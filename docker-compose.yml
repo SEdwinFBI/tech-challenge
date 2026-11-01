@@ -1,0 +1,37 @@
+services:
+  mssql-server:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    container_name: mssql-server
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      MSSQL_SA_PASSWORD: "Reto-Shopcart!2026"
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+    deploy:
+      resources:
+        limits:
+          memory: 4096M
+        reservations:
+          memory: 2048M
+    healthcheck:
+      test: [
+        "CMD-SHELL",
+        "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Reto-Shopcart!2026' -C -Q 'SELECT 1' || exit 1"
+      ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - shopcart-network
+
+volumes:
+  mssql_data:
+    driver: local
+networks:
+  shopcart-network:
+    driver: bridge
