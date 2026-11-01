@@ -6,7 +6,7 @@ export const setCookie = (res: Response, token: string): void => {
     httpOnly: true,
     secure: env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: env.JWT_REFRESH_EXPIRES_IN * 86400 * 1000,
+    maxAge: env.JWT_REFRESH_EXPIRES_IN_DAYS * 86400 * 1000,
     path: '/api/v1/auth',
   });
 };

@@ -13,11 +13,11 @@ const envSchema = z.object({
   DB_NAME: z.string(),
   JWT_ACCESS_SECRET: z.string(),
   JWT_REFRESH_SECRET: z.string(),
-  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
-  JWT_REFRESH_EXPIRES_IN: z.coerce.number().default(7),
-  JWT_FAMILY_EXPIRES_IN: z.coerce.number().default(30),
+  JWT_ACCESS_EXPIRES_IN_MIN: z.string().default('15m'),
+  JWT_REFRESH_EXPIRES_IN_DAYS: z.coerce.number().default(7),
+  JWT_FAMILY_EXPIRES_IN_DAYS: z.coerce.number().default(30),
   RATE_LIMIT_AUTH_MAX: z.coerce.number().default(15),
-  RATE_LIMIT_AUTH_WINDOW_MS: z.coerce.number().default(15),
+  RATE_LIMIT_AUTH_WINDOW_MIN: z.coerce.number().default(15),
   CORS_ALLOW_ORIGIN: z.string()
 });
 

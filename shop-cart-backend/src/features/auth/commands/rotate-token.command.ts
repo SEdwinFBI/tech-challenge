@@ -18,7 +18,7 @@ export class RotateTokenCommandHandler implements ICommandHandler<RotateTokenCom
     const hashActual = this.tokenService.hashRefreshToken(refreshToken);
     const nuevoPlano = this.tokenService.generateRefreshToken();
     const nuevoHash = this.tokenService.hashRefreshToken(nuevoPlano);
-    const nuevaExp = new Date(Date.now() + env.JWT_REFRESH_EXPIRES_IN * 86400 * 1000);
+    const nuevaExp = new Date(Date.now() + env.JWT_REFRESH_EXPIRES_IN_DAYS * 86400 * 1000);
 
     const user = await this.repo.rotateRefreshToken(hashActual, nuevoHash, nuevaExp);
     if (!user) throw new DomainError('Sesión inválida o usuario inactivo.', 'SESSION_INVALID', 401);
@@ -26,7 +26,7 @@ export class RotateTokenCommandHandler implements ICommandHandler<RotateTokenCom
     return {
       accessToken: this.tokenService.signAccessToken(user),
       refreshToken: nuevoPlano,
-      expiresIn: env.JWT_ACCESS_EXPIRES_IN,
+      expiresIn: env.JWT_ACCESS_EXPIRES_IN_MIN,
       usuario: {
         idUsuario: user.IDUsuario,
         correo: user.Correo,

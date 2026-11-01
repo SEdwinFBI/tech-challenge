@@ -22,7 +22,7 @@ export class AuthTokenService implements IAuthTokenService {
         return jwt.sign(
             { idUsuario: user.IDUsuario, correo: user.Correo, rol: user.Rol },
             env.JWT_ACCESS_SECRET,
-            { algorithm: 'HS256', expiresIn: env.JWT_ACCESS_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
+            { algorithm: 'HS256', expiresIn: env.JWT_ACCESS_EXPIRES_IN_MIN as jwt.SignOptions['expiresIn'] }
         );
     }
 }

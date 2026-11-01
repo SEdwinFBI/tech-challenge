@@ -1,4 +1,4 @@
-﻿# ShopCart Backend
+# ShopCart Backend
 
 API de comercio electrónico para gestionar catálogo, inventario, carritos, pedidos y usuarios. Está desarrollada con TypeScript, Express y SQL Server. El pago se simula; no hay integración con una pasarela de cobros.
 
@@ -31,11 +31,11 @@ Completar las credenciales de SQL Server y los secretos de JWT antes de iniciar 
 | `DB_USER`, `DB_PASSWORD` | Credenciales de conexión. |
 | `DB_NAME` | Nombre de la base de datos. |
 | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | Secretos de autenticación. |
-| `JWT_ACCESS_EXPIRES_IN` | Duración del token de acceso; por defecto, `15m`. |
-| `JWT_REFRESH_EXPIRES_IN` | Duración del refresh token en días; por defecto, `7`. |
-| `JWT_FAMILY_EXPIRES_IN` | Duración máxima de la familia de sesiones en días; por defecto, `30`. |
+| `JWT_ACCESS_EXPIRES_IN_MIN` | Duración del token de acceso; por defecto, `15m`. |
+| `JWT_REFRESH_EXPIRES_IN_DAYS` | Duración del refresh token en días; por defecto, `7`. |
+| `JWT_FAMILY_EXPIRES_IN_DAYS` | Duración máxima de la familia de sesiones en días; por defecto, `30`. |
 | `RATE_LIMIT_AUTH_MAX` | Intentos de autenticación permitidos por ventana; por defecto, `15`. |
-| `RATE_LIMIT_AUTH_WINDOW_MS` | Ventana de autenticación. Aunque el nombre termina en `_MS`, la implementación interpreta el valor en minutos; por defecto, `15`. |
+| `RATE_LIMIT_AUTH_WINDOW_MIN` | Ventana de autenticación en minutos; por defecto, `15`. |
 | `CORS_ALLOW_ORIGIN` | Origen permitido para el frontend; en desarrollo, `http://localhost:5173`. |
 
 ### Base de datos
