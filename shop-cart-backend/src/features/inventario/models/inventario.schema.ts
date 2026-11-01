@@ -1,0 +1,37 @@
+import { z } from 'zod';
+
+export * from './inventario.model';
+
+export const GetKardexSchema = z.object({
+  idVariante: z.coerce.number().int().positive().optional(),
+  pagina: z.coerce.number().int().min(1).default(1),
+  tamanoPagina: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export type GetKardexDTO = z.infer<typeof GetKardexSchema>;
+
+export const CreateMovementSchema = z.object({
+  idVariante: z.number().int().positive(),
+  tipoMovimiento: z.enum([
+    'ENTRADA',
+    'SALIDA',
+    'AJUSTE',
+    'ENTRADA_COMPRA',
+    'SALIDA_MERMA',
+    'AJUSTE_FISICO',
+    'AJUSTE_POSITIVO',
+    'AJUSTE_NEGATIVO',
+  ]),
+  cantidad: z.number().int().refine((n) => n !== 0, 'La cantidad no puede ser 0'),
+  motivo: z.string().min(5, 'El motivo es obligatorio (mínimo 5 caracteres)'),
+  costoUnitario: z.number().nonnegative().optional(),
+});
+
+export type CreateMovementDTO = z.infer<typeof CreateMovementSchema>;
+
+export type CreateMovementCommand = CreateMovementDTO & {
+  idUsuario: number;
+  idUsuarioOperador?: number;
+};
+
+export type GetKardexQuery = GetKardexDTO;
