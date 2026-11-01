@@ -1,0 +1,57 @@
+{
+  "name": "shop-cart-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "node -e \"const fs=require('fs'); fs.rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "db:setup": "tsx src/core/config/db-setup.ts",
+    "test": "tsx --test tests/domain.test.ts tests/extensiones.test.ts",
+    "test:concurrency": "tsx tests/concurrency-demo.ts",
+    "test:integration": "tsx --test tests/audit-regression.test.ts",
+    "test:concurrency:http": "node --test tests/real-concurrency.test.cjs"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1159.0",
+    "@aws-sdk/s3-request-presigner": "^3.1159.0",
+    "@types/cookie-parser": "^1.4.10",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "exceljs": "^4.4.0",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mssql": "^12.7.13",
+    "node-cron": "^4.6.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/mssql": "^12.3.0",
+    "@types/node": "^26.6.6",
+    "@types/node-cron": "^3.0.11",
+    "tsc-alias": "^1.9.9",
+    "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  },
+  "overrides": {
+    "@azure/identity": {
+      "@azure/msal-node": "^7.0.3"
+    }
+  }
+}
