@@ -1,0 +1,50 @@
+
+import { Request, Response, NextFunction } from 'express';
+import { ZodError } from 'zod';
+import { DomainError } from '@/core/domain/domain.error'
+
+export const globalErrorHandler = (err: any, _req: Request, res: Response, _next: NextFunction) => {
+  if (err instanceof ZodError) {
+
+
+    return res.status(400).json({
+      ok: false,
+      codigo: 'VALIDATION_ERROR',
+      mensaje: 'Datos inválidos.',
+      detalles: err.issues.map(e => ({ campo: e.path.join('.'), mensaje: e.message })),
+    });
+  }
+
+  if (err instanceof DomainError) {
+    return res.status(err.httpStatus).json({
+      ok: false,
+      codigo: err.code,
+      mensaje: err.message,
+    });
+  }
+
+  if (typeof err.number === 'number' && err.number >= 50000) {
+    const conflictCodes = [50010, 50033, 50040, 50041, 50051, 50057, 50063, 50066, 50073, 50082, 50092];
+    const forbiddenCodes = [50050, 50061, 50076, 50071, 50072];
+    const unauthorizedCodes = [50011, 50012, 50013];
+
+    let status = 400;
+    if (conflictCodes.includes(err.number)) status = 409;
+    if (forbiddenCodes.includes(err.number)) status = 403;
+    if (unauthorizedCodes.includes(err.number)) status = 401;
+    if (err.number === 50075 || [50090, 50091, 50093, 50096, 50098].includes(err.number)) status = 404;
+
+    return res.status(status).json({
+      ok: false,
+      codigo: `SQL_${err.number}`,
+      mensaje: err.message,
+    });
+  }
+
+  console.error('Error:', err);
+  return res.status(500).json({
+    ok: false,
+    codigo: 'INTERNAL_ERROR',
+    mensaje: 'Error interno.',
+  });
+};
