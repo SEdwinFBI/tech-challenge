@@ -3,6 +3,9 @@ import path from 'path';
 import sql from 'mssql';
 import { env } from './env';
 
+
+//Tiene el proposito unicamente para setear la seed, se usa consultas sql solamente para unico uso
+
 async function executeSqlFileInBatches(pool: sql.ConnectionPool, filePath: string): Promise<sql.IResult<any> | undefined> {
   const content = fs.readFileSync(filePath, 'utf8');
 
