@@ -15,6 +15,7 @@ export class GetOrdersQueryHandler implements IQueryHandler<GetOrdersQuery, GetO
       fechaFin: q.fechaFin ?? null,
       pagina: q.pagina,
       tamanoPagina: q.tamanoPagina,
+      busqueda: q.numeroSeguimiento ? q.numeroSeguimiento : null,
     });
   }
 }

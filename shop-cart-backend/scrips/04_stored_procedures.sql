@@ -1500,7 +1500,8 @@ CREATE OR ALTER PROCEDURE SP_Pedidos_ListarPaginado
     @FechaInicio DATETIME2 = NULL,
     @FechaFin DATETIME2 = NULL,
     @Pagina INT = 1,
-    @TamanoPagina INT = 15
+    @TamanoPagina INT = 15,
+    @Busqueda NVARCHAR(100) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1512,7 +1513,12 @@ BEGIN
     WHERE (@IDUsuarioFiltro IS NULL OR vh.IDUsuario = @IDUsuarioFiltro)
       AND (@Estado IS NULL OR vh.Estado = @Estado)
       AND (@FechaInicio IS NULL OR vh.FechaCreacion >= @FechaInicio)
-      AND (@FechaFin IS NULL OR vh.FechaCreacion <= @FechaFin);
+      AND (@FechaFin IS NULL OR vh.FechaCreacion <= @FechaFin)
+      AND (@Busqueda IS NULL OR @Busqueda = ''
+           OR vh.Cliente LIKE '%' + @Busqueda + '%'
+           OR vh.Correo LIKE '%' + @Busqueda + '%'
+           OR vh.Estado LIKE '%' + @Busqueda + '%'
+           OR vh.IDPedido = TRY_CAST(REPLACE(UPPER(@Busqueda), 'ORD-', '') AS INT));
 
     SELECT * FROM #Resultados
     ORDER BY FechaCreacion DESC

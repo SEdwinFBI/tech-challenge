@@ -38,6 +38,7 @@ export class OrdersRepository implements IOrdersRepository {
       .input('FechaFin', sql.DateTime2, params.fechaFin)
       .input('Pagina', sql.Int, params.pagina)
       .input('TamanoPagina', sql.Int, params.tamanoPagina)
+      .input('Busqueda', sql.NVarChar(100), params.busqueda ?? null)
       .execute('SP_Pedidos_ListarPaginado');
 
     const recordset = res.recordset as sql.IRecordSet<OrderHeaderDTO>;

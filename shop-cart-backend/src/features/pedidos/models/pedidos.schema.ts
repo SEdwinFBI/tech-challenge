@@ -6,6 +6,7 @@ export * from './pedidos.model';
 export const GetOrdersSchema = z.object({
   estado: z.string().optional(),
   idCliente: z.coerce.number().int().positive().optional(),
+  numeroSeguimiento: z.string().trim().max(100).optional(),
   fechaInicio: z.coerce.date().optional(),
   fechaFin: z.coerce.date().optional(),
   pagina: z.coerce.number().int().min(1).default(1),

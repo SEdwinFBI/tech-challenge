@@ -82,6 +82,7 @@ export interface GetOrdersParams {
   fechaFin: Date | null;
   pagina: number;
   tamanoPagina: number;
+  busqueda?: string | null;
 }
 
 export interface GetOrdersResult {
