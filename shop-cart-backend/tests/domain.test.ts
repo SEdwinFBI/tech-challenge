@@ -36,7 +36,7 @@ import { GetDashboardSummaryQueryHandler } from '@/features/dashboard/queries/ge
 import { IDashboardRepository } from '@/features/dashboard/abstracts/dashboard.repository.interface';
 
 describe('Value Object Money', () => {
-  it('debe instanciar Money a partir de decimales positivos correctamente', () => {
+  it('instancia Money con decimales positivos', () => {
     const m1 = Money.fromDecimal(19.99);
     assert.equal(m1.value, 19.99);
 
@@ -47,7 +47,7 @@ describe('Value Object Money', () => {
     assert.equal(m3.value, 650.0);
   });
 
-  it('debe redondear centavos sin sufrir errores de punto flotante de IEEE 754', () => {
+  it('redondea centavos sin error de punto flotante', () => {
     const suma = Money.fromDecimal(0.1).add(Money.fromDecimal(0.2));
     assert.equal(suma.value, 0.3);
 
@@ -62,7 +62,7 @@ describe('Value Object Money', () => {
     assert.equal(m1.add(m2).value, 25.98);
   });
 
-  it('debe rechazar montos negativos arrojando DomainError MONTO_NEGATIVO (400)', () => {
+  it('rechaza montos negativos con MONTO_NEGATIVO (400)', () => {
     assert.throws(
       () => Money.fromDecimal(-0.01),
       (err: unknown) => expectDomainError(err, 'MONTO_NEGATIVO', 400)
@@ -95,7 +95,7 @@ describe('Value Object Money', () => {
     assert.equal(resultado.value, 0.0, 'El monto nunca debe descender de cero');
   });
 
-  it('debe calcular el monto neto e IVA del 12% ', () => {
+  it('calcula el monto neto e IVA del 12%', () => {
     const totalConIva = Money.fromDecimal(112.0);
     assert.equal(totalConIva.netAmount, 100.0);
     assert.equal(totalConIva.iva, 12.0);
@@ -112,7 +112,7 @@ describe('Value Object Money', () => {
 });
 
 describe('OrderStatePolicy - Máquina de Estados', () => {
-  it('debe permitir la ruta feliz completa de transiciones para OPERADOR y ADMINISTRADOR', () => {
+  it('permite las transiciones válidas para OPERADOR y ADMINISTRADOR', () => {
     assert.doesNotThrow(() => {
       OrderStatePolicy.ensureValidTransition('PAGADO', 'EN_PREPARACION', 'OPERADOR');
       OrderStatePolicy.ensureValidTransition('EN_PREPARACION', 'DESPACHADO', 'OPERADOR');
@@ -673,7 +673,7 @@ describe('Validación de Esquemas Zod', () => {
   });
 });
 
-describe('6. Handlers CQRS con Repositorios Mock', () => {
+describe('Handlers CQRS con repositorios mock', () => {
   describe('UpdateOrderStatusCommandHandler', () => {
     it('debe arrojar DomainError FORBIDDEN_IDOR (403) cuando un CLIENTE intenta modificar el pedido de otro cliente', async () => {
       const repoMock: IOrdersRepository = {
@@ -869,7 +869,7 @@ describe('6. Handlers CQRS con Repositorios Mock', () => {
   });
 
   describe('GetDashboardSummaryQueryHandler', () => {
-    it('debe invocar al repositorio en la primera llamada (desdeCache: false) y devolver desde caché en la segunda (desdeCache: true)', async () => {
+    it('consulta el repositorio la primera vez y responde desde caché la segunda', async () => {
       let callCount = 0;
 
       const repoMock: IDashboardRepository = {
@@ -889,7 +889,6 @@ describe('6. Handlers CQRS con Repositorios Mock', () => {
 
       const handler = new GetDashboardSummaryQueryHandler(repoMock);
 
-      // Fechas fijas para que la cacheKey coincida.
       const queryFija = {
         fechaInicio: new Date('2026-10-01T00:00:00Z'),
         fechaFin: new Date('2026-10-31T23:59:59Z'),
@@ -909,7 +908,6 @@ describe('6. Handlers CQRS con Repositorios Mock', () => {
   });
 });
 
-// Una credencial presentada nunca debe convertirse silenciosamente en invitado.
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import { optionalAuth } from '@/core/middlewares/auth.middleware';

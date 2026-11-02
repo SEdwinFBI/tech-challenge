@@ -106,7 +106,6 @@ test('Regresiones ', { skip: !enabled }, async t => {
     assert.equal(added.data.codigo, 'SQL_50041');
     const checkout = await call('POST', '/checkout/confirmar', { idCarrito: cartId, idDireccion: ownAddress, claveIdempotencia: 'inactive-' + suffix }, client, 409);
     assert.equal(checkout.data.codigo, 'SQL_50041');
-    // The user can still remove an item that became unavailable.
     await call('POST', '/carrito/items', { idVariante: variantId, cantidad: 0 }, client);
     await call('PATCH', '/catalogo/productos/' + productId, { activo: true }, admin);
     await call('PUT', '/catalogo/variantes/' + variantId, { activo: false }, admin);
@@ -141,7 +140,6 @@ test('Regresiones ', { skip: !enabled }, async t => {
   });
 
   await t.test('caché diferencia dos horas del mismo día y coincide con SQL independiente', async () => {
-    // Unique lower bound avoids cache populated by an earlier run.
     const start = `2026-11-01T00:00:00.${String(Date.now() % 1000).padStart(3, '0')}Z`;
     const shortEnd = '2026-11-01T00:01:00Z';
     const fullEnd = '2026-11-01T23:59:59Z';
