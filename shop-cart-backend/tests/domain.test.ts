@@ -675,7 +675,7 @@ describe('Validación de Esquemas Zod', () => {
 
 describe('Handlers CQRS con repositorios mock', () => {
   describe('UpdateOrderStatusCommandHandler', () => {
-    it('debe arrojar DomainError FORBIDDEN_IDOR (403) cuando un CLIENTE intenta modificar el pedido de otro cliente', async () => {
+    it('responde 404 cuando un CLIENTE intenta modificar el pedido de otro cliente', async () => {
       const repoMock: IOrdersRepository = {
         getById: async (idPedido: number): Promise<OrderAggregate | null> => ({
           pedido: { IDPedido: idPedido, IDUsuario: 999, Estado: 'PAGADO' },
@@ -698,7 +698,7 @@ describe('Handlers CQRS con repositorios mock', () => {
             ejecutor: clienteEjecutor,
           });
         },
-        (err: unknown) => expectDomainError(err, 'FORBIDDEN_IDOR', 403)
+        (err: unknown) => expectDomainError(err, 'ORDER_NOT_FOUND', 404)
       );
     });
 
@@ -757,7 +757,7 @@ describe('Handlers CQRS con repositorios mock', () => {
       );
     });
 
-    it('debe arrojar DomainError FORBIDDEN_IDOR (403) cuando otro cliente intenta leer el pedido', async () => {
+    it('responde 404 cuando otro cliente intenta leer el pedido', async () => {
       const repoMock: IOrdersRepository = {
         getById: async (idPedido: number): Promise<OrderAggregate | null> => ({
           pedido: { IDPedido: idPedido, IDUsuario: 456, Estado: 'DESPACHADO' },
@@ -776,7 +776,7 @@ describe('Handlers CQRS con repositorios mock', () => {
         async () => {
           await handler.getSecureDetail(10, clienteEspia);
         },
-        (err: unknown) => expectDomainError(err, 'FORBIDDEN_IDOR', 403)
+        (err: unknown) => expectDomainError(err, 'ORDER_NOT_FOUND', 404)
       );
     });
 
@@ -928,7 +928,7 @@ describe('Autenticación opcional', () => {
   });
   it('rechaza tokens inválidos, expirados y cabeceras mal formadas con 401', async () => {
     const expired = jwt.sign({ idUsuario: 1, correo: 'test@example.com', rol: 'CLIENTE' }, env.JWT_ACCESS_SECRET, { expiresIn: -1 });
-    for (const result of await Promise.all([invoke('Bearer invalido'), invoke(`Bearer ${expired}`), invoke('Basic invalido'), invoke(undefined, expired)])) {
+    for (const result of await Promise.all([invoke('Bearer invalido'), invoke(`Bearer ${expired}`), invoke('Basic invalido')])) {
       assert.ok(result.error instanceof DomainError);
       assert.equal(result.error.httpStatus, 401);
       assert.equal(result.req.user, undefined);

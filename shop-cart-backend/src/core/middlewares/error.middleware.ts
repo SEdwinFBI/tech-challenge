@@ -2,6 +2,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { DomainError } from '@/core/domain/domain.error'
+import { codigoDeNegocio } from './sql-error-codes';
 
 export const globalErrorHandler = (err: any, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof ZodError) {
@@ -45,7 +46,7 @@ export const globalErrorHandler = (err: any, _req: Request, res: Response, _next
 
     return res.status(status).json({
       ok: false,
-      codigo: `SQL_${err.number}`,
+      codigo: codigoDeNegocio(err.number, err.message),
       mensaje: err.message,
     });
   }

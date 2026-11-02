@@ -16,7 +16,7 @@ export class GetOrderByIdQueryHandler implements IQueryHandler<GetOrderByIdQuery
     const data = await this.repo.getById(idPedido);
     if (!data) throw new DomainError('Pedido no encontrado.', 'ORDER_NOT_FOUND', 404);
     if (solicitante.rol === 'CLIENTE' && data.pedido.IDUsuario !== solicitante.idUsuario) {
-      throw new DomainError('Sin permiso para este pedido.', 'FORBIDDEN_IDOR', 403);
+      throw new DomainError('Pedido no encontrado.', 'ORDER_NOT_FOUND', 404);
     }
     return data;
   }

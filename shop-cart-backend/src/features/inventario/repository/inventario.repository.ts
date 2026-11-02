@@ -1,6 +1,6 @@
 import { getDbPool, sql } from '@/core/config/db';
 import { IInventoryRepository } from '../abstracts/inventario.repository.interface';
-import { CreateMovementParams, CreateMovementResult, KardexResult } from '../models/inventario.model';
+import { CreateMovementParams, CreateMovementResult, GetKardexParams, KardexResult } from '../models/inventario.model';
 import { LowStockItemDTO, LowStockResult } from '../models/existencias-bajas.model';
 
 export class InventoryRepository implements IInventoryRepository {
@@ -18,13 +18,16 @@ export class InventoryRepository implements IInventoryRepository {
     return res.recordset[0];
   }
 
-  async getKardex(idVariante?: number, pagina = 1, tamanoPagina = 20): Promise<KardexResult> {
+  async getKardex(params: GetKardexParams): Promise<KardexResult> {
     const pool = await getDbPool();
     const res = await pool
       .request()
-      .input('IDVariante', sql.Int, idVariante ?? null)
-      .input('Pagina', sql.Int, pagina)
-      .input('TamanoPagina', sql.Int, tamanoPagina)
+      .input('IDVariante', sql.Int, params.idVariante ?? null)
+      .input('TipoMovimiento', sql.VarChar(30), params.tipoMovimiento || null)
+      .input('FechaDesde', sql.DateTime2, params.fechaDesde ?? null)
+      .input('FechaHasta', sql.DateTime2, params.fechaHasta ?? null)
+      .input('Pagina', sql.Int, params.pagina)
+      .input('TamanoPagina', sql.Int, params.tamanoPagina)
       .execute('SP_Inventario_ListarKardex');
 
     return {

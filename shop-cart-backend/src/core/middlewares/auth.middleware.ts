@@ -31,14 +31,7 @@ const authRepository = new AuthRepository();
 
 export const requireAuth = async (req: Request, _res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
-  const tokenFromQuery = typeof req.query.token === 'string' ? req.query.token : undefined;
-
-  let token: string | undefined;
-  if (authHeader?.startsWith('Bearer ')) {
-    token = authHeader.split(' ')[1];
-  } else if (tokenFromQuery) {
-    token = tokenFromQuery;
-  }
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : undefined;
 
   if (!token) {
     return next(new DomainError('Autenticación requerida.', 'TOKEN_MISSING', 401));
@@ -71,23 +64,16 @@ export const requireAuth = async (req: Request, _res: Response, next: NextFuncti
 
 export const optionalAuth = (req: Request, _res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
-  const tokenFromQuery = typeof req.query.token === 'string' ? req.query.token : undefined;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : undefined;
 
-  let token: string | undefined;
-  if (authHeader?.startsWith('Bearer ')) {
-    token = authHeader.split(' ')[1];
-  } else if (tokenFromQuery) {
-    token = tokenFromQuery;
-  }
-
-  if (token || authHeader !== undefined || tokenFromQuery !== undefined) {
+  if (token || authHeader !== undefined) {
     return requireAuth(req, _res, next);
   }
   return next();
 };
 
 export const optionalAuthLenient = (req: Request, res: Response, next: NextFunction) => {
-  if (req.headers.authorization === undefined && typeof req.query.token !== 'string') return next();
+  if (req.headers.authorization === undefined) return next();
   return requireAuth(req, res, (err?: unknown) => {
     if (err instanceof DomainError && err.httpStatus === 401) {
       req.user = undefined;

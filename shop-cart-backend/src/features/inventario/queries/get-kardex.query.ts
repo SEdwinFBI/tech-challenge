@@ -7,6 +7,6 @@ export class GetKardexQueryHandler implements IQueryHandler<GetKardexQuery, Kard
   constructor(private readonly repo: IInventoryRepository = new InventoryRepository()) {}
 
   async handle(query: GetKardexQuery): Promise<KardexResult> {
-    return this.repo.getKardex(query.idVariante, query.pagina, query.tamanoPagina);
+    return this.repo.getKardex(query);
   }
 }

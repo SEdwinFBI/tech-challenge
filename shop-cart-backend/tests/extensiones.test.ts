@@ -38,7 +38,11 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '@/core/config/env';
 import { globalErrorHandler } from '@/core/middlewares/error.middleware';
-import { optionalAuthLenient } from '@/core/middlewares/auth.middleware';
+import { optionalAuthLenient, requireAuth } from '@/core/middlewares/auth.middleware';
+import { codigoDeNegocio } from '@/core/middlewares/sql-error-codes';
+import { consumeStreamTicket, issueStreamTicket } from '@/features/dashboard/domain/stream-ticket.store';
+import { GetKardexSchema } from '@/features/inventario/models/inventario.schema';
+import { GetKardexQueryHandler } from '@/features/inventario/queries/get-kardex.query';
 import { AuthRepository } from '@/features/auth/repository/auth.repository';
 import { CatalogRepository } from '@/features/catalogo/repository/catalogo.repository';
 import { catalogoRouter } from '@/features/catalogo/catalogo.routes';
@@ -517,5 +521,64 @@ describe('Correcciones de la fase 1', () => {
     it('mantiene 400 para un cupón que todavía no está vigente', () => {
       assert.equal(responder({ number: 50099, message: 'El cupón todavía no está vigente.' }).status, 400);
     });
+  });
+});
+
+describe('Filtros del kardex', () => {
+  it('acepta tipo de movimiento y rango de fechas', () => {
+    const dto = GetKardexSchema.parse({ tipoMovimiento: 'AJUSTE_NEGATIVO', fechaDesde: '2026-11-01', fechaHasta: '2026-11-30' });
+    assert.equal(dto.tipoMovimiento, 'AJUSTE_NEGATIVO');
+    assert.ok(dto.fechaDesde instanceof Date && dto.fechaHasta instanceof Date);
+  });
+
+  it('rechaza un rango con la fecha final anterior a la inicial', () => {
+    assert.equal(GetKardexSchema.safeParse({ fechaDesde: '2026-11-30', fechaHasta: '2026-11-01' }).success, false);
+  });
+
+  it('el handler entrega los filtros completos al repositorio', async () => {
+    let recibido: unknown;
+    const repo = { getKardex: async (params: unknown) => { recibido = params; return { items: [], totalRegistros: 0 }; } } as unknown as IInventoryRepository;
+    const query = GetKardexSchema.parse({ idVariante: '7', tipoMovimiento: 'ENTRADA_COMPRA', pagina: '2' });
+    await new GetKardexQueryHandler(repo).handle(query);
+    assert.deepEqual(recibido, query);
+  });
+});
+
+describe('Códigos de error de negocio', () => {
+  it('traduce los números de SQL Server a códigos legibles', () => {
+    assert.equal(codigoDeNegocio(50041), 'VARIANT_UNAVAILABLE');
+    assert.equal(codigoDeNegocio(50013), 'REFRESH_TOKEN_EXPIRED');
+    assert.equal(codigoDeNegocio(50060, 'Pago rechazado por el emisor.'), 'PAYMENT_REJECTED');
+    assert.equal(codigoDeNegocio(50082, 'La cantidad a devolver debe ser positiva.'), 'RETURN_QUANTITY_INVALID');
+  });
+
+  it('conserva SQL_<número> para un error que no está en la tabla', () => {
+    assert.equal(codigoDeNegocio(50999), 'SQL_50999');
+  });
+});
+
+describe('Ticket del stream del dashboard', () => {
+  it('sirve una sola vez', () => {
+    const { ticket } = issueStreamTicket();
+    assert.equal(consumeStreamTicket(ticket), true);
+    assert.equal(consumeStreamTicket(ticket), false);
+  });
+
+  it('vence a los 30 segundos y no acepta valores desconocidos', () => {
+    const ahora = Date.now();
+    const { ticket, expiraEnSegundos } = issueStreamTicket(ahora);
+    assert.equal(expiraEnSegundos, 30);
+    assert.equal(consumeStreamTicket(ticket, ahora + 31_000), false);
+    assert.equal(consumeStreamTicket('no-existe'), false);
+    assert.equal(consumeStreamTicket(''), false);
+  });
+
+  it('el token enviado en la URL ya no autentica', async () => {
+    const token = jwt.sign({ idUsuario: 1, correo: 'test@example.com', rol: 'ADMINISTRADOR' }, env.JWT_ACCESS_SECRET, { expiresIn: 60 });
+    let error: unknown;
+    await requireAuth({ headers: {}, query: { token } } as never, {} as never, ((err?: unknown) => { error = err; }) as never);
+    assert.ok(error instanceof DomainError);
+    assert.equal(error.httpStatus, 401);
+    assert.equal(error.code, 'TOKEN_MISSING');
   });
 });

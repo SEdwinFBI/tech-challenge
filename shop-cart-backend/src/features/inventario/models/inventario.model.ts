@@ -59,6 +59,15 @@ export interface KardexItemDTO {
   TotalRegistros?: number;
 }
 
+export interface GetKardexParams {
+  idVariante?: number;
+  tipoMovimiento?: string;
+  fechaDesde?: Date;
+  fechaHasta?: Date;
+  pagina: number;
+  tamanoPagina: number;
+}
+
 export interface KardexResult {
   items: KardexItemDTO[];
   totalRegistros: number;

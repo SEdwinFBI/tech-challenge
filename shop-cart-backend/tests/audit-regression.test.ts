@@ -103,13 +103,13 @@ test('Regresiones ', { skip: !enabled }, async t => {
     await call('PATCH', '/catalogo/productos/' + productId, { activo: false }, admin);
     await call('GET', '/catalogo/productos/' + productId, undefined, undefined, 404);
     const added = await call('POST', '/carrito/items', { idVariante: variantId, cantidad: 1 }, client, 409);
-    assert.equal(added.data.codigo, 'SQL_50041');
+    assert.equal(added.data.codigo, 'VARIANT_UNAVAILABLE');
     const checkout = await call('POST', '/checkout/confirmar', { idCarrito: cartId, idDireccion: ownAddress, claveIdempotencia: 'inactive-' + suffix }, client, 409);
-    assert.equal(checkout.data.codigo, 'SQL_50041');
+    assert.equal(checkout.data.codigo, 'VARIANT_UNAVAILABLE');
     await call('POST', '/carrito/items', { idVariante: variantId, cantidad: 0 }, client);
     await call('PATCH', '/catalogo/productos/' + productId, { activo: true }, admin);
     await call('PUT', '/catalogo/variantes/' + variantId, { activo: false }, admin);
-    assert.equal((await call('POST', '/carrito/items', { idVariante: variantId, cantidad: 1 }, client, 409)).data.codigo, 'SQL_50041');
+    assert.equal((await call('POST', '/carrito/items', { idVariante: variantId, cantidad: 1 }, client, 409)).data.codigo, 'VARIANT_UNAVAILABLE');
   });
 
   await t.test('desactivar al usuario bloquea el JWT vigente y revoca sesiones refresh', async () => {

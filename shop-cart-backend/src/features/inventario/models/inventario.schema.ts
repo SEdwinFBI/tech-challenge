@@ -2,11 +2,19 @@ import { z } from 'zod';
 
 export * from './inventario.model';
 
-export const GetKardexSchema = z.object({
-  idVariante: z.coerce.number().int().positive().optional(),
-  pagina: z.coerce.number().int().min(1).default(1),
-  tamanoPagina: z.coerce.number().int().min(1).max(100).default(20),
-});
+export const GetKardexSchema = z
+  .object({
+    idVariante: z.coerce.number().int().positive().optional(),
+    tipoMovimiento: z.string().trim().max(30).optional(),
+    fechaDesde: z.coerce.date().optional(),
+    fechaHasta: z.coerce.date().optional(),
+    pagina: z.coerce.number().int().min(1).default(1),
+    tamanoPagina: z.coerce.number().int().min(1).max(100).default(20),
+  })
+  .refine((d) => !d.fechaDesde || !d.fechaHasta || d.fechaDesde <= d.fechaHasta, {
+    path: ['fechaHasta'],
+    message: 'La fecha final no puede ser anterior a la inicial.',
+  });
 
 export type GetKardexDTO = z.infer<typeof GetKardexSchema>;
 

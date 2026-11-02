@@ -14,7 +14,7 @@ export class UpdateOrderStatusCommandHandler implements ICommandHandler<UpdateOr
     if (!agregado) throw new DomainError('El pedido no existe.', 'ORDER_NOT_FOUND', 404);
 
     if (cmd.ejecutor.rol === 'CLIENTE' && agregado.pedido.IDUsuario !== cmd.ejecutor.idUsuario) {
-      throw new DomainError('Sin permiso para este pedido.', 'FORBIDDEN_IDOR', 403);
+      throw new DomainError('El pedido no existe.', 'ORDER_NOT_FOUND', 404);
     }
 
     OrderStatePolicy.ensureValidTransition(agregado.pedido.Estado, cmd.nuevoEstado, cmd.ejecutor.rol);

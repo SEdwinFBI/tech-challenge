@@ -731,6 +731,9 @@ GO
 
 CREATE OR ALTER PROCEDURE SP_Inventario_ListarKardex
     @IDVariante INT = NULL,
+    @TipoMovimiento VARCHAR(30) = NULL,
+    @FechaDesde DATETIME2 = NULL,
+    @FechaHasta DATETIME2 = NULL,
     @Pagina INT = 1,
     @TamanoPagina INT = 20
 AS
@@ -749,7 +752,10 @@ BEGIN
     INNER JOIN Productos p ON v.IDProducto = p.IDProducto
     INNER JOIN Usuarios u ON k.IDUsuario = u.IDUsuario
     INNER JOIN TipoMovimiento tm ON k.IDTipoMovimiento = tm.IDTipoMovimiento
-    WHERE (@IDVariante IS NULL OR k.IDVariante = @IDVariante);
+    WHERE (@IDVariante IS NULL OR k.IDVariante = @IDVariante)
+      AND (@TipoMovimiento IS NULL OR tm.Codigo = @TipoMovimiento)
+      AND (@FechaDesde IS NULL OR k.FechaMovimiento >= @FechaDesde)
+      AND (@FechaHasta IS NULL OR k.FechaMovimiento <= @FechaHasta);
 
     SELECT * FROM #Resultados
     ORDER BY FechaMovimiento DESC
