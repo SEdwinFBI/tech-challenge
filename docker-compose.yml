@@ -6,7 +6,7 @@ services:
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_PID: "Developer"
-      MSSQL_SA_PASSWORD: "Reto-Shopcart!2026"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:?Define MSSQL_SA_PASSWORD en el archivo .env}"
     ports:
       - "1433:1433"
     volumes:
@@ -20,7 +20,7 @@ services:
     healthcheck:
       test: [
         "CMD-SHELL",
-        "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Reto-Shopcart!2026' -C -Q 'SELECT 1' || exit 1"
+        "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"
       ]
       interval: 10s
       timeout: 5s
