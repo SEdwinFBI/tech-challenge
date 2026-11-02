@@ -23,6 +23,15 @@ export const globalErrorHandler = (err: any, _req: Request, res: Response, _next
     });
   }
 
+  if (err?.number === 2627 || err?.number === 2601) {
+    const msg = String(err.message ?? '');
+    return res.status(409).json({
+      ok: false,
+      codigo: 'DUPLICATE_KEY',
+      mensaje: msg.includes('UQ_Cupones_Codigo') ? 'Ya existe un cupón con ese código.' : 'Ya existe un registro con ese valor.',
+    });
+  }
+
   if (typeof err.number === 'number' && err.number >= 50000) {
     const conflictCodes = [50010, 50033, 50040, 50041, 50051, 50057, 50063, 50066, 50073, 50082, 50092];
     const forbiddenCodes = [50050, 50061, 50076, 50071, 50072];
