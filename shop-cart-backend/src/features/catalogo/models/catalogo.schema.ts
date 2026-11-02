@@ -8,7 +8,7 @@ export const GetCategoriesSchema = z.object({
 export type GetCategoriesDTO = z.infer<typeof GetCategoriesSchema>;
 
 export const GetProductsSchema = z.object({
-  q: z.string().optional(),
+  q: z.string().trim().max(150).optional(),
   idCategoria: z.coerce.number().int().positive().optional(),
   precioMin: z.coerce.number().nonnegative().optional(),
   precioMax: z.coerce.number().positive().optional(),

@@ -99,6 +99,19 @@ BEGIN
 
         IF @Revocado = 1
         BEGIN
+            IF EXISTS (
+                SELECT 1
+                FROM RefreshTokens anterior
+                INNER JOIN RefreshTokens sucesor ON sucesor.TokenHash = anterior.ReemplazadoPorToken
+                WHERE anterior.TokenHash = @TokenHashActual
+                  AND sucesor.Revocado = 0
+                  AND sucesor.FechaCreacion >= DATEADD(SECOND, -10, SYSDATETIME())
+            )
+            BEGIN
+                COMMIT TRANSACTION;
+                THROW 50016, 'Ya se renovó esta sesión hace un instante. Intenta de nuevo.', 1;
+            END
+
             UPDATE RefreshTokens SET Revocado = 1 WHERE IDUsuario = @IDUsuario;
             COMMIT TRANSACTION;
             THROW 50012, 'Reutilización de token detectada. Sesiones revocadas por seguridad.', 1;
@@ -234,12 +247,18 @@ BEGIN
         IF NOT EXISTS (SELECT 1 FROM Usuarios WITH (UPDLOCK) WHERE IDUsuario = @IDUsuarioObjetivo)
             THROW 50015, 'El usuario especificado no existe.', 1;
 
+        DECLARE @RolAnterior VARCHAR(20);
+        SELECT @RolAnterior = r.Codigo
+        FROM Usuarios u
+        INNER JOIN Roles r ON u.IDRol = r.IDRol
+        WHERE u.IDUsuario = @IDUsuarioObjetivo;
+
         UPDATE Usuarios 
         SET IDRol = @IDRol 
         WHERE IDUsuario = @IDUsuarioObjetivo;
 
         INSERT INTO Bitacora (IDUsuario, Modulo, Entidad, IDEntidad, Accion, ValorAnterior, ValorNuevo)
-        VALUES (@IDUsuarioAdmin, 'USUARIOS', 'Usuarios', @IDUsuarioObjetivo, 'CAMBIO_ROL', NULL, CONCAT('{"NuevoRol":"', @NuevoRol, '"}'));
+        VALUES (@IDUsuarioAdmin, 'USUARIOS', 'Usuarios', @IDUsuarioObjetivo, 'CAMBIO_ROL', CONCAT('{"Rol":"', @RolAnterior, '"}'), CONCAT('{"Rol":"', @NuevoRol, '"}'));
 
         COMMIT TRANSACTION;
     END TRY
@@ -404,6 +423,9 @@ BEGIN
     SET XACT_ABORT ON;
     BEGIN TRY
         BEGIN TRANSACTION;
+
+        IF EXISTS (SELECT 1 FROM Variantes WITH (UPDLOCK, HOLDLOCK) WHERE SKU = @SKU)
+            THROW 50023, 'Ya existe una variante con el SKU especificado.', 1;
 
         INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl)
         VALUES (@IDCategoria, @Nombre, @Descripcion, @ImagenUrl);
@@ -911,7 +933,8 @@ BEGIN
         FROM Cupones WITH (UPDLOCK) WHERE Codigo = @CodigoCupon;
 
         IF @IDCupon IS NULL THROW 50055, 'El código de cupón ingresado no existe.', 1;
-        IF @Activo = 0 OR SYSDATETIME() NOT BETWEEN @Inicio AND @Fin THROW 50056, 'El cupón se encuentra vencido o inactivo.', 1;
+        IF @Activo = 0 OR SYSDATETIME() > @Fin THROW 50056, 'El cupón se encuentra vencido o inactivo.', 1;
+        IF SYSDATETIME() < @Inicio THROW 50099, 'El cupón todavía no está vigente.', 1;
         IF @UsosActuales >= @LimiteTotal THROW 50057, 'El cupón se ha agotado (alcanzó el límite total de usos).', 1;
 
         DECLARE @Subtotal DECIMAL(12,2);
@@ -919,6 +942,15 @@ BEGIN
         FROM CarritoItems ci INNER JOIN Variantes v ON ci.IDVariante = v.IDVariante WHERE ci.IDCarrito = @IDCarrito;
 
         IF @Subtotal < @Minimo THROW 50058, 'El monto de tu carrito no cumple el mínimo de compra requerido por este cupón.', 1;
+
+        IF @IDCatCupon IS NOT NULL AND NOT EXISTS (
+            SELECT 1
+            FROM CarritoItems ci
+            INNER JOIN Variantes v ON ci.IDVariante = v.IDVariante
+            INNER JOIN Productos p ON v.IDProducto = p.IDProducto
+            WHERE ci.IDCarrito = @IDCarrito AND p.IDCategoria = @IDCatCupon
+        )
+            THROW 50069, 'El cupón no aplica a estos productos.', 1;
 
         IF (
             SELECT COUNT(1) 

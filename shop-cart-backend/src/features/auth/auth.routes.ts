@@ -67,7 +67,7 @@ authRouter.post('/refresh', async (req, res, next) => {
     setCookie(res, data.refreshToken);
     res.json({ ok: true, accessToken: data.accessToken, usuario: data.usuario });
   } catch (err) {
-    res.clearCookie('refreshToken', { path: '/api/v1/auth' });
+    if ((err as { number?: number })?.number !== 50016) res.clearCookie('refreshToken', { path: '/api/v1/auth' });
     next(err);
   }
 });

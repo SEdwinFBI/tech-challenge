@@ -20,7 +20,7 @@ import { RemoveFavoriteCommandHandler } from '@/features/favoritos/commands/remo
 import { GetFavoriteIdsQueryHandler } from '@/features/favoritos/queries/get-favorite-ids.query';
 import bcrypt from 'bcryptjs';
 import { SetCategoryImageSchema } from '@/features/catalogo/models/catalogo.schema';
-import { ChangePasswordSchema, UpdateProfileSchema } from '@/features/auth/models/auth.schema';
+import { ChangePasswordSchema, RegisterSchema, UpdateProfileSchema } from '@/features/auth/models/auth.schema';
 import { IAuthRepository } from '@/features/auth/abstracts/auth.repository.interface';
 import { ChangePasswordCommandHandler } from '@/features/auth/commands/change-password.command';
 import { UpdateProfileCommandHandler } from '@/features/auth/commands/update-profile.command';
@@ -38,6 +38,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '@/core/config/env';
 import { globalErrorHandler } from '@/core/middlewares/error.middleware';
+import { optionalAuthLenient } from '@/core/middlewares/auth.middleware';
 import { AuthRepository } from '@/features/auth/repository/auth.repository';
 import { CatalogRepository } from '@/features/catalogo/repository/catalogo.repository';
 import { catalogoRouter } from '@/features/catalogo/catalogo.routes';
@@ -442,5 +443,79 @@ describe('Extensiones de tienda: detalle de producto para administración', () =
       () => handler.handle(404),
       (err: unknown) => err instanceof DomainError && err.code === 'PRODUCT_NOT_FOUND' && err.httpStatus === 404,
     );
+  });
+});
+
+describe('Correcciones de la fase 1', () => {
+  it('limita la búsqueda del catálogo a 150 caracteres', () => {
+    assert.equal(GetProductsSchema.safeParse({ q: 'a'.repeat(150) }).success, true);
+    assert.equal(GetProductsSchema.safeParse({ q: 'a'.repeat(151) }).success, false);
+    assert.equal(GetProductsSchema.parse({ q: '  camisa  ' }).q, 'camisa');
+  });
+
+  it('limita la contraseña de registro a 72 caracteres, igual que el cambio de contraseña', () => {
+    const base = { correo: 'cliente@example.com', nombreCompleto: 'Cliente Prueba' };
+    assert.equal(RegisterSchema.safeParse({ ...base, password: 'a'.repeat(7) }).success, false);
+    assert.equal(RegisterSchema.safeParse({ ...base, password: 'a'.repeat(72) }).success, true);
+    assert.equal(RegisterSchema.safeParse({ ...base, password: 'a'.repeat(73) }).success, false);
+  });
+
+  describe('autenticación tolerante del catálogo', () => {
+    const invoke = async (authorization?: string) => {
+      const req = { headers: authorization === undefined ? {} : { authorization }, query: {} } as never;
+      let error: unknown;
+      await optionalAuthLenient(req, {} as never, ((err?: unknown) => { error = err; }) as never);
+      return { req: req as { user?: { idUsuario: number } }, error };
+    };
+    const firmar = (expiresIn: number) => jwt.sign({ idUsuario: 1, correo: 'test@example.com', rol: 'CLIENTE' }, env.JWT_ACCESS_SECRET, { expiresIn });
+
+    it('trata como invitado un token vencido o mal formado', async () => {
+      for (const header of ['Bearer ' + firmar(-1), 'Bearer invalido']) {
+        const result = await invoke(header);
+        assert.equal(result.error, undefined);
+        assert.equal(result.req.user, undefined);
+      }
+    });
+
+    it('conserva la identidad de un token vigente', async t => {
+      t.mock.method(AuthRepository.prototype, 'getById', async () => ({ IDUsuario: 1, Correo: 'test@example.com', Rol: 'CLIENTE', Activo: true }));
+      const result = await invoke('Bearer ' + firmar(60));
+      assert.equal(result.error, undefined);
+      assert.equal(result.req.user?.idUsuario, 1);
+    });
+
+    it('sigue rechazando a un usuario desactivado aunque el token sea vigente', async t => {
+      t.mock.method(AuthRepository.prototype, 'getById', async () => ({ IDUsuario: 1, Correo: 'test@example.com', Rol: 'CLIENTE', Activo: false }));
+      const result = await invoke('Bearer ' + firmar(60));
+      assert.ok(result.error instanceof DomainError);
+      assert.equal(result.error.httpStatus, 403);
+    });
+  });
+
+  describe('errores de SQL Server', () => {
+    const responder = (err: unknown) => {
+      const salida: { status?: number; body?: { codigo: string; mensaje: string } } = {};
+      const res = {
+        status(code: number) { salida.status = code; return this; },
+        json(body: { codigo: string; mensaje: string }) { salida.body = body; return this; },
+      };
+      globalErrorHandler(err, {} as never, res as never, (() => {}) as never);
+      return salida;
+    };
+
+    it('responde 409 ante un SKU duplicado y ante una renovación simultánea', () => {
+      assert.equal(responder({ number: 50023, message: 'Ya existe una variante con el SKU especificado.' }).status, 409);
+      assert.equal(responder({ number: 50016, message: 'Ya se renovó esta sesión.' }).status, 409);
+    });
+
+    it('responde 409 con mensaje propio ante un código de cupón repetido', () => {
+      const salida = responder({ number: 2627, message: 'Violation of UNIQUE KEY constraint UQ_Cupones_Codigo' });
+      assert.equal(salida.status, 409);
+      assert.equal(salida.body?.mensaje, 'Ya existe un cupón con ese código.');
+    });
+
+    it('mantiene 400 para un cupón que todavía no está vigente', () => {
+      assert.equal(responder({ number: 50099, message: 'El cupón todavía no está vigente.' }).status, 400);
+    });
   });
 });

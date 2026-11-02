@@ -86,6 +86,17 @@ export const optionalAuth = (req: Request, _res: Response, next: NextFunction) =
   return next();
 };
 
+export const optionalAuthLenient = (req: Request, res: Response, next: NextFunction) => {
+  if (req.headers.authorization === undefined && typeof req.query.token !== 'string') return next();
+  return requireAuth(req, res, (err?: unknown) => {
+    if (err instanceof DomainError && err.httpStatus === 401) {
+      req.user = undefined;
+      return next();
+    }
+    return next(err);
+  });
+};
+
 export const requireRoles = (...roles: UserRole[]) => {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user || !roles.includes(req.user.rol)) {

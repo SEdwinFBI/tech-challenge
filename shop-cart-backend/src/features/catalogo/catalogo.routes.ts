@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { optionalAuth, requireAuth, requireRoles } from '@/core/middlewares/auth.middleware';
+import { optionalAuthLenient, requireAuth, requireRoles } from '@/core/middlewares/auth.middleware';
 import { requireNumericId } from '@/core/middlewares/validate-param.middleware';
 import { GetCategoriesQueryHandler } from './queries/get-categories.query';
 import { GetProductsQueryHandler } from './queries/get-products.query';
@@ -46,7 +46,7 @@ const createVariantCommandHandler = new CreateVariantCommandHandler();
 const updateVariantCommandHandler = new UpdateVariantCommandHandler();
 const updatePriceCommandHandler = new UpdatePriceCommandHandler();
 
-catalogoRouter.get('/categorias', optionalAuth, async (req, res, next) => {
+catalogoRouter.get('/categorias', optionalAuthLenient, async (req, res, next) => {
   try {
     const soloActivas = req.user?.rol !== 'ADMINISTRADOR';
     const datos = await getCategoriesQueryHandler.handle(soloActivas);
@@ -56,7 +56,7 @@ catalogoRouter.get('/categorias', optionalAuth, async (req, res, next) => {
   }
 });
 
-catalogoRouter.get('/productos', optionalAuth, async (req, res, next) => {
+catalogoRouter.get('/productos', optionalAuthLenient, async (req, res, next) => {
   try {
     const query = GetProductsSchema.parse(req.query);
     const resultado = await getProductsQueryHandler.handle({

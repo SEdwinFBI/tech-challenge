@@ -5,7 +5,7 @@ export * from './auth.model';
 
 export const RegisterSchema = z.object({
   correo: z.email(),
-  password: z.string().min(8),
+  password: z.string().min(8).max(72),
   nombreCompleto: z.string().min(3),
   tokenInvitado: z.string().optional(),
 });
