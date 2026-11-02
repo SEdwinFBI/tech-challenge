@@ -3,13 +3,13 @@ import { IQueryHandler } from '@/core/cqrs/index';
 import { DashboardRepository } from '../repository/dashboard.repository';
 import { IDashboardRepository } from '../abstracts/dashboard.repository.interface';
 import { ExportDashboardExcelQuery } from '../models/dashboard.schema';
+import { resolveDashboardRange } from '../domain/dashboard-range';
 
 export class ExportDashboardExcelQueryHandler implements IQueryHandler<ExportDashboardExcelQuery, ExcelJS.Workbook> {
   constructor(private readonly repo: IDashboardRepository = new DashboardRepository()) {}
 
   async handle(query: ExportDashboardExcelQuery): Promise<ExcelJS.Workbook> {
-    const fechaInicio = query.fechaInicio || new Date(Date.now() - 30 * 86400 * 1000);
-    const fechaFin = query.fechaFin || new Date();
+    const { fechaInicio, fechaFin } = resolveDashboardRange(query);
 
     const resumen = await this.repo.getMetricsSummary(fechaInicio, fechaFin);
     const wb = new ExcelJS.Workbook();

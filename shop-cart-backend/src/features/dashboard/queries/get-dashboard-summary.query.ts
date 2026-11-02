@@ -2,6 +2,7 @@ import { IQueryHandler } from '@/core/cqrs/index';
 import { sseCacheManager } from '@/core/http/sse-cache.manager';
 import { DashboardRepository } from '../repository/dashboard.repository';
 import { IDashboardRepository } from '../abstracts/dashboard.repository.interface';
+import { resolveDashboardRange } from '../domain/dashboard-range';
 import {
   DashboardSummaryData,
   DashboardSummaryResponse,
@@ -14,8 +15,7 @@ export class GetDashboardSummaryQueryHandler
   constructor(private readonly repo: IDashboardRepository = new DashboardRepository()) {}
 
   async handle(query: GetDashboardSummaryQuery): Promise<DashboardSummaryResponse> {
-    const fechaInicio = query.fechaInicio || new Date(Date.now() - 30 * 86400 * 1000);
-    const fechaFin = query.fechaFin || new Date();
+    const { fechaInicio, fechaFin } = resolveDashboardRange(query);
     const agrupacion = (query.agrupacion || 'DIA').toUpperCase();
 
     const cacheKey = `dash_${fechaInicio.toISOString()}_${fechaFin.toISOString()}_${agrupacion}`;

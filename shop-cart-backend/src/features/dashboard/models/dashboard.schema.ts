@@ -2,11 +2,20 @@ import { z } from 'zod';
 
 export * from './dashboard.model';
 
-export const GetDashboardSummarySchema = z.object({
+const dashboardRangeFields = {
+  periodo: z.enum(['HOY', 'SEMANA', 'MES', 'ANIO']).optional(),
   fechaInicio: z.coerce.date().optional(),
   fechaFin: z.coerce.date().optional(),
+};
+
+const validDateRange = (query: { fechaInicio?: Date; fechaFin?: Date }) =>
+  !query.fechaInicio || !query.fechaFin || query.fechaInicio <= query.fechaFin;
+const dateRangeError = { message: 'La fecha final debe ser posterior o igual a la inicial.', path: ['fechaFin'] };
+
+export const GetDashboardSummarySchema = z.object({
+  ...dashboardRangeFields,
   agrupacion: z.string().optional(),
-});
+}).refine(validDateRange, dateRangeError);
 
 export type GetDashboardSummaryDTO = z.infer<typeof GetDashboardSummarySchema>;
 
@@ -22,10 +31,7 @@ export type GetSalesByPeriodDTO = z.infer<typeof GetSalesByPeriodSchema>;
 
 export type GetSalesByPeriodQuery = GetSalesByPeriodDTO;
 
-export const ExportDashboardExcelSchema = z.object({
-  fechaInicio: z.coerce.date().optional(),
-  fechaFin: z.coerce.date().optional(),
-});
+export const ExportDashboardExcelSchema = z.object(dashboardRangeFields).refine(validDateRange, dateRangeError);
 
 export type ExportDashboardExcelDTO = z.infer<typeof ExportDashboardExcelSchema>;
 
