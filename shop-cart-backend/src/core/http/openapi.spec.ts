@@ -3,14 +3,7 @@ export const openApiSpec = {
   info: {
     title: 'ShopCart E-Commerce API',
     version: '1.0.0',
-    description: `### Don Arturo Grupo Pentandra
-API de comercio electrónico con persistencia en Microsoft SQL Server 2019+ mediante procedimientos almacenados.
-
-#### Características:
-- Access Token JWT de 15 min en el header Authorization. Refresh token rotativo en cookie HttpOnly.
-- Carrito de invitado con el header \`X-Guest-Token\`. Se fusiona con el carrito del usuario al iniciar sesión.
-- Concurrencia: bloqueo pesimista (\`UPDLOCK, ROWLOCK\`) en reservas de 15 min. Checkout idempotente por \`ClaveIdempotencia\`.
-- Montos en quetzales (GTQ) con IVA del 12% incluido.`,
+    description: `API de la tienda en línea de Don Arturo Grupo Pentandra. La autenticación usa un access token JWT de 15 minutos con refresh por cookie, el carrito funciona también para invitados, las existencias se controlan con bloqueo pesimista y todos los montos son en quetzales (GTQ).`,
     contact: {
       name: 'Equipo de Desarrollo ShopCart',
       email: 'soporte@shopcart.gt',
@@ -1285,6 +1278,7 @@ API de comercio electrónico con persistencia en Microsoft SQL Server 2019+ medi
         summary: 'Resumen (Admin)',
         security: [{ bearerAuth: [] }],
         parameters: [
+          { name: 'periodo', in: 'query', description: 'Calendario de Guatemala; la semana comienza el lunes. Las fechas explícitas tienen prioridad.', schema: { type: 'string', enum: ['HOY', 'SEMANA', 'MES', 'ANIO'] } },
           { name: 'fechaInicio', in: 'query', schema: { type: 'string', format: 'date-time' } },
           { name: 'fechaFin', in: 'query', schema: { type: 'string', format: 'date-time' } },
         ],
@@ -1329,6 +1323,7 @@ API de comercio electrónico con persistencia en Microsoft SQL Server 2019+ medi
         summary: 'Exportar Excel (Admin)',
         security: [{ bearerAuth: [] }],
         parameters: [
+          { name: 'periodo', in: 'query', description: 'Mismo calendario y rango que el resumen del dashboard.', schema: { type: 'string', enum: ['HOY', 'SEMANA', 'MES', 'ANIO'] } },
           { name: 'fechaInicio', in: 'query', schema: { type: 'string', format: 'date-time' } },
           { name: 'fechaFin', in: 'query', schema: { type: 'string', format: 'date-time' } },
         ],
@@ -1430,6 +1425,21 @@ API de comercio electrónico con persistencia en Microsoft SQL Server 2019+ medi
           properties: { imagenUrl: { type: 'string', format: 'uri', nullable: true, example: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400' } },
         } } } },
         responses: { 200: { description: 'Imagen actualizada' }, 404: { description: 'Categoría inexistente' } },
+      },
+    },
+    '/catalogo/productos/{id}/inventario': {
+      get: {
+        tags: ['Inventario'],
+        summary: 'Variantes y existencias del producto (Operador y Admin)',
+        description: 'Incluye variantes inactivas para operación de inventario. No devuelve precios ni imágenes.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        responses: {
+          200: { description: 'Identificación del producto y variantes con existencias físicas, reservadas y disponibles' },
+          401: { description: 'Autenticación requerida' },
+          403: { description: 'Solo operador y administrador' },
+          404: { description: 'Producto inexistente' },
+        },
       },
     },
     '/catalogo/admin/productos/{id}': {
