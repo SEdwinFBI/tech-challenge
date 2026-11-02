@@ -4,11 +4,13 @@ API de comercio electrónico para gestionar catálogo, inventario, carritos, ped
 
 ## Arquitectura
 
-Es un monolito modular. El código se organiza por funcionalidad: cada módulo de `features/` reúne todo lo suyo, y lo transversal (configuración, middlewares, errores de dominio) está en `core/`.
+Arquitectura vertical (Vertical Slice), con DDD y CQRS ligeros.
 
-Dentro de cada módulo el flujo es ruta, comando o consulta, repositorio y procedimiento almacenado. La ruta valida la entrada con Zod y delega en un handler; el handler aplica las reglas de negocio; el repositorio, declarado como interfaz en `abstracts/`, solo invoca procedimientos almacenados. Se usa CQRS en su versión ligera: las escrituras son comandos y las lecturas son consultas, pero comparten la misma base de datos y no hay bus de mensajes.
+**Vertical.** El código se organiza por funcionalidad y no por capas técnicas. Cada módulo de `features/` es un corte completo del negocio: rutas, modelos, comandos, consultas, repositorio y reglas de dominio. Lo transversal (configuración, middlewares, errores de dominio) está en `core/`.
 
-Las reglas que no dependen de la base de datos, como la máquina de estados del pedido, las políticas de cupones e inventario y el manejo de importes, están en `domain/` como código sin efectos. Las transacciones y el control de existencias se resuelven en SQL Server.
+**CQRS ligero.** Las escrituras son comandos y las lecturas son consultas, cada una con su handler. Comparten la misma base de datos, sin bus de mensajes ni modelos de lectura separados. La ruta valida la entrada con Zod y delega en el handler, que usa un repositorio declarado como interfaz en `abstracts/`; el repositorio solo invoca procedimientos almacenados.
+
+**DDD ligero.** Las reglas del negocio viven en `domain/` como código sin dependencias de datos: la máquina de estados del pedido, las políticas de cupones e inventario, el objeto de valor `Money` y los errores de dominio. La persistencia, las transacciones y el control de existencias se resuelven en SQL Server.
 
 ## Desarrollo local
 
