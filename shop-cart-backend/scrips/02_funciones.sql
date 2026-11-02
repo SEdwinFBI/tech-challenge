@@ -1,9 +1,7 @@
 USE ShopCartDB;
 GO
 
--- Funciones de inventario y cupones
 
--- Existencia disponible
 CREATE OR ALTER FUNCTION FU_Inventario_ExistenciaDisponible (@IDVariante INT)
 RETURNS TABLE WITH SCHEMABINDING AS
 RETURN (
@@ -20,7 +18,6 @@ RETURN (
 );
 GO
 
--- Descuento de cupón
 CREATE OR ALTER FUNCTION FU_Cupones_CalculoDescuento (@IDCarrito INT, @IDUsuario INT)
 RETURNS TABLE AS
 RETURN (

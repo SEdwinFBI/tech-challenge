@@ -1,8 +1,5 @@
--- Funciones de tienda
--- Galería, favoritos y catálogo
--- Permite ejecuciones repetidas
+-- Se puede ejecutar varias veces sin duplicar datos.
 
--- Columnas de tienda
 IF COL_LENGTH('dbo.Variantes', 'PrecioReferencia') IS NULL
 BEGIN
     ALTER TABLE dbo.Variantes ADD PrecioReferencia DECIMAL(12,2) NULL
@@ -17,7 +14,6 @@ BEGIN
 END
 GO
 
--- Tablas de imágenes y favoritos
 IF OBJECT_ID('dbo.ProductoImagenes', 'U') IS NULL
 BEGIN
     CREATE TABLE dbo.ProductoImagenes (
@@ -50,7 +46,6 @@ BEGIN
 END
 GO
 
--- Listado de productos
 CREATE OR ALTER PROCEDURE SP_Catalogo_ListarProductos
     @Busqueda NVARCHAR(150) = NULL,
     @IDCategoria INT = NULL,
@@ -130,7 +125,6 @@ BEGIN
 END;
 GO
 
--- Detalle de producto y galería
 CREATE OR ALTER PROCEDURE SP_Catalogo_ObtenerDetalleProducto
     @IDProducto INT
 AS
@@ -157,7 +151,6 @@ BEGIN
 END;
 GO
 
--- Galería de imágenes
 CREATE OR ALTER PROCEDURE SP_Catalogo_ListarImagenesProducto
     @IDProducto INT
 AS
@@ -234,7 +227,6 @@ BEGIN
 END;
 GO
 
--- Precio de referencia
 CREATE OR ALTER PROCEDURE SP_Catalogo_ActualizarPrecioReferencia
     @IDVariante INT,
     @PrecioReferencia DECIMAL(12,2) = NULL,
@@ -267,7 +259,6 @@ BEGIN
 END;
 GO
 
--- Producto destacado
 CREATE OR ALTER PROCEDURE SP_Catalogo_MarcarDestacado
     @IDProducto INT,
     @Destacado BIT,
@@ -297,7 +288,6 @@ BEGIN
 END;
 GO
 
--- Favoritos por usuario
 CREATE OR ALTER PROCEDURE SP_Favoritos_Listar
     @IDUsuario INT
 AS
@@ -373,7 +363,7 @@ BEGIN
 END;
 GO
 
--- Datos demo (solo si aun no existen)
+-- Datos demo; solo si no existen.
 IF NOT EXISTS (SELECT 1 FROM ProductoImagenes)
 BEGIN
     INSERT INTO ProductoImagenes (IDProducto, Url, Orden)
@@ -395,7 +385,6 @@ BEGIN
 END
 GO
 
--- Imagen de categoría
 IF COL_LENGTH('dbo.Categorias', 'ImagenUrl') IS NULL
 BEGIN
     ALTER TABLE dbo.Categorias ADD ImagenUrl NVARCHAR(500) NULL;
@@ -457,7 +446,6 @@ BEGIN
 END
 GO
 
--- Existencias bajas
 IF NOT EXISTS (SELECT 1 FROM dbo.ConfiguracionSistema WHERE Clave = 'UmbralExistenciasBajas')
 BEGIN
     INSERT INTO dbo.ConfiguracionSistema (Clave, Valor, Descripcion)
@@ -502,7 +490,6 @@ BEGIN
 END;
 GO
 
--- Perfil y contraseña
 CREATE OR ALTER PROCEDURE SP_Usuarios_ActualizarPerfil
     @IDUsuario INT,
     @Nombre NVARCHAR(150)
@@ -552,7 +539,6 @@ BEGIN
             THROW 50098, 'El usuario no existe.', 1;
 
         UPDATE Usuarios SET Password = @PasswordHash WHERE IDUsuario = @IDUsuario;
-        -- Revocar sesiones al cambiar la contraseña
         UPDATE RefreshTokens SET Revocado = 1 WHERE IDUsuario = @IDUsuario AND Revocado = 0;
 
         INSERT INTO Bitacora (IDUsuario, Modulo, Entidad, IDEntidad, Accion, ValorAnterior, ValorNuevo)
@@ -566,7 +552,6 @@ BEGIN
 END;
 GO
 
--- Detalle administrativo del producto
 CREATE OR ALTER PROCEDURE SP_Catalogo_ObtenerDetalleAdmin
     @IDProducto INT
 AS

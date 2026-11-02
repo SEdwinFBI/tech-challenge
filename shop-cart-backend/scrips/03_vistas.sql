@@ -1,9 +1,7 @@
 USE ShopCartDB;
 GO
 
--- Vistas del sistema
 
--- Ventas por categoría
 CREATE OR ALTER VIEW VW_Dashboard_VentasPorCategoria AS
 SELECT 
     c.IDCategoria,
@@ -23,7 +21,6 @@ WHERE ep.Codigo IN ('ENTREGADO', 'DEVUELTO_PARCIAL', 'DEVUELTO_TOTAL')
 GROUP BY c.IDCategoria, c.Nombre;
 GO
 
--- Historial de pedidos e IVA
 CREATE OR ALTER VIEW VW_Pedidos_Historial AS
 SELECT 
     p.IDPedido,

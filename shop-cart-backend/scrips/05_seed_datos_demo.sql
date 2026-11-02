@@ -4,7 +4,6 @@ GO
 SET QUOTED_IDENTIFIER ON;
 GO
 
--- Datos semilla y de demostración
 
 CREATE OR ALTER PROCEDURE SP_Sistema_AplicarSeed
 AS
@@ -124,7 +123,6 @@ BEGIN
     DECLARE @IDDeptoHuehue INT = (SELECT IDDepartamento FROM Departamentos WHERE Nombre = 'Huehuetenango');
     DECLARE @IDDeptoSacat INT = (SELECT IDDepartamento FROM Departamentos WHERE Nombre = 'Sacatepéquez');
 
-    -- Municipios Guatemala
     IF @IDDeptoGuate IS NOT NULL
     BEGIN
         IF NOT EXISTS (SELECT 1 FROM Municipios WHERE IDDepartamento = @IDDeptoGuate AND Nombre = 'Guatemala')
@@ -137,7 +135,6 @@ BEGIN
             INSERT INTO Municipios (IDDepartamento, Nombre) VALUES (@IDDeptoGuate, 'Santa Catarina Pinula');
     END
 
-    -- Municipios Quetzaltenango
     IF @IDDeptoXela IS NOT NULL
     BEGIN
         IF NOT EXISTS (SELECT 1 FROM Municipios WHERE IDDepartamento = @IDDeptoXela AND Nombre = 'Quetzaltenango')
@@ -150,7 +147,6 @@ BEGIN
             INSERT INTO Municipios (IDDepartamento, Nombre) VALUES (@IDDeptoXela, 'La Esperanza');
     END
 
-    -- Municipios Totonicapán
     IF @IDDeptoToto IS NOT NULL
     BEGIN
         IF NOT EXISTS (SELECT 1 FROM Municipios WHERE IDDepartamento = @IDDeptoToto AND Nombre = 'Totonicapán')
@@ -161,7 +157,6 @@ BEGIN
             INSERT INTO Municipios (IDDepartamento, Nombre) VALUES (@IDDeptoToto, 'San Francisco El Alto');
     END
 
-    -- Municipios San Marcos
     IF @IDDeptoSanMarcos IS NOT NULL
     BEGIN
         IF NOT EXISTS (SELECT 1 FROM Municipios WHERE IDDepartamento = @IDDeptoSanMarcos AND Nombre = 'San Marcos')
@@ -170,7 +165,6 @@ BEGIN
             INSERT INTO Municipios (IDDepartamento, Nombre) VALUES (@IDDeptoSanMarcos, 'San Pedro Sacatepéquez');
     END
 
-    -- Municipios Huehuetenango
     IF @IDDeptoHuehue IS NOT NULL
     BEGIN
         IF NOT EXISTS (SELECT 1 FROM Municipios WHERE IDDepartamento = @IDDeptoHuehue AND Nombre = 'Huehuetenango')
@@ -179,7 +173,6 @@ BEGIN
             INSERT INTO Municipios (IDDepartamento, Nombre) VALUES (@IDDeptoHuehue, 'Chiantla');
     END
 
-    -- Municipios Sacatepéquez
     IF @IDDeptoSacat IS NOT NULL
     BEGIN
         IF NOT EXISTS (SELECT 1 FROM Municipios WHERE IDDepartamento = @IDDeptoSacat AND Nombre = 'Antigua Guatemala')
@@ -411,66 +404,54 @@ BEGIN
     DECLARE @CatMochilas INT = (SELECT IDCategoria FROM Categorias WHERE Nombre = 'Mochilas y Viaje');
 
     -- Productos
-    -- Botín de Cuero Artesanal
     IF NOT EXISTS (SELECT 1 FROM Productos WHERE Nombre = 'Botín de Cuero Artesanal')
         INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo)
         VALUES (@CatCalzado, 'Botín de Cuero Artesanal', 'Botín 100% cuero vacuno curtido en Pastores, Sacatepéquez. Ojo: la horma viene un poco reducida, si tenés el pie ancho pedí media talla más. La suela es de hule cocida, aguanta buen trote en empedrado.', 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800', 1);
     ELSE
         UPDATE Productos SET Descripcion = 'Botín 100% cuero vacuno curtido en Pastores, Sacatepéquez. Ojo: la horma viene un poco reducida, si tenés el pie ancho pedí media talla más. La suela es de hule cocida, aguanta buen trote en empedrado.' WHERE Nombre = 'Botín de Cuero Artesanal';
 
-    -- Camisa Oxford Clásica
     IF NOT EXISTS (SELECT 1 FROM Productos WHERE Nombre = 'Camisa Oxford Clásica')
         INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo)
         VALUES (@CatCamisas, 'Camisa Oxford Clásica', 'Camisa de algodón con tramado oxford. Corte regular fit clásico. Lavar a mano con agua fría porque si la metés a secadora caliente encoge casi media talla. Viene con repuesto de dos botones en la etiqueta interior.', 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800', 1);
     ELSE
         UPDATE Productos SET Descripcion = 'Camisa de algodón con tramado oxford. Corte regular fit clásico. Lavar a mano con agua fría porque si la metés a secadora caliente encoge casi media talla. Viene con repuesto de dos botones en la etiqueta interior.' WHERE Nombre = 'Camisa Oxford Clásica';
 
-    -- Tenis Urbanos de Lona y Cuero
     IF NOT EXISTS (SELECT 1 FROM Productos WHERE Nombre = 'Tenis Urbanos de Lona y Cuero')
         INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo)
         VALUES (@CatCalzado, 'Tenis Urbanos de Lona y Cuero', 'Tenis para el día a día con plantilla acolchada de espuma viscoelástica. La suela viene pegada y vulcanizada. Aviso: la lona no es impermeable, si llueve fuerte sí se pasa el agua.', 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=800', 1);
 
-    -- Blusa Típica con Bordado de Cantel
     IF NOT EXISTS (SELECT 1 FROM Productos WHERE Nombre = 'Blusa Típica con Bordado de Cantel')
         INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo)
         VALUES (@CatCamisas, 'Blusa Típica con Bordado de Cantel', 'Blusa de manta 100% algodón tejida en telar de pedal en Quetzaltenango con cuello bordado a mano. Cada pieza varía un poco en los tonos del hilo. No usar cloro jamás para no desteñir el bordado.', 'https://images.unsplash.com/photo-1564257631407-4deb129f044b?w=800', 1);
 
-    -- Cinturón Reversible de Cuero Genuino
     IF NOT EXISTS (SELECT 1 FROM Productos WHERE Nombre = 'Cinturón Reversible de Cuero Genuino')
         INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo)
         VALUES (@CatAccesorios, 'Cinturón Reversible de Cuero Genuino', 'Cinturón doble faz (café de un lado y negro del otro) con hebilla giratoria metálica. Cuero vacuno grueso de 3.5 cm de ancho. Si te queda muy largo, la hebilla se desatornilla fácil con un desarmador plano para cortarlo a tu medida.', 'https://images.unsplash.com/photo-1624222247344-550fb60583dc?w=800', 1);
 
-    -- Billetera Bifold con Bloqueo RFID
     IF NOT EXISTS (SELECT 1 FROM Productos WHERE Nombre = 'Billetera Bifold con Bloqueo RFID')
         INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo)
         VALUES (@CatAccesorios, 'Billetera Bifold con Bloqueo RFID', 'Billetera de cuero curtido al aceite, entra cabal el DPI, licencia y hasta 8 tarjetas sin abultar el pantalón. Tiene forro metálico antirrobo RFID. Al principio se siente un poco dura pero con dos semanas de uso afloja y se amolda.', 'https://images.unsplash.com/photo-1627123424574-724758594e93?w=800', 1);
 
-    -- Audífonos Inalámbricos True Wireless Sport
     IF NOT EXISTS (SELECT 1 FROM Productos WHERE Nombre = 'Audífonos Inalámbricos True Wireless Sport')
         INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo)
         VALUES (@CatTecnologia, 'Audífonos Inalámbricos True Wireless Sport', 'Audífonos bluetooth 5.3 con resistencia a sudor IPX5 y estuche de carga USB-C. La batería le dura unas 5 a 6 horas continuas si tenés el volumen alto (no las 10 que dice la caja). Trae 3 pares de gomitas de repuesto para ajustarse a tu oído.', 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800', 1);
 
-    -- Bocina Portátil Resistente al Agua IPX6
     IF NOT EXISTS (SELECT 1 FROM Productos WHERE Nombre = 'Bocina Portátil Resistente al Agua IPX6')
         INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo)
         VALUES (@CatTecnologia, 'Bocina Portátil Resistente al Agua IPX6', 'Bocina compacta de 15W con sonido claro y buen bajo para su tamaño. Ojo: no incluye el cubo cargador de pared, solo viene el cable tipo C en la caja. Aguanta salpicaduras de lluvia o piscina, pero no es sumergible.', 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=800', 1);
 
-    -- Café Especial de Origen Huehuetenango
     IF NOT EXISTS (SELECT 1 FROM Productos WHERE Nombre = 'Café Especial de Origen Huehuetenango')
         INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo)
         VALUES (@CatHogar, 'Café Especial de Origen Huehuetenango', 'Café de estricta altura (1,650 msnm) cosechado en la sierra de los Cuchumatanes. Tueste medio con notas achocolatadas y acidez cítrica brillante. Por defecto viene en grano entero para preservar el aroma; si lo querés molido ponelo en las notas aclarando para qué método.', 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=800', 1);
 
-    -- Prensa Francesa de Vidrio Borosilicato 800ml
     IF NOT EXISTS (SELECT 1 FROM Productos WHERE Nombre = 'Prensa Francesa de Vidrio Borosilicato 800ml')
         INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo)
         VALUES (@CatHogar, 'Prensa Francesa de Vidrio Borosilicato 800ml', 'Cafetera de émbolo de vidrio resistente al choque térmico con filtro de acero inoxidable 304. Rinde unas 3 tazas de café. Importante: lavar el émbolo con esponja suave para no doblar la orilla de la malla metálica.', 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=800', 1);
 
-    -- Mochila Ejecutiva Antirrobo para Laptop 15.6"'
     IF NOT EXISTS (SELECT 1 FROM Productos WHERE Nombre = 'Mochila Ejecutiva Antirrobo para Laptop 15.6"')
         INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo)
         VALUES (@CatMochilas, 'Mochila Ejecutiva Antirrobo para Laptop 15.6"', 'Mochila de tela impermeable con puerto de carga USB exterior (requiere powerbank adentro, no incluido). Cremalleras ocultas pegadas a la espalda para evitar aperturas en el Transmetro o en aglomeraciones.', 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800', 1);
 
-    -- Morral Casual de Lona y Cuero Vintage
     IF NOT EXISTS (SELECT 1 FROM Productos WHERE Nombre = 'Morral Casual de Lona y Cuero Vintage')
         INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo)
         VALUES (@CatMochilas, 'Morral Casual de Lona y Cuero Vintage', 'Morral confeccionado en lona encerada gruesa de 16oz y detalles en cuero vacuno con forro de tela a rayas. Aguanta cuadernos, tablet y termo de agua. Al inicio el encerado huele un poco fuerte a cera natural; se le quita ventilándolo dos días.', 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800', 1);
@@ -489,7 +470,6 @@ BEGIN
     DECLARE @IDP_Morral INT = (SELECT IDProducto FROM Productos WHERE Nombre = 'Morral Casual de Lona y Cuero Vintage');
 
     -- Variantes y existencias
-    -- Botín
     IF NOT EXISTS (SELECT 1 FROM Variantes WHERE SKU = 'BOT-CUE-40-CAF')
         INSERT INTO Variantes (IDProducto, SKU, Talla, Color, Presentacion, Precio, ExistenciaFisica, Activo)
         VALUES (@IDP_Botin, 'BOT-CUE-40-CAF', '40', 'Café Caramelo', 'Par en Caja', 650.00, 10, 1);
@@ -514,7 +494,6 @@ BEGIN
     ELSE
         UPDATE Variantes SET Precio = 675.00, ExistenciaFisica = 6 WHERE SKU = 'BOT-CUE-39-MIE';
 
-    -- Camisa Oxford
     IF NOT EXISTS (SELECT 1 FROM Variantes WHERE SKU = 'CAM-OXF-M-AZU')
         INSERT INTO Variantes (IDProducto, SKU, Talla, Color, Presentacion, Precio, ExistenciaFisica, Activo)
         VALUES (@IDP_Camisa, 'CAM-OXF-M-AZU', 'M', 'Azul Celeste', 'Unidad', 280.00, 15, 1);
@@ -539,7 +518,6 @@ BEGIN
     ELSE
         UPDATE Variantes SET Precio = 295.00, ExistenciaFisica = 9 WHERE SKU = 'CAM-OXF-XL-AZU';
 
-    -- Tenis Urbanos
     IF NOT EXISTS (SELECT 1 FROM Variantes WHERE SKU = 'TEN-URB-41-GRI')
         INSERT INTO Variantes (IDProducto, SKU, Talla, Color, Presentacion, Precio, ExistenciaFisica, Activo)
         VALUES (@IDP_Tenis, 'TEN-URB-41-GRI', '41', 'Gris Asfalto', 'Par en Caja', 420.00, 14, 1);
@@ -564,7 +542,6 @@ BEGIN
     ELSE
         UPDATE Variantes SET Precio = 435.00, ExistenciaFisica = 5 WHERE SKU = 'TEN-URB-43-NEG';
 
-    -- Blusa Cantel
     IF NOT EXISTS (SELECT 1 FROM Variantes WHERE SKU = 'BLU-CAN-S-BLA')
         INSERT INTO Variantes (IDProducto, SKU, Talla, Color, Presentacion, Precio, ExistenciaFisica, Activo)
         VALUES (@IDP_Blusa, 'BLU-CAN-S-BLA', 'S', 'Blanco Bordado', 'Unidad', 320.00, 8, 1);
@@ -583,7 +560,6 @@ BEGIN
     ELSE
         UPDATE Variantes SET Precio = 340.00, ExistenciaFisica = 6 WHERE SKU = 'BLU-CAN-L-IND';
 
-    -- Cinturón Reversible
     IF NOT EXISTS (SELECT 1 FROM Variantes WHERE SKU = 'CIN-REV-34-BIC')
         INSERT INTO Variantes (IDProducto, SKU, Talla, Color, Presentacion, Precio, ExistenciaFisica, Activo)
         VALUES (@IDP_Cinturon, 'CIN-REV-34-BIC', '34', 'Negro/Café Reversible', 'Unidad', 195.00, 18, 1);
@@ -602,7 +578,6 @@ BEGIN
     ELSE
         UPDATE Variantes SET Precio = 195.00, ExistenciaFisica = 10 WHERE SKU = 'CIN-REV-38-BIC';
 
-    -- Billetera RFID
     IF NOT EXISTS (SELECT 1 FROM Variantes WHERE SKU = 'BIL-RFID-CAF')
         INSERT INTO Variantes (IDProducto, SKU, Talla, Color, Presentacion, Precio, ExistenciaFisica, Activo)
         VALUES (@IDP_Billetera, 'BIL-RFID-CAF', 'Estándar', 'Café Tabaco', 'Caja Regalo', 175.00, 22, 1);
@@ -615,7 +590,6 @@ BEGIN
     ELSE
         UPDATE Variantes SET Precio = 175.00, ExistenciaFisica = 16 WHERE SKU = 'BIL-RFID-NEG';
 
-    -- Audífonos Sport
     IF NOT EXISTS (SELECT 1 FROM Variantes WHERE SKU = 'AUD-TWS-NEG')
         INSERT INTO Variantes (IDProducto, SKU, Talla, Color, Presentacion, Precio, ExistenciaFisica, Activo)
         VALUES (@IDP_Audifonos, 'AUD-TWS-NEG', 'Universal', 'Negro Mate', 'Caja Sellada', 345.00, 20, 1);
@@ -628,7 +602,6 @@ BEGIN
     ELSE
         UPDATE Variantes SET Precio = 345.00, ExistenciaFisica = 14 WHERE SKU = 'AUD-TWS-BLA';
 
-    -- Bocina IPX6
     IF NOT EXISTS (SELECT 1 FROM Variantes WHERE SKU = 'BOC-WAT-AZU')
         INSERT INTO Variantes (IDProducto, SKU, Talla, Color, Presentacion, Precio, ExistenciaFisica, Activo)
         VALUES (@IDP_Bocina, 'BOC-WAT-AZU', 'Compacta', 'Azul Petróleo', 'Caja', 290.00, 12, 1);
@@ -641,7 +614,6 @@ BEGIN
     ELSE
         UPDATE Variantes SET Precio = 290.00, ExistenciaFisica = 15 WHERE SKU = 'BOC-WAT-NEG';
 
-    -- Café Huehuetenango
     IF NOT EXISTS (SELECT 1 FROM Variantes WHERE SKU = 'CAF-HUE-GRA-1LB')
         INSERT INTO Variantes (IDProducto, SKU, Talla, Color, Presentacion, Precio, ExistenciaFisica, Activo)
         VALUES (@IDP_Cafe, 'CAF-HUE-GRA-1LB', '1 Libra', 'Grano Entero', 'Bolsa con Válvula', 65.00, 35, 1);
@@ -660,7 +632,6 @@ BEGIN
     ELSE
         UPDATE Variantes SET Precio = 65.00, ExistenciaFisica = 25 WHERE SKU = 'CAF-HUE-MOL-1LB';
 
-    -- Prensa Francesa
     IF NOT EXISTS (SELECT 1 FROM Variantes WHERE SKU = 'PRE-FRA-800-INO')
         INSERT INTO Variantes (IDProducto, SKU, Talla, Color, Presentacion, Precio, ExistenciaFisica, Activo)
         VALUES (@IDP_Prensa, 'PRE-FRA-800-INO', '800 ml', 'Acero Inoxidable', 'Caja', 185.00, 18, 1);
@@ -673,7 +644,6 @@ BEGIN
     ELSE
         UPDATE Variantes SET Precio = 195.00, ExistenciaFisica = 10 WHERE SKU = 'PRE-FRA-800-NEG';
 
-    -- Mochila Ejecutiva
     IF NOT EXISTS (SELECT 1 FROM Variantes WHERE SKU = 'MOC-EJE-GRI')
         INSERT INTO Variantes (IDProducto, SKU, Talla, Color, Presentacion, Precio, ExistenciaFisica, Activo)
         VALUES (@IDP_Mochila, 'MOC-EJE-GRI', '15.6 Pulgadas', 'Gris Oxford', 'Unidad con Funda', 380.00, 16, 1);
@@ -686,7 +656,6 @@ BEGIN
     ELSE
         UPDATE Variantes SET Precio = 380.00, ExistenciaFisica = 12 WHERE SKU = 'MOC-EJE-NEG';
 
-    -- Morral Casual
     IF NOT EXISTS (SELECT 1 FROM Variantes WHERE SKU = 'MOR-LON-VER')
         INSERT INTO Variantes (IDProducto, SKU, Talla, Color, Presentacion, Precio, ExistenciaFisica, Activo)
         VALUES (@IDP_Morral, 'MOR-LON-VER', 'Mediano (14L)', 'Verde Militar', 'Unidad', 310.00, 14, 1);
@@ -703,22 +672,18 @@ BEGIN
     DECLARE @IDDescPorc INT = (SELECT IDTipoDescuento FROM TipoDescuento WHERE Codigo = 'PORCENTAJE');
     DECLARE @IDDescFijo INT = (SELECT IDTipoDescuento FROM TipoDescuento WHERE Codigo = 'MONTO_FIJO');
 
-    -- Cupón Bienvenida 15%
     IF NOT EXISTS (SELECT 1 FROM Cupones WHERE Codigo = 'BIENVENIDA15')
         INSERT INTO Cupones (Codigo, IDTipoDescuento, Valor, MontoMinimoCompra, LimiteTotalUsos, LimiteUsosPorCliente, UsosActuales, FechaInicio, FechaFin, Activo)
         VALUES ('BIENVENIDA15', @IDDescPorc, 15.00, 200.00, 100, 1, 2, DATEADD(DAY, -25, SYSDATETIME()), DATEADD(DAY, 45, SYSDATETIME()), 1);
 
-    -- Cupón Fijo Q50
     IF NOT EXISTS (SELECT 1 FROM Cupones WHERE Codigo = 'GUATE50')
         INSERT INTO Cupones (Codigo, IDTipoDescuento, Valor, MontoMinimoCompra, LimiteTotalUsos, LimiteUsosPorCliente, UsosActuales, FechaInicio, FechaFin, Activo)
         VALUES ('GUATE50', @IDDescFijo, 50.00, 350.00, 50, 1, 2, DATEADD(DAY, -25, SYSDATETIME()), DATEADD(DAY, 30, SYSDATETIME()), 1);
 
-    -- Cupón Café 10%
     IF NOT EXISTS (SELECT 1 FROM Cupones WHERE Codigo = 'HUEHUECAFE')
         INSERT INTO Cupones (Codigo, IDTipoDescuento, Valor, MontoMinimoCompra, LimiteTotalUsos, LimiteUsosPorCliente, UsosActuales, IDCategoriaAplica, FechaInicio, FechaFin, Activo)
         VALUES ('HUEHUECAFE', @IDDescPorc, 10.00, 100.00, 200, 2, 0, @CatHogar, DATEADD(DAY, -20, SYSDATETIME()), DATEADD(DAY, 60, SYSDATETIME()), 1);
 
-    -- Cupón Cliente Frecuente 20%
     IF NOT EXISTS (SELECT 1 FROM Cupones WHERE Codigo = 'CLIENTEFRECUENTE')
         INSERT INTO Cupones (Codigo, IDTipoDescuento, Valor, MontoMinimoCompra, LimiteTotalUsos, LimiteUsosPorCliente, UsosActuales, FechaInicio, FechaFin, Activo)
         VALUES ('CLIENTEFRECUENTE', @IDDescPorc, 20.00, 400.00, 30, 1, 1, DATEADD(DAY, -15, SYSDATETIME()), DATEADD(DAY, 30, SYSDATETIME()), 1);
@@ -811,7 +776,6 @@ BEGIN
     DECLARE @V_MOR_VER INT = (SELECT IDVariante FROM Variantes WHERE SKU = 'MOR-LON-VER');
     DECLARE @V_MOR_KHA INT = (SELECT IDVariante FROM Variantes WHERE SKU = 'MOR-LON-KHA');
 
-    -- Pedido ENTREGADO (Hace 24 días)
     IF NOT EXISTS (SELECT 1 FROM Pedidos WHERE ClaveIdempotencia = 'ORDER-SEED-2026-001')
     BEGIN
         INSERT INTO Pedidos (IDUsuario, IDDireccion, IDCupon, IDEstadoPedido, ClaveIdempotencia, Subtotal, Descuento, CostoEnvio, MontoReembolsado, Total, FechaCreacion)
@@ -828,7 +792,6 @@ BEGIN
         (@IDP1, @IDUserOperador, @EstDesp, @EstEntregado, 'Entregado al cliente en portón café zona 1, firmó recibido conforme', DATEADD(DAY, -22, SYSDATETIME()));
     END
 
-    -- Pedido ENTREGADO (Hace 20 días)
     IF NOT EXISTS (SELECT 1 FROM Pedidos WHERE ClaveIdempotencia = 'ORDER-SEED-2026-002')
     BEGIN
         INSERT INTO Pedidos (IDUsuario, IDDireccion, IDCupon, IDEstadoPedido, ClaveIdempotencia, Subtotal, Descuento, CostoEnvio, MontoReembolsado, Total, FechaCreacion)
@@ -846,7 +809,6 @@ BEGIN
         (@IDP2, @IDUserOperador, @EstDesp, @EstEntregado, 'Dejado en recepción del edificio Torre Azul con recepcionista Claudia', DATEADD(DAY, -18, SYSDATETIME()));
     END
 
-    -- Pedido DEVUELTO_PARCIAL (Hace 18 días)
     IF NOT EXISTS (SELECT 1 FROM Pedidos WHERE ClaveIdempotencia = 'ORDER-SEED-2026-003')
     BEGIN
         INSERT INTO Pedidos (IDUsuario, IDDireccion, IDCupon, IDEstadoPedido, ClaveIdempotencia, Subtotal, Descuento, CostoEnvio, MontoReembolsado, Total, FechaCreacion)
@@ -870,7 +832,6 @@ BEGIN
         (@IDP3, @IDUserOperador, @EstEntregado, @EstDevParcial, 'Devolución procesada: me quedó apretado del empeine, solicito cambio o devolución', DATEADD(DAY, -13, SYSDATETIME()));
     END
 
-    -- Pedido CANCELADO (Hace 15 días)
     IF NOT EXISTS (SELECT 1 FROM Pedidos WHERE ClaveIdempotencia = 'ORDER-SEED-2026-004')
     BEGIN
         INSERT INTO Pedidos (IDUsuario, IDDireccion, IDCupon, IDEstadoPedido, ClaveIdempotencia, Subtotal, Descuento, CostoEnvio, MontoReembolsado, Total, FechaCreacion)
@@ -885,7 +846,6 @@ BEGIN
         (@IDP4, @IDUserOperador, @EstPagado, @EstCancelado, 'el cliente llamó para cancelar porque se equivocó de talla y prefiere pedir M', DATEADD(DAY, -15, SYSDATETIME()));
     END
 
-    -- Pedido ENTREGADO (Hace 12 días)
     IF NOT EXISTS (SELECT 1 FROM Pedidos WHERE ClaveIdempotencia = 'ORDER-SEED-2026-005')
     BEGIN
         INSERT INTO Pedidos (IDUsuario, IDDireccion, IDCupon, IDEstadoPedido, ClaveIdempotencia, Subtotal, Descuento, CostoEnvio, MontoReembolsado, Total, FechaCreacion)
@@ -904,7 +864,6 @@ BEGIN
         (@IDP5, @IDUserOperador, @EstDesp, @EstEntregado, 'Entregado en abarrotería frente al salón municipal', DATEADD(DAY, -9, SYSDATETIME()));
     END
 
-    -- Pedido ENTREGADO (Hace 9 días)
     IF NOT EXISTS (SELECT 1 FROM Pedidos WHERE ClaveIdempotencia = 'ORDER-SEED-2026-006')
     BEGIN
         INSERT INTO Pedidos (IDUsuario, IDDireccion, IDCupon, IDEstadoPedido, ClaveIdempotencia, Subtotal, Descuento, CostoEnvio, MontoReembolsado, Total, FechaCreacion)
@@ -922,7 +881,6 @@ BEGIN
         (@IDP6, @IDUserOperador, @EstDesp, @EstEntregado, 'Entregado en mano propia en garita de Plaza 10', DATEADD(DAY, -7, SYSDATETIME()));
     END
 
-    -- Pedido DESPACHADO (Hace 4 días)
     IF NOT EXISTS (SELECT 1 FROM Pedidos WHERE ClaveIdempotencia = 'ORDER-SEED-2026-007')
     BEGIN
         INSERT INTO Pedidos (IDUsuario, IDDireccion, IDCupon, IDEstadoPedido, ClaveIdempotencia, Subtotal, Descuento, CostoEnvio, MontoReembolsado, Total, FechaCreacion)
@@ -939,7 +897,6 @@ BEGIN
         (@IDP7, @IDUserOperador, @EstPrep, @EstDesp, 'Guía Cargo Expreso #CAX-99418 ruta Sacatepéquez en tránsito', DATEADD(DAY, -2, SYSDATETIME()));
     END
 
-    -- Pedido EN_PREPARACION (Hace 2 días)
     IF NOT EXISTS (SELECT 1 FROM Pedidos WHERE ClaveIdempotencia = 'ORDER-SEED-2026-008')
     BEGIN
         INSERT INTO Pedidos (IDUsuario, IDDireccion, IDCupon, IDEstadoPedido, ClaveIdempotencia, Subtotal, Descuento, CostoEnvio, MontoReembolsado, Total, FechaCreacion)
@@ -955,7 +912,6 @@ BEGIN
         (@IDP8, @IDUserOperador, @EstPagado, @EstPrep, 'El operador está alistando los productos y verificando cable de bocina', DATEADD(DAY, -1, SYSDATETIME()));
     END
 
-    -- Pedido PAGADO (Hace 6 horas)
     IF NOT EXISTS (SELECT 1 FROM Pedidos WHERE ClaveIdempotencia = 'ORDER-SEED-2026-009')
     BEGIN
         INSERT INTO Pedidos (IDUsuario, IDDireccion, IDCupon, IDEstadoPedido, ClaveIdempotencia, Subtotal, Descuento, CostoEnvio, MontoReembolsado, Total, FechaCreacion)
@@ -970,7 +926,6 @@ BEGIN
         (@IDP9, @IDUserClaudia, NULL, @EstPagado, 'Pedido pagado exitosamente tras checkout, listo para surtir en bodega', DATEADD(HOUR, -6, SYSDATETIME()));
     END
 
-    -- Pedido ENTREGADO (Hace 14 días)
     IF NOT EXISTS (SELECT 1 FROM Pedidos WHERE ClaveIdempotencia = 'ORDER-SEED-2026-010')
     BEGIN
         INSERT INTO Pedidos (IDUsuario, IDDireccion, IDCupon, IDEstadoPedido, ClaveIdempotencia, Subtotal, Descuento, CostoEnvio, MontoReembolsado, Total, FechaCreacion)
@@ -987,7 +942,6 @@ BEGIN
         (@IDP10, @IDUserOperador, @EstDesp, @EstEntregado, 'Entregado en zaguán rojo zona 1', DATEADD(DAY, -11, SYSDATETIME()));
     END
 
-    -- Pedido ENTREGADO (Hace 7 días)
     IF NOT EXISTS (SELECT 1 FROM Pedidos WHERE ClaveIdempotencia = 'ORDER-SEED-2026-011')
     BEGIN
         INSERT INTO Pedidos (IDUsuario, IDDireccion, IDCupon, IDEstadoPedido, ClaveIdempotencia, Subtotal, Descuento, CostoEnvio, MontoReembolsado, Total, FechaCreacion)
@@ -1028,7 +982,6 @@ BEGIN
     -- Borrar filas de kardex viejas para que el saldo cuadre con la existencia
     DELETE FROM Kardex WHERE Motivo IN ('Inventario inicial semilla', 'Inventario inicial semilla (Última unidad)');
 
-    -- BOT-CUE-40-CAF (10 final)
     IF @V_BOT40 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_BOT40 AND Motivo = 'Inventario inicial de apertura de tienda')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_BOT40, @IDUserAdmin, @MovEntrada, 11, 11, 'Inventario inicial de apertura de tienda', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1037,7 +990,6 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_BOT40, @IDUserOperador, @MovSalida, -1, 10, 'Salida por venta en Pedido #1 (BOT-CUE-40-CAF)', @IDPed1, DATEADD(DAY, -24, SYSDATETIME()));
 
-    -- BOT-CUE-42-NEG (4 final)
     IF @V_BOT42 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_BOT42 AND Motivo = 'Inventario inicial de apertura de tienda')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_BOT42, @IDUserAdmin, @MovEntrada, 4, 4, 'Inventario inicial de apertura de tienda', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1050,7 +1002,6 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_BOT42, @IDUserOperador, @MovDevolucion, 1, 4, 'Devolución Pedido #3: me quedó apretado del empeine, solicito cambio o devolución', @IDPed3, DATEADD(DAY, -13, SYSDATETIME()));
 
-    -- BOT-CUE-41-CAF (8 final)
     IF @V_BOT41 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_BOT41 AND Motivo = 'Inventario inicial de apertura de tienda')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_BOT41, @IDUserAdmin, @MovEntrada, 9, 9, 'Inventario inicial de apertura de tienda', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1059,12 +1010,10 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_BOT41, @IDUserOperador, @MovSalida, -1, 8, 'Salida por venta en Pedido #10 (BOT-CUE-41-CAF)', @IDPed10, DATEADD(DAY, -14, SYSDATETIME()));
 
-    -- BOT-CUE-39-MIE (6 final)
     IF @V_BOT39 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_BOT39 AND Motivo = 'Inventario inicial de apertura de tienda')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_BOT39, @IDUserAdmin, @MovEntrada, 6, 6, 'Inventario inicial de apertura de tienda', DATEADD(DAY, -28, SYSDATETIME()));
 
-    -- CAM-OXF-M-AZU (15 final)
     IF @V_CAM_M IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_CAM_M AND Motivo = 'Inventario inicial lote textil importado')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_CAM_M, @IDUserAdmin, @MovEntrada, 16, 16, 'Inventario inicial lote textil importado', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1073,12 +1022,10 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_CAM_M, @IDUserOperador, @MovSalida, -1, 15, 'Salida por venta en Pedido #11 (CAM-OXF-M-AZU)', @IDPed11, DATEADD(DAY, -7, SYSDATETIME()));
 
-    -- CAM-OXF-L-BLA (12 final)
     IF @V_CAM_L IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_CAM_L AND Motivo = 'Inventario inicial lote textil importado')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_CAM_L, @IDUserAdmin, @MovEntrada, 12, 12, 'Inventario inicial lote textil importado', DATEADD(DAY, -28, SYSDATETIME()));
 
-    -- CAM-OXF-S-ROS (7 final)
     IF @V_CAM_S IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_CAM_S AND Motivo = 'Inventario inicial lote textil importado')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_CAM_S, @IDUserAdmin, @MovEntrada, 7, 7, 'Inventario inicial lote textil importado', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1091,12 +1038,10 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_CAM_S, @IDUserOperador, @MovAjustePos, 1, 7, 'Reintegro por cancelación Pedido #4: cliente equivocó de talla', @IDPed4, DATEADD(DAY, -15, SYSDATETIME()));
 
-    -- CAM-OXF-XL-AZU (9 final)
     IF @V_CAM_XL IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_CAM_XL AND Motivo = 'Inventario inicial lote textil importado')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_CAM_XL, @IDUserAdmin, @MovEntrada, 9, 9, 'Inventario inicial lote textil importado', DATEADD(DAY, -28, SYSDATETIME()));
 
-    -- TEN-URB-41-GRI (14 final)
     IF @V_TEN41 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_TEN41 AND Motivo = 'Recepción de proveedor de calzado')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_TEN41, @IDUserAdmin, @MovEntrada, 15, 15, 'Recepción de proveedor de calzado', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1105,7 +1050,6 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_TEN41, @IDUserOperador, @MovAjusteNeg, -1, 14, 'caja llegó golpeada en ruta de guatex, se descuenta 1 unidad dañada', DATEADD(DAY, -10, SYSDATETIME()));
 
-    -- TEN-URB-42-GRI (9 final)
     IF @V_TEN42 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_TEN42 AND Motivo = 'Recepción de proveedor de calzado')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_TEN42, @IDUserAdmin, @MovEntrada, 10, 10, 'Recepción de proveedor de calzado', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1114,7 +1058,6 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_TEN42, @IDUserOperador, @MovSalida, -1, 9, 'Salida por venta en Pedido #8 (TEN-URB-42-GRI)', @IDPed8, DATEADD(DAY, -2, SYSDATETIME()));
 
-    -- TEN-URB-40-AZU (11 final)
     IF @V_TEN40 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_TEN40 AND Motivo = 'Recepción de proveedor de calzado')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_TEN40, @IDUserAdmin, @MovEntrada, 12, 12, 'Recepción de proveedor de calzado', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1123,7 +1066,6 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_TEN40, @IDUserOperador, @MovSalida, -1, 11, 'Salida por venta en Pedido #11 (TEN-URB-40-AZU)', @IDPed11, DATEADD(DAY, -7, SYSDATETIME()));
 
-    -- TEN-URB-43-NEG (5 final)
     IF @V_TEN43 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_TEN43 AND Motivo = 'Recepción de proveedor de calzado')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_TEN43, @IDUserAdmin, @MovEntrada, 3, 3, 'Recepción de proveedor de calzado', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1132,12 +1074,10 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_TEN43, @IDUserOperador, @MovAjustePos, 2, 5, 'conteo físico de sábado por la mañana, sobraban 2 en bodega', DATEADD(DAY, -5, SYSDATETIME()));
 
-    -- BLU-CAN-S-BLA (8 final)
     IF @V_BLU_S IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_BLU_S AND Motivo = 'Recepción de taller artesanal Cantel')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_BLU_S, @IDUserAdmin, @MovEntrada, 8, 8, 'Recepción de taller artesanal Cantel', DATEADD(DAY, -28, SYSDATETIME()));
 
-    -- BLU-CAN-M-BLA (12 final)
     IF @V_BLU_M IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_BLU_M AND Motivo = 'Recepción de taller artesanal Cantel')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_BLU_M, @IDUserAdmin, @MovEntrada, 13, 13, 'Recepción de taller artesanal Cantel', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1146,12 +1086,10 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_BLU_M, @IDUserOperador, @MovSalida, -1, 12, 'Salida por venta en Pedido #7 (BLU-CAN-M-BLA)', @IDPed7, DATEADD(DAY, -4, SYSDATETIME()));
 
-    -- BLU-CAN-L-IND (6 final)
     IF @V_BLU_L IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_BLU_L AND Motivo = 'Recepción de taller artesanal Cantel')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_BLU_L, @IDUserAdmin, @MovEntrada, 6, 6, 'Recepción de taller artesanal Cantel', DATEADD(DAY, -28, SYSDATETIME()));
 
-    -- CIN-REV-34-BIC (18 final)
     IF @V_CIN34 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_CIN34 AND Motivo = 'Recepción lote marroquinería')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_CIN34, @IDUserAdmin, @MovEntrada, 19, 19, 'Recepción lote marroquinería', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1160,7 +1098,6 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_CIN34, @IDUserOperador, @MovSalida, -1, 18, 'Salida por venta en Pedido #6', @IDPed6, DATEADD(DAY, -9, SYSDATETIME()));
 
-    -- CIN-REV-36-BIC (15 final)
     IF @V_CIN36 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_CIN36 AND Motivo = 'Recepción lote marroquinería')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_CIN36, @IDUserAdmin, @MovEntrada, 16, 16, 'Recepción lote marroquinería', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1169,12 +1106,10 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_CIN36, @IDUserOperador, @MovSalida, -1, 15, 'Salida por venta en Pedido #3', @IDPed3, DATEADD(DAY, -18, SYSDATETIME()));
 
-    -- CIN-REV-38-BIC (10 final)
     IF @V_CIN38 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_CIN38 AND Motivo = 'Recepción lote marroquinería')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_CIN38, @IDUserAdmin, @MovEntrada, 10, 10, 'Recepción lote marroquinería', DATEADD(DAY, -28, SYSDATETIME()));
 
-    -- BIL-RFID-CAF (22 final)
     IF @V_BIL_CAF IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_BIL_CAF AND Motivo = 'Lote billeteras con chip antirrobo')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_BIL_CAF, @IDUserAdmin, @MovEntrada, 23, 23, 'Lote billeteras con chip antirrobo', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1183,12 +1118,10 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_BIL_CAF, @IDUserOperador, @MovSalida, -1, 22, 'Salida por venta en Pedido #5', @IDPed5, DATEADD(DAY, -12, SYSDATETIME()));
 
-    -- BIL-RFID-NEG (16 final)
     IF @V_BIL_NEG IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_BIL_NEG AND Motivo = 'Lote billeteras con chip antirrobo')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_BIL_NEG, @IDUserAdmin, @MovEntrada, 16, 16, 'Lote billeteras con chip antirrobo', DATEADD(DAY, -28, SYSDATETIME()));
 
-    -- AUD-TWS-NEG (20 final)
     IF @V_AUD_NEG IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_AUD_NEG AND Motivo = 'Lote importación gadgets audio TWS')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_AUD_NEG, @IDUserAdmin, @MovEntrada, 21, 21, 'Lote importación gadgets audio TWS', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1197,12 +1130,10 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_AUD_NEG, @IDUserOperador, @MovSalida, -1, 20, 'Salida por venta en Pedido #6', @IDPed6, DATEADD(DAY, -9, SYSDATETIME()));
 
-    -- AUD-TWS-BLA (14 final)
     IF @V_AUD_BLA IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_AUD_BLA AND Motivo = 'Lote importación gadgets audio TWS')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_AUD_BLA, @IDUserAdmin, @MovEntrada, 14, 14, 'Lote importación gadgets audio TWS', DATEADD(DAY, -28, SYSDATETIME()));
 
-    -- BOC-WAT-AZU (12 final)
     IF @V_BOC_AZU IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_BOC_AZU AND Motivo = 'Recepción bocinas waterproof')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_BOC_AZU, @IDUserAdmin, @MovEntrada, 13, 13, 'Recepción bocinas waterproof', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1211,12 +1142,10 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_BOC_AZU, @IDUserOperador, @MovSalida, -1, 12, 'Salida por venta en Pedido #8', @IDPed8, DATEADD(DAY, -2, SYSDATETIME()));
 
-    -- BOC-WAT-NEG (15 final)
     IF @V_BOC_NEG IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_BOC_NEG AND Motivo = 'Recepción bocinas waterproof')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_BOC_NEG, @IDUserAdmin, @MovEntrada, 15, 15, 'Recepción bocinas waterproof', DATEADD(DAY, -28, SYSDATETIME()));
 
-    -- CAF-HUE-GRA-1LB (35 final)
     IF @V_CAF_GRA1 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_CAF_GRA1 AND Motivo = 'Lote 104 café de altura finca Cuchumatanes')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_CAF_GRA1, @IDUserAdmin, @MovEntrada, 37, 37, 'Lote 104 café de altura finca Cuchumatanes', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1225,7 +1154,6 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_CAF_GRA1, @IDUserOperador, @MovSalida, -2, 35, 'Salida por venta en Pedido #2', @IDPed2, DATEADD(DAY, -20, SYSDATETIME()));
 
-    -- CAF-HUE-GRA-2LB (20 final)
     IF @V_CAF_GRA2 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_CAF_GRA2 AND Motivo = 'Lote 104 café de altura finca Cuchumatanes')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_CAF_GRA2, @IDUserAdmin, @MovEntrada, 21, 21, 'Lote 104 café de altura finca Cuchumatanes', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1234,7 +1162,6 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_CAF_GRA2, @IDUserOperador, @MovSalida, -1, 20, 'Salida por venta en Pedido #5', @IDPed5, DATEADD(DAY, -12, SYSDATETIME()));
 
-    -- CAF-HUE-MOL-1LB (25 final)
     IF @V_CAF_MOL1 IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_CAF_MOL1 AND Motivo = 'Molienda fresca lote semanal')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_CAF_MOL1, @IDUserAdmin, @MovEntrada, 28, 28, 'Molienda fresca lote semanal', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1243,7 +1170,6 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_CAF_MOL1, @IDUserOperador, @MovSalida, -3, 25, 'Salida por venta en Pedido #9', @IDPed9, DATEADD(HOUR, -6, SYSDATETIME()));
 
-    -- PRE-FRA-800-INO (18 final)
     IF @V_PRE_INO IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_PRE_INO AND Motivo = 'Recepción prensas borosilicato')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_PRE_INO, @IDUserAdmin, @MovEntrada, 19, 19, 'Recepción prensas borosilicato', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1252,7 +1178,6 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_PRE_INO, @IDUserOperador, @MovSalida, -1, 18, 'Salida por venta en Pedido #5', @IDPed5, DATEADD(DAY, -12, SYSDATETIME()));
 
-    -- PRE-FRA-800-NEG (10 final)
     IF @V_PRE_NEG IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_PRE_NEG AND Motivo = 'Recepción prensas borosilicato')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_PRE_NEG, @IDUserAdmin, @MovEntrada, 11, 11, 'Recepción prensas borosilicato', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1261,7 +1186,6 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_PRE_NEG, @IDUserOperador, @MovSalida, -1, 10, 'Salida por venta en Pedido #9', @IDPed9, DATEADD(HOUR, -6, SYSDATETIME()));
 
-    -- MOC-EJE-GRI (16 final)
     IF @V_MOC_GRI IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_MOC_GRI AND Motivo = 'Lote mochilas Oxford impermeables')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_MOC_GRI, @IDUserAdmin, @MovEntrada, 17, 17, 'Lote mochilas Oxford impermeables', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1270,17 +1194,14 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_MOC_GRI, @IDUserOperador, @MovSalida, -1, 16, 'Salida por venta en Pedido #2', @IDPed2, DATEADD(DAY, -20, SYSDATETIME()));
 
-    -- MOC-EJE-NEG (12 final)
     IF @V_MOC_NEG IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_MOC_NEG AND Motivo = 'Lote mochilas Oxford impermeables')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_MOC_NEG, @IDUserAdmin, @MovEntrada, 12, 12, 'Lote mochilas Oxford impermeables', DATEADD(DAY, -28, SYSDATETIME()));
 
-    -- MOR-LON-VER (14 final)
     IF @V_MOR_VER IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_MOR_VER AND Motivo = 'Lote morrales lona encerada')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_MOR_VER, @IDUserAdmin, @MovEntrada, 14, 14, 'Lote morrales lona encerada', DATEADD(DAY, -28, SYSDATETIME()));
 
-    -- MOR-LON-KHA (11 final)
     IF @V_MOR_KHA IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Kardex WHERE IDVariante = @V_MOR_KHA AND Motivo = 'Lote morrales lona encerada')
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
         VALUES (@V_MOR_KHA, @IDUserAdmin, @MovEntrada, 12, 12, 'Lote morrales lona encerada', DATEADD(DAY, -28, SYSDATETIME()));
@@ -1289,8 +1210,6 @@ BEGIN
         INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
         VALUES (@V_MOR_KHA, @IDUserOperador, @MovSalida, -1, 11, 'Salida por venta en Pedido #7', @IDPed7, DATEADD(DAY, -4, SYSDATETIME()));
 
-    -- Carritos abandonados (más de 30 horas) y activos
-    -- Carrito (Abandonado hace 36 horas)
     IF @IDUserChristian IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Carritos WHERE IDUsuario = @IDUserChristian)
     BEGIN
         INSERT INTO Carritos (IDUsuario, TokenInvitado, IDCupon, UltimaActividad)
@@ -1304,7 +1223,6 @@ BEGIN
         UPDATE Carritos SET UltimaActividad = DATEADD(HOUR, -36, SYSDATETIME()) WHERE IDUsuario = @IDUserChristian;
     END
 
-    -- Carrito (Abandonado hace 48 horas)
     IF @IDUserDiego IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Carritos WHERE IDUsuario = @IDUserDiego)
     BEGIN
         INSERT INTO Carritos (IDUsuario, TokenInvitado, IDCupon, UltimaActividad)
@@ -1320,7 +1238,6 @@ BEGIN
         UPDATE Carritos SET UltimaActividad = DATEADD(HOUR, -48, SYSDATETIME()) WHERE IDUsuario = @IDUserDiego;
     END
 
-    -- Carrito (Abandonado de invitado hace 32 horas)
     IF NOT EXISTS (SELECT 1 FROM Carritos WHERE TokenInvitado = 'guest-abandoned-4491')
     BEGIN
         INSERT INTO Carritos (IDUsuario, TokenInvitado, IDCupon, UltimaActividad)
@@ -1334,7 +1251,6 @@ BEGIN
         UPDATE Carritos SET UltimaActividad = DATEADD(HOUR, -32, SYSDATETIME()) WHERE TokenInvitado = 'guest-abandoned-4491';
     END
 
-    -- Carrito (Activo reciente - hace 15 minutos)
     IF @IDUserByron IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Carritos WHERE IDUsuario = @IDUserByron)
     BEGIN
         INSERT INTO Carritos (IDUsuario, TokenInvitado, IDCupon, UltimaActividad)
@@ -1385,6 +1301,5 @@ BEGIN
 END;
 GO
 
--- Ejecuta el seed. Es idempotente.
 EXEC SP_Sistema_AplicarSeed;
 GO

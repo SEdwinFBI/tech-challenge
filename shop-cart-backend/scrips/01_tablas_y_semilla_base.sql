@@ -1,4 +1,4 @@
--- Estructura de la base de datos (SQL Server 2019+)
+-- Esquema base (SQL Server 2019+)
 
 IF NOT EXISTS (SELECT 1 FROM sys.databases WHERE name = 'ShopCartDB')
 BEGIN
@@ -316,7 +316,6 @@ BEGIN
 END;
 GO
 
--- Índices
 
 CREATE INDEX IX_Municipios_IDDepartamento ON Municipios(IDDepartamento);
 CREATE INDEX IX_Direcciones_IDUsuario_Activo ON Direcciones(IDUsuario, Activo);
