@@ -28,10 +28,134 @@ import { GetLowStockSchema } from '@/features/inventario/models/existencias-baja
 import { IInventoryRepository } from '@/features/inventario/abstracts/inventario.repository.interface';
 import { GetLowStockQueryHandler } from '@/features/inventario/queries/get-low-stock.query';
 import { GetProductAdminQueryHandler } from '@/features/catalogo/queries/get-product-admin.query';
+import { GetProductInventoryQueryHandler } from '@/features/catalogo/queries/get-product-inventory.query';
+import { resolveDashboardRange } from '@/features/dashboard/domain/dashboard-range';
+import { GetDashboardSummarySchema, ExportDashboardExcelSchema } from '@/features/dashboard/models/dashboard.schema';
+import { GetDashboardSummaryQueryHandler } from '@/features/dashboard/queries/get-dashboard-summary.query';
+import { ExportDashboardExcelQueryHandler } from '@/features/dashboard/queries/export-dashboard-excel.query';
+import { IDashboardRepository } from '@/features/dashboard/abstracts/dashboard.repository.interface';
+import express from 'express';
+import jwt from 'jsonwebtoken';
+import { env } from '@/core/config/env';
+import { globalErrorHandler } from '@/core/middlewares/error.middleware';
+import { AuthRepository } from '@/features/auth/repository/auth.repository';
+import { CatalogRepository } from '@/features/catalogo/repository/catalogo.repository';
+import { catalogoRouter } from '@/features/catalogo/catalogo.routes';
 
 function asCatalogRepo(partial: Partial<ICatalogRepository>): ICatalogRepository {
   return partial as unknown as ICatalogRepository;
 }
+
+describe('Consulta operativa de inventario', () => {
+  const detail: ProductDetailResult = {
+    producto: { IDProducto: 7, Nombre: 'Producto', IDCategoria: 1, Activo: false, Descripcion: 'Detalle administrativo' },
+    variantes: [{ IDVariante: 10, SKU: 'SKU-10', Precio: 125, Activo: false, ExistenciaFisica: 8, UnidadesReservadas: 2, ExistenciaDisponible: 6 }],
+    imagenes: [{ IDProductoImagen: 1, IDProducto: 7, Url: 'https://example.com/imagen.png', Orden: 1 }],
+  };
+
+  it('conserva las variantes inactivas y limita la respuesta a datos operativos', async () => {
+    const handler = new GetProductInventoryQueryHandler(asCatalogRepo({ getProductByIdAdmin: async () => detail }));
+    const result = await handler.handle(7);
+    assert.deepEqual(result.producto, { IDProducto: 7, Nombre: 'Producto', Activo: false });
+    assert.equal(result.variantes[0]?.ExistenciaDisponible, 6);
+    assert.equal(result.variantes[0]?.Activo, false);
+    assert.equal('Precio' in result.variantes[0]!, false);
+    assert.equal('imagenes' in result, false);
+  });
+
+  it('responde 404 cuando no existe el producto', async () => {
+    const handler = new GetProductInventoryQueryHandler(asCatalogRepo({ getProductByIdAdmin: async () => ({ producto: null, variantes: [] }) }));
+    await assert.rejects(() => handler.handle(99), (error: unknown) => error instanceof DomainError && error.httpStatus === 404);
+  });
+
+  it('permite leer a operador y administrador, sin conceder al operador administración del catálogo', async t => {
+    const roles = ['OPERADOR', 'ADMINISTRADOR', 'CLIENTE'] as const;
+    t.mock.method(AuthRepository.prototype, 'getById', async (id: number) => ({
+      IDUsuario: id, Correo: 'test@example.com', Rol: roles[id - 1], Activo: true,
+    }));
+    t.mock.method(CatalogRepository.prototype, 'getProductByIdAdmin', async () => detail);
+    const app = express();
+    app.use('/catalogo', catalogoRouter);
+    app.use(globalErrorHandler);
+    const server = app.listen(0, '127.0.0.1');
+    await new Promise<void>(resolve => server.once('listening', resolve));
+    t.after(() => new Promise<void>((resolve, reject) => {
+      server.closeAllConnections();
+      server.close(error => error ? reject(error) : resolve());
+    }));
+    const address = server.address();
+    assert.ok(address && typeof address !== 'string');
+    const base = `http://127.0.0.1:${address.port}/catalogo`;
+    assert.equal((await fetch(`${base}/productos/7/inventario`)).status, 401);
+    for (const [index, role] of roles.entries()) {
+      const token = jwt.sign({ idUsuario: index + 1, correo: 'test@example.com', rol: role }, env.JWT_ACCESS_SECRET);
+      const headers = { authorization: `Bearer ${token}` };
+      const response = await fetch(`${base}/productos/7/inventario`, { headers });
+      assert.equal(response.status, role === 'CLIENTE' ? 403 : 200);
+      if (role === 'OPERADOR') {
+        assert.equal((await fetch(`${base}/admin/productos/7`, { headers })).status, 403);
+        assert.equal((await fetch(`${base}/productos`, { method: 'POST', headers })).status, 403);
+      }
+    }
+  });
+});
+
+describe('Periodos del dashboard', () => {
+  const now = new Date('2026-11-02T02:30:00.000Z');
+
+  it('calcula los cuatro periodos con el calendario de Guatemala', () => {
+    const cases = { HOY: '2026-11-01T06:00:00.000Z', SEMANA: '2026-10-26T06:00:00.000Z', MES: '2026-11-01T06:00:00.000Z', ANIO: '2026-01-01T06:00:00.000Z' } as const;
+    for (const [periodo, expected] of Object.entries(cases)) {
+      const query = GetDashboardSummarySchema.parse({ periodo });
+      const range = resolveDashboardRange(query, now);
+      assert.equal(range.fechaInicio.toISOString(), expected, periodo);
+      assert.equal(range.fechaFin.toISOString(), now.toISOString());
+    }
+  });
+
+  it('respeta medianoche, inicio de semana y cambio de año en Guatemala', () => {
+    assert.equal(resolveDashboardRange({ periodo: 'HOY' }, new Date('2027-01-01T05:59:59Z')).fechaInicio.toISOString(), '2026-12-31T06:00:00.000Z');
+    assert.equal(resolveDashboardRange({ periodo: 'ANIO' }, new Date('2027-01-01T06:00:00Z')).fechaInicio.toISOString(), '2027-01-01T06:00:00.000Z');
+    assert.equal(resolveDashboardRange({ periodo: 'SEMANA' }, new Date('2026-11-02T06:00:00Z')).fechaInicio.toISOString(), '2026-11-02T06:00:00.000Z');
+  });
+
+  it('conserva rangos explícitos y el rango predeterminado de treinta días', () => {
+    const fechaInicio = new Date('2026-09-15T12:00:00Z');
+    const range = resolveDashboardRange({ periodo: 'HOY', fechaInicio, fechaFin: now }, now);
+    assert.equal(range.fechaInicio.toISOString(), fechaInicio.toISOString());
+    assert.equal(range.fechaFin.toISOString(), now.toISOString());
+    assert.equal(resolveDashboardRange({}, now).fechaInicio.getTime(), now.getTime() - 30 * 86400 * 1000);
+  });
+
+  it('rechaza periodos, fechas y rangos inválidos en resumen y Excel', () => {
+    for (const schema of [GetDashboardSummarySchema, ExportDashboardExcelSchema]) {
+      assert.equal(schema.safeParse({ periodo: 'AYER' }).success, false);
+      assert.equal(schema.safeParse({ fechaInicio: 'no-es-fecha' }).success, false);
+      assert.equal(schema.safeParse({ fechaInicio: '2026-12-01', fechaFin: '2026-11-01' }).success, false);
+      assert.equal(schema.parse({ periodo: 'HOY' }).periodo, 'HOY');
+    }
+    assert.throws(() => resolveDashboardRange({ fechaInicio: new Date('2026-12-01') }, now), (error: unknown) => error instanceof DomainError && error.httpStatus === 400);
+  });
+
+  it('aplica el mismo rango al resumen, la serie temporal y la exportación', async () => {
+    const ranges: string[][] = [];
+    const repo = {
+      getMetricsSummary: async (start: Date, end: Date) => {
+        ranges.push([start.toISOString(), end.toISOString()]);
+        return { kpis: {}, top10Productos: [], ventasPorCategoria: [] };
+      },
+      getSalesByPeriod: async (_group: string, start: Date, end: Date) => {
+        ranges.push([start.toISOString(), end.toISOString()]);
+        return [];
+      },
+    } as IDashboardRepository;
+    const query = { periodo: 'HOY' as const, fechaFin: new Date('2026-11-09T19:20:21.123Z') };
+    await new GetDashboardSummaryQueryHandler(repo).handle(query);
+    await new ExportDashboardExcelQueryHandler(repo).handle(query);
+    assert.equal(ranges.length, 3);
+    for (const range of ranges) assert.deepEqual(range, ['2026-11-09T06:00:00.000Z', query.fechaFin.toISOString()]);
+  });
+});
 
 describe('Extensiones de tienda: esquemas de catálogo', () => {
   it('acepta los nuevos criterios de orden y rechaza valores desconocidos', () => {
