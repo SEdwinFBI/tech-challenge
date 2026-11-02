@@ -89,7 +89,6 @@ export const ChangePasswordSchema = z
   });
 export type ChangePasswordDTO = z.infer<typeof ChangePasswordSchema>;
 
-// Usuario y correo salen del JWT, no del body.
 export interface UpdateProfileCommand {
   idUsuario: number;
   nombreCompleto: string;

@@ -5,7 +5,6 @@ import { AuthRepository } from '../repository/auth.repository';
 import { IAuthRepository } from '../abstracts/auth.repository.interface';
 import { ChangePasswordCommand } from '../models/auth.schema';
 
-// 400 y no 401: con 401 el cliente renovaría el token y cerraría sesión.
 export class ChangePasswordCommandHandler implements ICommandHandler<ChangePasswordCommand, void> {
   constructor(private readonly repo: IAuthRepository = new AuthRepository()) {}
 

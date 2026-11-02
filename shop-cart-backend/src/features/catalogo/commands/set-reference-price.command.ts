@@ -4,7 +4,6 @@ import { ICatalogRepository } from '../abstracts/catalogo.repository.interface';
 import { SetReferencePriceCommand } from '../models/catalogo.schema';
 import { CatalogRepository } from '../repository/catalogo.repository';
 
-// Solo se muestra tachado. El cobro usa Variantes.Precio.
 export class SetReferencePriceCommandHandler implements ICommandHandler<SetReferencePriceCommand, void> {
   constructor(private readonly repo: ICatalogRepository = new CatalogRepository()) {}
 

@@ -7,7 +7,6 @@ export const AddFavoriteSchema = z.object({
 });
 export type AddFavoriteDTO = z.infer<typeof AddFavoriteSchema>;
 
-// IDUsuario sale del JWT, nunca del body ni de la URL.
 export interface AddFavoriteCommand {
   idUsuario: number;
   idProducto: number;
