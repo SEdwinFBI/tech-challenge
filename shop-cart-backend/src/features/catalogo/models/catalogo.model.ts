@@ -60,6 +60,15 @@ export interface ProductDetailResult {
   imagenes?: ProductImageDTO[];
 }
 
+export interface ProductInventoryResult {
+  producto: Pick<ProductDTO, 'IDProducto' | 'Nombre' | 'Activo'>;
+  variantes: Array<Pick<VariantDTO, 'IDVariante' | 'SKU' | 'Talla' | 'Color' | 'Presentacion' | 'Activo'> & {
+    ExistenciaFisica: number;
+    UnidadesReservadas: number;
+    ExistenciaDisponible: number;
+  }>;
+}
+
 export interface GetProductsFilter {
   q?: string;
   idCategoria?: number;

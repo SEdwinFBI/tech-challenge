@@ -18,6 +18,7 @@ import { SetFeaturedCommandHandler } from './commands/set-featured.command';
 import { GetProductImagesQueryHandler } from './queries/get-product-images.query';
 import { SetCategoryImageCommandHandler } from './commands/set-category-image.command';
 import { GetProductAdminQueryHandler } from './queries/get-product-admin.query';
+import { GetProductInventoryQueryHandler } from './queries/get-product-inventory.query';
 import {
   CreateProductSchema,
   CreateVariantSchema,
@@ -320,8 +321,17 @@ catalogoRouter.patch(
 );
 
 const getProductAdminQueryHandler = new GetProductAdminQueryHandler();
+const getProductInventoryQueryHandler = new GetProductInventoryQueryHandler();
 
-// Bajo /admin para no chocar con la ruta pública.
+catalogoRouter.get('/productos/:id/inventario', requireAuth, requireRoles('OPERADOR', 'ADMINISTRADOR'), requireNumericId, async (req, res, next) => {
+  try {
+    const detalle = await getProductInventoryQueryHandler.handle(Number(req.params.id));
+    res.json({ ok: true, ...detalle });
+  } catch (err) {
+    next(err);
+  }
+});
+
 catalogoRouter.get('/admin/productos/:id', requireAuth, requireRoles('ADMINISTRADOR'), requireNumericId, async (req, res, next) => {
   try {
     const detalle = await getProductAdminQueryHandler.handle(Number(req.params.id));
