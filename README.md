@@ -6,7 +6,7 @@ API de comercio electrónico para gestionar catálogo, inventario, carritos, ped
 
 Arquitectura Vertical Slice, con DDD y CQRS ligeros.
 
-**Vertical.** El código se organiza por funcionalidad y no por capas. Cada módulo de `features/` es un slice completo: rutas, modelos, comandos, consultas, repositorio y reglas de dominio. Lo demas: configuración, middlewares, errores de dominio está en `core/`.
+**Vertical.** El código se organiza por funcionalidad. Cada módulo de `features/` es un slice completo: rutas, modelos, comandos, consultas, repositorio y reglas de dominio. Lo demas: configuración, middlewares, errores de dominio está en `core/`.
 
 **CQRS ligero.** Las escrituras son Commands y las lecturas son Queries, cada una con su handler. Comparten la misma base de datos, sin sistema de  mensajes ni BD separada por cuestion de tiempo. La ruta valida la entrada con Zod y delega en el handler, el repositorio solo invoca procedimientos almacenados.
 
