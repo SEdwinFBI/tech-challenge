@@ -4,13 +4,13 @@ API de comercio electrónico para gestionar catálogo, inventario, carritos, ped
 
 ## Arquitectura
 
-Arquitectura vertical (Vertical Slice), con DDD y CQRS ligeros.
+Arquitectura Vertical Slice, con DDD y CQRS ligeros.
 
-**Vertical.** El código se organiza por funcionalidad y no por capas técnicas. Cada módulo de `features/` es un corte completo del negocio: rutas, modelos, comandos, consultas, repositorio y reglas de dominio. Lo transversal (configuración, middlewares, errores de dominio) está en `core/`.
+**Vertical.** El código se organiza por funcionalidad y no por capas. Cada módulo de `features/` es un slice completo: rutas, modelos, comandos, consultas, repositorio y reglas de dominio. Lo demas: configuración, middlewares, errores de dominio está en `core/`.
 
-**CQRS ligero.** Las escrituras son comandos y las lecturas son consultas, cada una con su handler. Comparten la misma base de datos, sin bus de mensajes ni modelos de lectura separados. La ruta valida la entrada con Zod y delega en el handler, que usa un repositorio declarado como interfaz en `abstracts/`; el repositorio solo invoca procedimientos almacenados.
+**CQRS ligero.** Las escrituras son Commands y las lecturas son Queries, cada una con su handler. Comparten la misma base de datos, sin sistema de  mensajes ni BD separada por cuestion de tiempo. La ruta valida la entrada con Zod y delega en el handler, el repositorio solo invoca procedimientos almacenados.
 
-**DDD ligero.** Las reglas del negocio viven en `domain/` como código sin dependencias de datos: la máquina de estados del pedido, las políticas de cupones e inventario, el objeto de valor `Money` y los errores de dominio. La persistencia, las transacciones y el control de existencias se resuelven en SQL Server.
+**DDD ligero.** Las reglas del negocio viven en `domain/` como código sin dependencias de datos: estados del pedido, las políticas de cupones e inventario, el objeto de valor  y los errores de dominio. La persistencia, las transacciones y el control de existencias se resuelven en SQL Server.
 
 ## Desarrollo local
 
