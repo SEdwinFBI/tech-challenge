@@ -2,11 +2,19 @@
 
 API de comercio electrónico para gestionar catálogo, inventario, carritos, pedidos y usuarios. Está desarrollada con TypeScript, Express y SQL Server. El pago se simula; no hay integración con una pasarela de cobros.
 
+## Arquitectura
+
+Es un monolito modular. El código se organiza por funcionalidad: cada módulo de `features/` reúne todo lo suyo, y lo transversal (configuración, middlewares, errores de dominio) está en `core/`.
+
+Dentro de cada módulo el flujo es ruta, comando o consulta, repositorio y procedimiento almacenado. La ruta valida la entrada con Zod y delega en un handler; el handler aplica las reglas de negocio; el repositorio, declarado como interfaz en `abstracts/`, solo invoca procedimientos almacenados. Se usa CQRS en su versión ligera: las escrituras son comandos y las lecturas son consultas, pero comparten la misma base de datos y no hay bus de mensajes.
+
+Las reglas que no dependen de la base de datos, como la máquina de estados del pedido, las políticas de cupones e inventario y el manejo de importes, están en `domain/` como código sin efectos. Las transacciones y el control de existencias se resuelven en SQL Server.
+
 ## Desarrollo local
 
-El backend está en `shop-cart-backend/`. El repositorio Git se mantiene en la raíz `shop-cart/`.
+El backend está en `shop-cart-backend/`. 
 
-Se necesita Node.js 24 o superior y una instancia accesible de SQL Server 2019 o superior. La configuración de conexión se toma de `.env`.
+Se necesita Node.js 24 o superior y  SQL Server. La configuración de conexión se toma de `.env`.
 
 Desde la raíz del repositorio:
 
@@ -15,11 +23,7 @@ cd shop-cart-backend
 npm ci
 ```
 
-Crear `.env` a partir de [`.env.example`](.env.example). En PowerShell:
-
-```powershell
-Copy-Item .env.example .env
-```
+Crear `.env` a partir de [`.env.example`](.env.example).
 
 Completar las credenciales de SQL Server y los secretos de JWT antes de iniciar la aplicación.
 
@@ -46,7 +50,7 @@ Con SQL Server disponible y `.env` configurado, ejecutar desde `shop-cart-backen
 npm run db:setup
 ```
 
-El inicializador crea la base indicada en `DB_NAME` si no existe, crea las tablas cuando la base no tiene tablas de usuario y aplica funciones, vistas, procedimientos, datos de ejemplo y extensiones de tienda. El usuario de conexión necesita permisos para estas operaciones.
+El inicializador crea la base indicada en `DB_NAME` si no existe, crea las tablas cuando la base no tiene tablas de usuario y aplica funciones, vistas, procedimientos, datos de ejemplo y se agrego mas cosas para la  tienda. El usuario de conexión necesita permisos para estas operaciones.
 
 Los archivos SQL están en [`scrips/`](scrips/), numerados según su orden de ejecución:
 
@@ -57,7 +61,7 @@ Los archivos SQL están en [`scrips/`](scrips/), numerados según su orden de ej
 5. [`05_seed_datos_demo.sql`](scrips/05_seed_datos_demo.sql): datos de ejemplo.
 6. [`06_extensiones_tienda.sql`](scrips/06_extensiones_tienda.sql): galería, favoritos y otras funciones de tienda.
 
-`db:setup` es un inicializador, no un sistema de migraciones: no completa un esquema parcialmente creado mediante el primer script.
+`db:setup` es un inicializador, no un sistema de migraciones
 
 ### Servidor
 
@@ -73,12 +77,7 @@ La API queda disponible en `http://localhost:3000/api/v1`. El puerto depende de 
 
 `/health` informa que el proceso responde; no comprueba la conexión a SQL Server.
 
-Para compilar y ejecutar la salida generada:
 
-```sh
-npm run build
-npm start
-```
 
 ## Organización del código
 
@@ -90,14 +89,14 @@ shop-cart-backend/
 │   │   ├── config/         Entorno, conexión e inicialización de la base
 │   │   ├── cqrs/           Contratos de comandos y consultas
 │   │   ├── domain/         Errores y manejo de importes
-│   │   ├── http/           OpenAPI y gestión de SSE
+│   │   ├── http/           OpenAPI y gestión 
 │   │   └── middlewares/    Autenticación, validación y errores
 │   ├── features/           Módulos del negocio y registro de rutas
 │   └── server.ts           Entrada HTTP y limpieza de reservas
 └── tests/                  Pruebas de dominio, integración y concurrencia
 ```
 
-Cada módulo reúne sus rutas, modelos, comandos, consultas y repositorio. Los comandos representan operaciones de escritura; las consultas, lecturas. Los contratos de repositorio están en `abstracts/` y las implementaciones en `repository/`.
+Cada módulo tiene rutas, modelos, comandos, consultas y repositorio. Los Command representan operaciones de escritura; las Queries lecturas. Los contratos de repositorio están en `abstracts/` y las implementaciones en `repository/`.
 
 Los repositorios acceden a SQL Server mediante procedimientos almacenados. Las transacciones y el control de existencias se resuelven en la base de datos. El inicializador de la base ejecuta los scripts SQL directamente.
 
@@ -137,7 +136,7 @@ Las rutas protegidas reciben el token de acceso en `Authorization: Bearer <token
 
 ## Reglas del negocio
 
-- Los importes se expresan en quetzales (GTQ) y los precios incluyen IVA del 12 %.
+- Los importes se expresan en quetzales  y los precios incluyen IVA 
 - La reserva de inventario dura 15 minutos. El servidor ejecuta la limpieza de reservas vencidas cada minuto.
 - La confirmación de pedidos utiliza una clave de idempotencia para evitar duplicados.
 - Los descuentos se distribuyen entre las líneas elegibles. Las devoluciones usan los importes de línea para conservar el total exacto.
