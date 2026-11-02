@@ -128,6 +128,7 @@ async function verify() {
     const retry = await confirm(clients[0], prefix + "-rollback");
     assert.equal(retry.status, 201);
     evidence.cases.push({ scenario: "reintento-tras-rollback", status: retry.status, pedido: retry.data.IDPedido });
+    fs.mkdirSync("artifacts", { recursive: true });
     fs.writeFileSync("artifacts/final-concurrency-http.json", JSON.stringify(evidence, null, 2));
     console.log(JSON.stringify({ database, scenarios: evidence.cases.length, allPassed: true, rollbackTriggerRemoved: true }));
   } finally {
