@@ -35,7 +35,7 @@ app.get(['/api/docs', '/docs'], (_req, res) => {
   res.send(`<!doctype html>
 <html lang="es">
   <head>
-    <title>ShopCart API Reference & Interactive Docs</title>
+    <title>Documentación API ShopCart</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="https://scalar.com/favicon.svg" />
