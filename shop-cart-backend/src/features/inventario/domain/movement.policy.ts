@@ -12,7 +12,7 @@ export class InventoryMovementPolicy {
       throw new DomainError('La cantidad del movimiento no puede ser 0.', 'CANTIDAD_INVALIDA', 400);
     }
 
-    if (tipoMovimiento === 'ENTRADA_COMPRA' || tipoMovimiento === 'ENTRADA') {
+    if (tipoMovimiento === 'ENTRADA_COMPRA') {
       if (cantidad <= 0) {
         throw new DomainError('Cantidad para ENTRADA_COMPRA debe ser mayor a 0', 'CANTIDAD_INVALIDA', 400);
       }
@@ -36,20 +36,6 @@ export class InventoryMovementPolicy {
       return {
         tipoMovimiento: 'AJUSTE_NEGATIVO',
         cantidad: -Math.abs(cantidad),
-      };
-    }
-
-    if (tipoMovimiento === 'SALIDA' || tipoMovimiento === 'SALIDA_MERMA') {
-      return {
-        tipoMovimiento: 'SALIDA_MERMA',
-        cantidad: -Math.abs(cantidad),
-      };
-    }
-
-    if (tipoMovimiento === 'AJUSTE_FISICO') {
-      return {
-        tipoMovimiento: 'AJUSTE_FISICO',
-        cantidad,
       };
     }
 

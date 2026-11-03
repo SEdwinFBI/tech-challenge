@@ -19,7 +19,7 @@ import { CouponPolicy } from '@/features/cupones/domain/coupon.policy';
 
 import { RegisterSchema, LoginSchema, UpdateUserStatusSchema } from '@/features/auth/models/auth.schema';
 import { UpdateOrderStatusSchema, ReturnOrderLineSchema, GetOrdersSchema } from '@/features/pedidos/models/pedidos.schema';
-import { ConfirmOrderSchema, CreateAddressSchema, ReserveStockSchema } from '@/features/checkout/models/checkout.schema';
+import { ConfirmOrderSchema, CreateAddressSchema, ReserveStockSchema, SetDefaultAddressSchema } from '@/features/checkout/models/checkout.schema';
 import { SaveCouponSchema, ApplyCouponSchema } from '@/features/cupones/models/cupones.schema';
 import { CreateMovementSchema, GetKardexSchema } from '@/features/inventario/models/inventario.schema';
 import { UpsertCartItemSchema } from '@/features/carrito/models/carrito.schema';
@@ -125,10 +125,6 @@ describe('OrderStatePolicy - Máquina de Estados', () => {
       OrderStatePolicy.ensureValidTransition('PAGADO', 'CANCELADO', 'ADMINISTRADOR');
       OrderStatePolicy.ensureValidTransition('EN_PREPARACION', 'CANCELADO', 'ADMINISTRADOR');
     });
-
-    assert.doesNotThrow(() => {
-      OrderStatePolicy.ensureValidTransition('DEVUELTO_PARCIAL', 'DEVUELTO_PARCIAL', 'OPERADOR');
-    });
   });
 
   it('debe bloquear transiciones no permitidas arrojando DomainError INVALID_STATE_TRANSITION (409)', () => {
@@ -145,6 +141,7 @@ describe('OrderStatePolicy - Máquina de Estados', () => {
       ['CANCELADO', 'EN_PREPARACION'],
       ['DEVUELTO_TOTAL', 'ENTREGADO'],
       ['DEVUELTO_TOTAL', 'PAGADO'],
+      ['DEVUELTO_PARCIAL', 'DEVUELTO_PARCIAL'],
     ];
 
     for (const [origen, destino] of invalidTransitions) {
@@ -537,6 +534,13 @@ describe('Validación de Esquemas Zod', () => {
       assert.equal(idCero.success, false);
     });
 
+    it('SetDefaultAddressSchema: el id debe ser entero positivo', () => {
+      assert.equal(SetDefaultAddressSchema.parse({ idDireccion: '7' }).idDireccion, 7);
+      assert.equal(SetDefaultAddressSchema.safeParse({ idDireccion: 'abc' }).success, false);
+      assert.equal(SetDefaultAddressSchema.safeParse({ idDireccion: 0 }).success, false);
+      assert.equal(CreateAddressSchema.parse({ etiqueta: 'Casa', idMunicipio: 1, direccionExacta: 'Zona 1 casa 2', telefonoContacto: '55551234' }).predeterminada, false);
+    });
+
     it('CreateAddressSchema: valida que proporcione idMunicipio o municipio', () => {
       const conIdMuni = CreateAddressSchema.safeParse({
         etiqueta: 'Casa',
@@ -815,6 +819,7 @@ describe('Handlers CQRS con repositorios mock', () => {
         getAddresses: async () => [],
         createAddress: async () => [],
         deleteAddress: async () => [],
+        setDefaultAddress: async () => [],
         reserveStock: async () => ({}),
         confirmOrder: async (dto) => {
           confirmParamsPassed = dto;
@@ -846,6 +851,7 @@ describe('Handlers CQRS con repositorios mock', () => {
         getAddresses: async () => [],
         createAddress: async () => [],
         deleteAddress: async () => [],
+        setDefaultAddress: async () => [],
         reserveStock: async () => ({}),
         confirmOrder: async () => ({
           IDPedido: 888,
