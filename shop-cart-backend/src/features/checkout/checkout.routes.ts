@@ -5,12 +5,14 @@ import { GetMunicipalitiesQueryHandler } from './queries/get-municipalities.quer
 import { GetAddressesQueryHandler } from './queries/get-addresses.query';
 import { CreateAddressCommandHandler } from './commands/create-address.command';
 import { DeleteAddressCommandHandler } from './commands/delete-address.command';
+import { SetDefaultAddressCommandHandler } from './commands/set-default-address.command';
 import { ReserveStockCommandHandler } from './commands/reserve-stock.command';
 import { ConfirmOrderCommandHandler } from './commands/confirm-order.command';
 import {
   ConfirmOrderSchema,
   CreateAddressSchema,
   ReserveStockSchema,
+  SetDefaultAddressSchema,
 } from './models/checkout.schema';
 
 export const checkoutRouter = Router();
@@ -19,6 +21,7 @@ const getMunicipalitiesQueryHandler = new GetMunicipalitiesQueryHandler();
 const getAddressesQueryHandler = new GetAddressesQueryHandler();
 const createAddressCommandHandler = new CreateAddressCommandHandler();
 const deleteAddressCommandHandler = new DeleteAddressCommandHandler();
+const setDefaultAddressCommandHandler = new SetDefaultAddressCommandHandler();
 const reserveStockCommandHandler = new ReserveStockCommandHandler();
 const confirmOrderCommandHandler = new ConfirmOrderCommandHandler();
 
@@ -57,6 +60,19 @@ checkoutRouter.delete('/direcciones/:id', requireAuth, requireNumericId, async (
       idUsuario: req.user!.idUsuario,
     });
     res.json({ ok: true, datos: direcciones, mensaje: 'Dirección eliminada.' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+checkoutRouter.patch('/direcciones/:id/predeterminada', requireAuth, requireNumericId, async (req, res, next) => {
+  try {
+    const { idDireccion } = SetDefaultAddressSchema.parse({ idDireccion: req.params.id });
+    const direcciones = await setDefaultAddressCommandHandler.handle({
+      idDireccion,
+      idUsuario: req.user!.idUsuario,
+    });
+    res.json({ ok: true, datos: direcciones, mensaje: 'Dirección predeterminada actualizada.' });
   } catch (err) {
     next(err);
   }

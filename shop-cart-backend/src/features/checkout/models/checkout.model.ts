@@ -27,7 +27,7 @@ export interface AddressDTO {
   TelefonoContacto: string;
   Telefono?: string;
   Referencia?: string | null;
-  EsPredeterminada?: boolean;
+  Predeterminada?: boolean;
   Activo?: boolean;
 }
 
@@ -39,6 +39,7 @@ export interface CreateAddressParams {
   municipio?: string;
   direccionExacta: string;
   telefonoContacto: string;
+  predeterminada?: boolean;
 }
 
 export type DeleteAddressResult = AddressDTO[];

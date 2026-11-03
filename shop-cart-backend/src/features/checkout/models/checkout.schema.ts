@@ -10,6 +10,7 @@ export const CreateAddressSchema = z
     municipio: z.string().min(2).optional(),
     direccionExacta: z.string().min(5),
     telefonoContacto: z.string().min(8),
+    predeterminada: z.boolean().default(false),
   })
   .refine(d => d.idMunicipio !== undefined || d.municipio !== undefined || d.idTarifaEnvio !== undefined, {
     message: 'Debe especificar el idMunicipio o el municipio',
@@ -22,6 +23,12 @@ export const DeleteAddressSchema = z.object({
 });
 
 export type DeleteAddressDTO = z.infer<typeof DeleteAddressSchema>;
+
+export const SetDefaultAddressSchema = z.object({
+  idDireccion: z.coerce.number().int().positive(),
+});
+
+export type SetDefaultAddressDTO = z.infer<typeof SetDefaultAddressSchema>;
 
 export const ReserveStockSchema = z.object({
   idCarrito: z.number().int().positive(),
@@ -43,6 +50,11 @@ export type CreateAddressCommand = CreateAddressDTO & {
 };
 
 export interface DeleteAddressCommand {
+  idDireccion: number;
+  idUsuario: number;
+}
+
+export interface SetDefaultAddressCommand {
   idDireccion: number;
   idUsuario: number;
 }

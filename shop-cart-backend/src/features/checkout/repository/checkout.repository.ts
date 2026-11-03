@@ -42,6 +42,7 @@ export class CheckoutRepository implements ICheckoutRepository {
       .input('Municipio', sql.NVarChar(100), dto.municipio ?? null)
       .input('DireccionExacta', sql.NVarChar(300), dto.direccionExacta)
       .input('TelefonoContacto', sql.VarChar(20), dto.telefonoContacto)
+      .input('Predeterminada', sql.Bit, dto.predeterminada ? 1 : 0)
       .execute('SP_Direcciones_CrearListar');
     return res.recordset as AddressDTO[];
   }
@@ -55,6 +56,16 @@ export class CheckoutRepository implements ICheckoutRepository {
       .input('Accion', sql.VarChar(10), 'ELIMINAR')
       .execute('SP_Direcciones_CrearListar');
     return res.recordset as DeleteAddressResult;
+  }
+
+  async setDefaultAddress(idDireccion: number, idUsuario: number): Promise<AddressDTO[]> {
+    const pool = await getDbPool();
+    await pool
+      .request()
+      .input('IDUsuario', sql.Int, idUsuario)
+      .input('IDDireccion', sql.Int, idDireccion)
+      .execute('SP_Direcciones_MarcarPredeterminada');
+    return this.getAddresses(idUsuario);
   }
 
   async reserveStock(idUsuario: number, idCarrito: number): Promise<ReserveStockResult> {

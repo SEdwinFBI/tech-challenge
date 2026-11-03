@@ -13,6 +13,7 @@ export interface ICheckoutRepository {
   getAddresses(idUsuario: number): Promise<AddressDTO[]>;
   createAddress(dto: CreateAddressParams): Promise<AddressDTO[]>;
   deleteAddress(idDireccion: number, idUsuario: number): Promise<DeleteAddressResult>;
+  setDefaultAddress(idDireccion: number, idUsuario: number): Promise<AddressDTO[]>;
   reserveStock(idUsuario: number, idCarrito: number): Promise<ReserveStockResult>;
   confirmOrder(dto: ConfirmOrderParams): Promise<ConfirmOrderResult>;
 }
