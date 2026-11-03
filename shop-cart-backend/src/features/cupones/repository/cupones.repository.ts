@@ -3,15 +3,23 @@ import { ICouponsRepository } from '../abstracts/cupones.repository.interface';
 import {
   ApplyCouponResult,
   CouponDTO,
+  GetCouponsFilter,
   RemoveCouponResult,
   SaveCouponParams,
   SaveCouponResult,
 } from '../models/cupones.model';
 
 export class CouponsRepository implements ICouponsRepository {
-  async getAll(): Promise<CouponDTO[]> {
+  async getAll(f: GetCouponsFilter = {}): Promise<CouponDTO[]> {
     const pool = await getDbPool();
-    const res = await pool.request().execute<CouponDTO>('SP_Cupones_Listar');
+    const res = await pool
+      .request()
+      .input('Orden', sql.VarChar(20), f.orden ?? 'fecha')
+      .input('Direccion', sql.VarChar(4), f.direccion ?? 'desc')
+      .input('Busqueda', sql.NVarChar(50), f.q || null)
+      .input('Activo', sql.Bit, f.activo === undefined ? null : f.activo ? 1 : 0)
+      .input('Vigencia', sql.VarChar(12), f.vigencia ?? null)
+      .execute<CouponDTO>('SP_Cupones_Listar');
     return res.recordset;
   }
 

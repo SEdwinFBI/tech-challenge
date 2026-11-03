@@ -9,6 +9,7 @@ import {
   ApplyCouponResult,
   ApplyCouponSchema,
   CouponDTO,
+  GetCouponsSchema,
   RemoveCouponResult,
   SaveCouponResult,
   SaveCouponSchema,
@@ -20,9 +21,10 @@ const applyCouponCommandHandler = new ApplyCouponCommandHandler();
 const removeCouponCommandHandler = new RemoveCouponCommandHandler();
 const saveCouponCommandHandler = new SaveCouponCommandHandler();
 
-cuponesRouter.get('/', requireAuth, requireRoles('ADMINISTRADOR'), async (_req, res, next) => {
+cuponesRouter.get('/', requireAuth, requireRoles('ADMINISTRADOR'), async (req, res, next) => {
   try {
-    const datos: CouponDTO[] = await getCouponsQueryHandler.handle();
+    const query = GetCouponsSchema.parse(req.query);
+    const datos: CouponDTO[] = await getCouponsQueryHandler.handle(query);
     res.json({ ok: true, datos });
   } catch (err) {
     next(err);

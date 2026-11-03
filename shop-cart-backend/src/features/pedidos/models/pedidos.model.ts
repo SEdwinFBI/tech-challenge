@@ -1,12 +1,9 @@
 export type OrderStatus =
-  | 'PENDIENTE_PAGO'
   | 'PAGADO'
   | 'EN_PREPARACION'
   | 'DESPACHADO'
-  | 'ENVIADO'
   | 'ENTREGADO'
   | 'CANCELADO'
-  | 'DEVUELTO'
   | 'DEVUELTO_PARCIAL'
   | 'DEVUELTO_TOTAL';
 
@@ -80,9 +77,14 @@ export interface GetOrdersParams {
   estado: string | null;
   fechaInicio: Date | null;
   fechaFin: Date | null;
+  cliente?: string | null;
+  totalMin?: number | null;
+  totalMax?: number | null;
   pagina: number;
   tamanoPagina: number;
   busqueda?: string | null;
+  orden?: string;
+  direccion?: string;
 }
 
 export interface GetOrdersResult {

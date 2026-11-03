@@ -7,6 +7,6 @@ export class GetBitacoraQueryHandler implements IQueryHandler<GetBitacoraQuery, 
   constructor(private readonly repo: IBitacoraRepository = new BitacoraRepository()) {}
 
   async handle(query: GetBitacoraQuery): Promise<BitacoraResult> {
-    return this.repo.getBitacora(query.modulo ?? null, query.pagina, query.tamanoPagina);
+    return this.repo.getBitacora(query);
   }
 }

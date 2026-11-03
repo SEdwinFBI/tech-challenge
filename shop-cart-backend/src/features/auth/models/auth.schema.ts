@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DireccionSchema } from '@/core/domain/sort';
 import { UserRole } from './auth.model';
 
 export * from './auth.model';
@@ -39,7 +40,7 @@ export const UpdateUserRoleSchema = z.object({
 export type UpdateUserRoleDTO = z.infer<typeof UpdateUserRoleSchema>;
 
 export const GetUsersSchema = z.object({
-  q: z.string().optional(),
+  q: z.string().trim().max(150).optional(),
   rol: z.enum(['CLIENTE', 'OPERADOR', 'ADMINISTRADOR']).optional(),
   activo: z
     .preprocess((val) => {
@@ -48,6 +49,8 @@ export const GetUsersSchema = z.object({
       return undefined;
     }, z.boolean().optional())
     .optional(),
+  orden: z.enum(['fecha', 'nombre', 'correo', 'rol']).default('fecha'),
+  direccion: DireccionSchema,
   pagina: z.coerce.number().int().min(1).default(1),
   tamanoPagina: z.coerce.number().int().min(1).max(100).default(20),
 });

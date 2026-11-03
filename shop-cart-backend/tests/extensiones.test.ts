@@ -42,6 +42,12 @@ import { optionalAuthLenient, requireAuth } from '@/core/middlewares/auth.middle
 import { codigoDeNegocio } from '@/core/middlewares/sql-error-codes';
 import { consumeStreamTicket, issueStreamTicket } from '@/features/dashboard/domain/stream-ticket.store';
 import { GetKardexSchema } from '@/features/inventario/models/inventario.schema';
+import { GetOrdersSchema } from '@/features/pedidos/models/pedidos.schema';
+import { IOrdersRepository } from '@/features/pedidos/abstracts/pedidos.repository.interface';
+import { GetOrdersQueryHandler } from '@/features/pedidos/queries/get-orders.query';
+import { GetBitacoraSchema } from '@/features/bitacora/models/bitacora.schema';
+import { GetCouponsSchema } from '@/features/cupones/models/cupones.schema';
+import { GetUsersSchema } from '@/features/auth/models/auth.schema';
 import { GetKardexQueryHandler } from '@/features/inventario/queries/get-kardex.query';
 import { AuthRepository } from '@/features/auth/repository/auth.repository';
 import { CatalogRepository } from '@/features/catalogo/repository/catalogo.repository';
@@ -318,7 +324,7 @@ describe('Extensiones de tienda: favoritos (anti-IDOR)', () => {
 });
 
 describe('Extensiones de tienda: imagen de categoría', () => {
-  it('acepta URL http(s) o null para quitarla y rechaza esquemas peligrosos', () => {
+  it('acepta URL http(s) o null para quitarla y rechaza esquemas ', () => {
     assert.equal(SetCategoryImageSchema.safeParse({ imagenUrl: 'https://cdn.test/c.jpg' }).success, true);
     assert.equal(SetCategoryImageSchema.safeParse({ imagenUrl: null }).success, true);
     assert.equal(SetCategoryImageSchema.safeParse({ imagenUrl: 'javascript:alert(1)' }).success, false);
@@ -413,15 +419,24 @@ describe('Extensiones de tienda: existencias bajas', () => {
     assert.equal(GetLowStockSchema.safeParse({ tamanoPagina: 500 }).success, false);
   });
 
+  it('orden y direccion: defecto existencia asc, lista cerrada', () => {
+    const porDefecto = GetLowStockSchema.parse({});
+    assert.equal(porDefecto.orden, 'existencia');
+    assert.equal(porDefecto.direccion, 'asc');
+    assert.equal(GetLowStockSchema.parse({ orden: 'sku', direccion: 'desc' }).direccion, 'desc');
+    assert.equal(GetLowStockSchema.safeParse({ orden: 'categoria' }).success, false);
+    assert.equal(GetLowStockSchema.safeParse({ direccion: 'arriba' }).success, false);
+  });
+
   it('el handler delega búsqueda y paginación al repositorio', async () => {
     const recibido: unknown[] = [];
     const repo = {
-      getLowStock: async (q: string | undefined, pagina: number, tam: number) => {
-        recibido.push(q, pagina, tam);
+      getLowStock: async (p: { q?: string; pagina: number; tamanoPagina: number }) => {
+        recibido.push(p.q, p.pagina, p.tamanoPagina);
         return { items: [], totalRegistros: 0 };
       },
     } as unknown as IInventoryRepository;
-    await new GetLowStockQueryHandler(repo).handle({ q: 'bota', pagina: 2, tamanoPagina: 10 });
+    await new GetLowStockQueryHandler(repo).handle({ q: 'bota', orden: 'existencia', direccion: 'asc', pagina: 2, tamanoPagina: 10 });
     assert.deepEqual(recibido, ['bota', 2, 10]);
   });
 });
@@ -580,5 +595,75 @@ describe('Ticket del stream del dashboard', () => {
     assert.ok(error instanceof DomainError);
     assert.equal(error.httpStatus, 401);
     assert.equal(error.code, 'TOKEN_MISSING');
+  });
+});
+
+describe('Filtros por columna de las tablas de administración', () => {
+  it('pedidos: acepta cliente, rango de fechas y rango de total', () => {
+    const dto = GetOrdersSchema.parse({ cliente: ' ana ', fechaDesde: '2026-11-01', fechaHasta: '2026-11-30', totalMin: '100', totalMax: '500.5' });
+    assert.equal(dto.cliente, 'ana');
+    assert.equal(dto.totalMin, 100);
+    assert.equal(dto.totalMax, 500.5);
+    assert.ok(dto.fechaDesde instanceof Date && dto.fechaHasta instanceof Date);
+  });
+
+  it('pedidos: rechaza fechas invertidas, totales invertidos o negativos', () => {
+    assert.equal(GetOrdersSchema.safeParse({ fechaDesde: '2026-11-30', fechaHasta: '2026-11-01' }).success, false);
+    assert.equal(GetOrdersSchema.safeParse({ fechaInicio: '2026-11-30', fechaFin: '2026-11-01' }).success, false);
+    assert.equal(GetOrdersSchema.safeParse({ totalMin: '500', totalMax: '100' }).success, false);
+    assert.equal(GetOrdersSchema.safeParse({ totalMin: '-1' }).success, false);
+    assert.equal(GetOrdersSchema.safeParse({ cliente: 'x'.repeat(101) }).success, false);
+  });
+
+  it('pedidos: el handler usa fechaDesde/fechaHasta y los filtros nuevos', async () => {
+    let recibido: Record<string, unknown> = {};
+    const repo = { getAllPaginated: async (p: Record<string, unknown>) => { recibido = p; return { items: [], totalRegistros: 0 }; } } as unknown as IOrdersRepository;
+    const query = GetOrdersSchema.parse({ cliente: 'ana', fechaDesde: '2026-11-01', totalMin: '10' });
+    await new GetOrdersQueryHandler(repo).handle({ ...query, solicitante: { idUsuario: 1, correo: 'a@b.c', rol: 'ADMINISTRADOR' } });
+    assert.equal(recibido.cliente, 'ana');
+    assert.equal(recibido.totalMin, 10);
+    assert.equal(recibido.totalMax, null);
+    assert.ok(recibido.fechaInicio instanceof Date);
+  });
+
+  it('bitácora: acepta acción, búsqueda y rango de fechas', () => {
+    const dto = GetBitacoraSchema.parse({ modulo: 'PEDIDOS', accion: 'CAMBIO_ESTADO', busqueda: 'admin', fechaDesde: '2026-11-01', fechaHasta: '2026-11-02' });
+    assert.equal(dto.accion, 'CAMBIO_ESTADO');
+    assert.equal(dto.busqueda, 'admin');
+    assert.equal(GetBitacoraSchema.safeParse({ fechaDesde: '2026-11-05', fechaHasta: '2026-11-01' }).success, false);
+    assert.equal(GetBitacoraSchema.safeParse({ accion: 'x'.repeat(51) }).success, false);
+  });
+
+  it('cupones: acepta código, activo y vigencia', () => {
+    const dto = GetCouponsSchema.parse({ q: ' VER ', activo: 'false', vigencia: 'POR_INICIAR' });
+    assert.equal(dto.q, 'VER');
+    assert.equal(dto.activo, false);
+    assert.equal(dto.vigencia, 'POR_INICIAR');
+    assert.equal(GetCouponsSchema.safeParse({ vigencia: 'ETERNO' }).success, false);
+    assert.equal(GetCouponsSchema.safeParse({ activo: 'quizas' }).success, false);
+  });
+
+  it('catálogo: acepta activo y el orden por nombre descendente', () => {
+    const dto = GetProductsSchema.parse({ activo: 'true', orden: 'NOMBRE_DESC' });
+    assert.equal(dto.activo, true);
+    assert.equal(dto.orden, 'NOMBRE_DESC');
+    assert.equal(GetProductsSchema.safeParse({ orden: 'NOMBRE_XYZ' }).success, false);
+  });
+
+  it('catálogo: solo el administrador puede filtrar por activo', async () => {
+    const recibidos: Array<boolean | undefined> = [];
+    const repo = asCatalogRepo({ getProducts: async (f: GetProductsFilter) => { recibidos.push(f.activo); return { items: [], totalRegistros: 0 }; } });
+    const query = GetProductsSchema.parse({ activo: 'false' });
+    await new GetProductsQueryHandler(repo).handle({ ...query, rolUsuario: 'ADMINISTRADOR' });
+    await new GetProductsQueryHandler(repo).handle({ ...query, rolUsuario: 'CLIENTE' });
+    assert.deepEqual(recibidos, [false, undefined]);
+  });
+
+  it('usuarios: recorta el texto de búsqueda y valida el rol', () => {
+    const dto = GetUsersSchema.parse({ q: '  ana  ', rol: 'OPERADOR', activo: 'false' });
+    assert.equal(dto.q, 'ana');
+    assert.equal(dto.activo, false);
+    assert.equal(GetUsersSchema.safeParse({ rol: 'DIOS' }).success, false);
+    assert.equal(GetUsersSchema.safeParse({ q: 'x'.repeat(151) }).success, false);
   });
 });

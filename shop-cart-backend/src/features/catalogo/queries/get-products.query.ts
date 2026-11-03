@@ -10,6 +10,7 @@ export class GetProductsQueryHandler implements IQueryHandler<GetProductsQuery, 
     const { rolUsuario, ...filtros } = query;
     return this.repo.getProducts({
       ...filtros,
+      activo: rolUsuario === 'ADMINISTRADOR' ? filtros.activo : undefined,
       soloDisponibles: filtros.soloDisponibles === 'true',
       soloOfertas: filtros.soloOfertas === 'true',
       soloNuevos: filtros.soloNuevos === 'true',

@@ -1,5 +1,13 @@
 export type DiscountType = 'PORCENTAJE' | 'MONTO_FIJO';
 
+export interface GetCouponsFilter {
+  orden?: string;
+  direccion?: string;
+  q?: string;
+  activo?: boolean;
+  vigencia?: 'VIGENTE' | 'VENCIDO' | 'POR_INICIAR';
+}
+
 export interface CouponDTO {
   IDCupon: number;
   Codigo: string;

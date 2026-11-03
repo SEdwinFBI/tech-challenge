@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DireccionSchema } from '@/core/domain/sort';
 
 export * from './cupones.model';
 
@@ -35,3 +36,13 @@ export interface RemoveCouponCommand {
 export type SaveCouponCommand = SaveCouponDTO & {
   idAdmin: number;
 };
+
+export const GetCouponsSchema = z.object({
+  q: z.string().trim().max(50).optional(),
+  activo: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
+  vigencia: z.enum(['VIGENTE', 'VENCIDO', 'POR_INICIAR']).optional(),
+  orden: z.enum(['fecha', 'codigo', 'vigencia', 'usos']).default('fecha'),
+  direccion: DireccionSchema,
+});
+
+export type GetCouponsDTO = z.infer<typeof GetCouponsSchema>;

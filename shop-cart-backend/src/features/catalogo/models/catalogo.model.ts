@@ -82,6 +82,7 @@ export interface GetProductsFilter {
   soloOfertas?: boolean;
   soloNuevos?: boolean;
   soloDestacados?: boolean;
+  activo?: boolean;
 }
 
 export interface SaveCategoryParams {

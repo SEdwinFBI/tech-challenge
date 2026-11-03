@@ -7,6 +7,6 @@ export class GetLowStockQueryHandler implements IQueryHandler<GetLowStockQuery, 
   constructor(private readonly repo: IInventoryRepository = new InventoryRepository()) {}
 
   async handle(query: GetLowStockQuery): Promise<LowStockResult> {
-    return this.repo.getLowStock(query.q, query.pagina, query.tamanoPagina);
+    return this.repo.getLowStock(query);
   }
 }

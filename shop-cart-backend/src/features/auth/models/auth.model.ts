@@ -63,6 +63,8 @@ export interface GetUsersParams {
   q?: string;
   rol?: UserRole | string;
   activo?: boolean;
+  orden?: string;
+  direccion?: string;
   pagina: number;
   tamanoPagina: number;
 }

@@ -11,11 +11,16 @@ export class GetOrdersQueryHandler implements IQueryHandler<GetOrdersQuery, GetO
     return this.repo.getAllPaginated({
       idUsuarioFiltro,
       estado: q.estado ?? null,
-      fechaInicio: q.fechaInicio ?? null,
-      fechaFin: q.fechaFin ?? null,
+      fechaInicio: q.fechaDesde ?? q.fechaInicio ?? null,
+      fechaFin: q.fechaHasta ?? q.fechaFin ?? null,
+      cliente: q.cliente || null,
+      totalMin: q.totalMin ?? null,
+      totalMax: q.totalMax ?? null,
       pagina: q.pagina,
       tamanoPagina: q.tamanoPagina,
       busqueda: q.numeroSeguimiento ? q.numeroSeguimiento : null,
+      orden: q.orden,
+      direccion: q.direccion,
     });
   }
 }

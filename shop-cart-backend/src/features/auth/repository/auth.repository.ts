@@ -52,6 +52,8 @@ export class AuthRepository implements IAuthRepository {
       .input('Busqueda', sql.NVarChar(150), params.q ?? null)
       .input('Rol', sql.VarChar(20), params.rol ?? null)
       .input('Activo', sql.Bit, params.activo !== undefined ? (params.activo ? 1 : 0) : null)
+      .input('Orden', sql.VarChar(20), params.orden ?? 'fecha')
+      .input('Direccion', sql.VarChar(4), params.direccion ?? 'desc')
       .input('Pagina', sql.Int, params.pagina)
       .input('TamanoPagina', sql.Int, params.tamanoPagina)
       .execute('SP_Usuarios_Listar');

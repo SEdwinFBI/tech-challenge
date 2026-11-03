@@ -16,7 +16,8 @@ export const GetProductsSchema = z.object({
   soloOfertas: z.string().optional(),
   soloNuevos: z.string().optional(),
   soloDestacados: z.string().optional(),
-  orden: z.enum(['RECIENTES', 'PRECIO_ASC', 'PRECIO_DESC', 'NOMBRE_ASC', 'MAS_VENDIDOS', 'DESTACADOS']).default('RECIENTES'),
+  activo: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
+  orden: z.enum(['RECIENTES', 'PRECIO_ASC', 'PRECIO_DESC', 'NOMBRE_ASC', 'NOMBRE_DESC', 'MAS_VENDIDOS', 'DESTACADOS']).default('RECIENTES'),
   pagina: z.coerce.number().int().min(1).default(1),
   tamanoPagina: z.coerce.number().int().min(1).max(50).default(12),
 });

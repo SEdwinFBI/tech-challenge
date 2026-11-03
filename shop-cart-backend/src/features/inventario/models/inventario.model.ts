@@ -1,17 +1,11 @@
 export type MovementTypeInput =
-  | 'ENTRADA'
-  | 'SALIDA'
   | 'AJUSTE'
   | 'ENTRADA_COMPRA'
-  | 'SALIDA_MERMA'
-  | 'AJUSTE_FISICO'
   | 'AJUSTE_POSITIVO'
   | 'AJUSTE_NEGATIVO';
 
 export type KardexMovementType =
   | 'ENTRADA_COMPRA'
-  | 'SALIDA_MERMA'
-  | 'AJUSTE_FISICO'
   | 'AJUSTE_POSITIVO'
   | 'AJUSTE_NEGATIVO';
 
@@ -64,6 +58,8 @@ export interface GetKardexParams {
   tipoMovimiento?: string;
   fechaDesde?: Date;
   fechaHasta?: Date;
+  orden?: string;
+  direccion?: string;
   pagina: number;
   tamanoPagina: number;
 }

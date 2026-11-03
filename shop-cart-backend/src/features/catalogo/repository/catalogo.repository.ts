@@ -60,6 +60,7 @@ export class CatalogRepository implements ICatalogRepository {
       .input('SoloOfertas', sql.Bit, f.soloOfertas ? 1 : 0)
       .input('SoloNuevos', sql.Bit, f.soloNuevos ? 1 : 0)
       .input('SoloDestacados', sql.Bit, f.soloDestacados ? 1 : 0)
+      .input('Activo', sql.Bit, f.activo === undefined ? null : f.activo ? 1 : 0)
       .execute<ProductDTO>('SP_Catalogo_ListarProductos');
 
     return {

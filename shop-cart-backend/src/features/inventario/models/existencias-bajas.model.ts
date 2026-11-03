@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DireccionSchema } from '@/core/domain/sort';
 
 export interface LowStockItemDTO {
   IDVariante: number;
@@ -24,6 +25,8 @@ export interface LowStockResult {
 
 export const GetLowStockSchema = z.object({
   q: z.string().trim().max(150).optional(),
+  orden: z.enum(['existencia', 'producto', 'sku']).default('existencia'),
+  direccion: DireccionSchema.default('asc'),
   pagina: z.coerce.number().int().min(1).default(1),
   tamanoPagina: z.coerce.number().int().min(1).max(100).default(20),
 });
