@@ -1,3 +1,5 @@
+# Fase 1
+
 # ShopCart Backend
 
 API de comercio electrónico para gestionar catálogo, inventario, carritos, pedidos y usuarios. Está desarrollada con TypeScript, Express y SQL Server. El pago se simula; no hay integración con una pasarela de cobros.
@@ -6,17 +8,26 @@ API de comercio electrónico para gestionar catálogo, inventario, carritos, ped
 
 Arquitectura Vertical Slice, con DDD y CQRS ligeros.
 
-**Vertical.** El código se organiza por funcionalidad. Cada módulo de `features/` es un slice completo: rutas, modelos, comandos, consultas, repositorio y reglas de dominio. Lo demas: configuración, middlewares, errores de dominio está en `core/`.
+**Vertical.** El código se organiza por funcionalidad . Cada módulo de `features/` es un slice completo: controlladores: rutas, servicios:  comandos, consultas, acceso a datos: modelos, repositorio y reglas de dominio. Lo demas: configuración, middlewares, errores de dominio está en `core/`.
 
 **CQRS ligero.** Las escrituras son Commands y las lecturas son Queries, cada una con su handler. Comparten la misma base de datos, sin sistema de  mensajes ni BD separada por cuestion de tiempo. La ruta valida la entrada con Zod y delega en el handler, el repositorio solo invoca procedimientos almacenados.
 
-**DDD ligero.** Las reglas del negocio viven en `domain/` como código sin dependencias de datos: estados del pedido, las políticas de cupones e inventario, el objeto de valor  y los errores de dominio. La persistencia, las transacciones y el control de existencias se resuelven en SQL Server.
+**DDD ligero.** Las reglas del negocio viven en `domain/` como código: estados del pedido, las políticas de cupones e inventario, el objeto de valor  y los errores de dominio. La persistencia, las transacciones y el control de existencias se resuelven en SQL Server.
+
+![Arquitectura vertical de ShopCart](docs/imagenes/arquitectura-vertical.svg)
+
+### Por qué esta arquitectura
+
+- Slices verticales: Se seleccionó esta arquitectura porque permite organizar el código en función de lo que la aplicación hace. Este modelo agrupa todos los componentes necesarios para resolver una función específica. Esto reduce el tiempo de desarrollo y facilita la búsqueda de archivos.
+- CQRS ligero: Se complementó el diseño con un enfoque de CQRS ligero para separar las operaciones de lectura y escritura dentro de cada función.
+- DDD ligero: las reglas base viven en `domain/` (transiciones de estado, políticas de cupones e inventario). 
+
 
 ## Desarrollo local
 
 El backend está en `shop-cart-backend/`. 
 
-Se necesita Node.js 24 o superior y  SQL Server. La configuración de conexión se toma de `.env`.
+Se necesita Node.js 24  y  SQL Server. La configuración de conexión se toma de `.env`.
 
 Desde la raíz del repositorio:
 
@@ -25,7 +36,7 @@ cd shop-cart-backend
 npm ci
 ```
 
-Crear `.env` a partir de [`.env.example`](.env.example).
+Crear `.env` a partir de [`.env.example`](shop-cart-backend/.env.example).
 
 Completar las credenciales de SQL Server y los secretos de JWT antes de iniciar la aplicación.
 
@@ -42,7 +53,7 @@ Completar las credenciales de SQL Server y los secretos de JWT antes de iniciar 
 | `JWT_FAMILY_EXPIRES_IN_DAYS` | Duración máxima de la familia de sesiones en días; por defecto, `30`. |
 | `RATE_LIMIT_AUTH_MAX` | Intentos de autenticación permitidos por ventana; por defecto, `15`. |
 | `RATE_LIMIT_AUTH_WINDOW_MIN` | Ventana de autenticación en minutos; por defecto, `15`. |
-| `CORS_ALLOW_ORIGIN` | Origen permitido para el frontend; en desarrollo, `http://localhost:5173`. |
+| `CORS_ALLOW_ORIGIN` | Origen permitido para el frontend, `http://localhost:5173`. |
 
 ### Base de datos
 
@@ -52,16 +63,15 @@ Con SQL Server disponible y `.env` configurado, ejecutar desde `shop-cart-backen
 npm run db:setup
 ```
 
-El inicializador crea la base indicada en `DB_NAME` si no existe, crea las tablas cuando la base no tiene tablas de usuario y aplica funciones, vistas, procedimientos, datos de ejemplo y se agrego mas cosas para la  tienda. El usuario de conexión necesita permisos para estas operaciones.
+El inicializador crea la base indicada en `DB_NAME` si no existe, crea las tablas cuando la base no tiene tablas de usuario y aplica funciones, vistas, procedimientos, datos de ejemplo. El usuario de conexión necesita permisos para estas operaciones.
 
-Los archivos SQL están en [`scrips/`](scrips/), numerados según su orden de ejecución:
+Los archivos SQL están en [`scrips/`](shop-cart-backend/scrips/), numerados según su orden de ejecución:
 
-1. [`01_tablas_y_semilla_base.sql`](scrips/01_tablas_y_semilla_base.sql): tablas y datos base.
-2. [`02_funciones.sql`](scrips/02_funciones.sql): funciones de inventario y descuentos.
-3. [`03_vistas.sql`](scrips/03_vistas.sql): consultas agregadas de pedidos y ventas.
-4. [`04_stored_procedures.sql`](scrips/04_stored_procedures.sql): operaciones del negocio.
-5. [`05_seed_datos_demo.sql`](scrips/05_seed_datos_demo.sql): datos de ejemplo.
-6. [`06_extensiones_tienda.sql`](scrips/06_extensiones_tienda.sql): galería, favoritos y otras funciones de tienda.
+1. [`01_tablas_y_semilla_base.sql`](shop-cart-backend/scrips/01_tablas_y_semilla_base.sql): tablas y datos base.
+2. [`02_funciones.sql`](shop-cart-backend/scrips/02_funciones.sql): funciones de inventario y descuentos.
+3. [`03_vistas.sql`](shop-cart-backend/scrips/03_vistas.sql): consultas agregadas de pedidos y ventas.
+4. [`04_stored_procedures.sql`](shop-cart-backend/scrips/04_stored_procedures.sql): operaciones del negocio.
+5. [`05_seed_datos_demo.sql`](shop-cart-backend/scrips/05_seed_datos_demo.sql): datos de ejemplo.
 
 `db:setup` es un inicializador, no un sistema de migraciones
 
@@ -102,7 +112,7 @@ Cada módulo tiene rutas, modelos, comandos, consultas y repositorio. Los Comman
 
 Los repositorios acceden a SQL Server mediante procedimientos almacenados. Las transacciones y el control de existencias se resuelven en la base de datos. El inicializador de la base ejecuta los scripts SQL directamente.
 
-El registro en [`src/features/index.ts`](src/features/index.ts) busca archivos `*.routes.ts` o `*.routes.js` y monta cada router bajo `/api/v1/<nombre>`.
+El registro en [`src/features/index.ts`](shop-cart-backend/src/features/index.ts) busca archivos `*.routes.ts` o `*.routes.js` y monta cada router bajo `/api/v1/<nombre>`.
 
 | Módulo | Responsabilidad |
 | --- | --- |
@@ -118,7 +128,21 @@ El registro en [`src/features/index.ts`](src/features/index.ts) busca archivos `
 | `bitacora` | Consulta de auditoría. |
 | `seed` | Carga de datos de ejemplo en desarrollo. |
 
-Los contratos de las peticiones y respuestas se consultan en la referencia OpenAPI del servidor.
+Los contratos de las peticiones y respuestas estan en OpenAPI.
+
+
+
+## Modelo de datos
+
+![Diagrama ER](docs/imagenes/modelo-er.svg)
+
+La base tiene 29 tablas en seis áreas: acceso y auditoría, catálogo, inventario, carrito y cupones, pedidos, y envío. Las llaves primarias siguen el formato `IDProducto` y todo el acceso a datos pasa por procedimientos almacenados. Los montos usan `DECIMAL`.
+
+## Estados del pedido
+
+![Estados del pedido](docs/imagenes/estados-del-pedido.svg)
+
+Un pedido nace en `PAGADO` cuando el checkout confirma el pago y avanza hasta `ENTREGADO`. Se puede cancelar antes del despacho y devolver después de la entrega. Las transiciones válidas están en la tabla `TransicionesEstadoPedido`; el procedimiento almacenado rechaza cualquier otra.
 
 ## Acceso y datos de ejemplo
 
@@ -130,22 +154,28 @@ El seed crea estas cuentas en una instalación nueva:
 | Operador | `operador@shopcart.gt` | `Admin123!` |
 | Cliente | `cliente@shopcart.gt` | `Admin123!` |
 
-Al volver a aplicar el seed se conservan las contraseñas de usuarios existentes.
 
 El administrador gestiona catálogo, usuarios, cupones y reportes. El operador trabaja con inventario, preparación de pedidos y devoluciones. El cliente accede a sus propios carritos, direcciones, favoritos y pedidos.
 
-Las rutas protegidas reciben el token de acceso en `Authorization: Bearer <token>`. El carrito de invitados se identifica con `X-Guest-Token` y se fusiona con el del cliente al autenticarse. La renovación de sesión utiliza una cookie HTTP-only.
 
-## Reglas del negocio
+## Decisiones 
 
-- Los importes se expresan en quetzales  y los precios incluyen IVA 
-- La reserva de inventario dura 15 minutos. El servidor ejecuta la limpieza de reservas vencidas cada minuto.
-- La confirmación de pedidos utiliza una clave de idempotencia para evitar duplicados.
-- Los descuentos se distribuyen entre las líneas elegibles. Las devoluciones usan los importes de línea para conservar el total exacto.
-- Una cancelación o devolución total reintegra el uso del cupón; una devolución parcial no lo reintegra.
-- Las métricas de ventas incluyen pedidos entregados y sus devoluciones, descontando los reembolsos.
+ Esto es lo que se decidió.
 
-El flujo principal de un pedido es `PAGADO → EN_PREPARACION → DESPACHADO → ENTREGADO`. Las cancelaciones y devoluciones dependen del estado y del rol del usuario. Las transiciones se validan en el dominio y en SQL Server.
+- Se agrego mas funcionalidades ademas de los requerimientos del reto demostrar la extensibilidad del diseño, comprobando que la estructura elegida permite añadir nuevas características.
+- El flujo principal de un pedido es `PAGADO → EN_PREPARACION → DESPACHADO → ENTREGADO`.
+- Renovación de sesión: se tolera durante 10 segundos el reuso de un refresh token recién rotado 
+- Token inválido: en carrito y checkout responde 401, para no tratar como invitado a un cliente con la sesión vencida y perderle el carrito. Solo el catálogo lo toma como invitado
+- Un pedido ajeno responde 404, igual que uno inexistente, para no confirmar que existe.
+- El checkout no crea el pedido hasta confirmar el pago, y la reserva de existencias dura 15 minutos.
+- El pago se simula
+- La contraseña exige entre 8 y 72 caracteres. 
+- El dashboard en vivo usa un ticket de un solo uso con 30 segundos.
+- El ordenamiento se hace en el servidor .
+- La primera dirección activa de un cliente queda como predeterminada
+- Las Estadisticas cuentan como completados los pedidos entregados y descuentan las devoluciones. 
+
+
 
 ## Pruebas
 
@@ -160,7 +190,7 @@ npm test
 
 Las pruebas de integración y concurrencia HTTP necesitan una API local conectada a una base de pruebas cuyo nombre comience por `ShopCartAudit_`. Crean registros de prueba y los conservan para inspección.
 
-Para preparar ese entorno, configurar `DB_NAME` con el nombre de la base aislada y `PORT=3107`, ejecutar `npm run db:setup` e iniciar la API. En otra terminal de PowerShell, desde la carpeta del backend:
+Para preparar ese entorno, hay que  configurar `DB_NAME` con otra base de datos para test, `PORT=3107` y `RATE_LIMIT_AUTH_MAX=500` las suites registran muchos usuarios, ejecutar `npm run db:setup` e iniciar la API. 
 
 ```powershell
 $env:RUN_AUDIT_INTEGRATION = '1'
@@ -172,4 +202,4 @@ npm run test:concurrency:http
 
 `AUDIT_DB_NAME` debe coincidir con el `DB_NAME` de la API de pruebas. Estas suites modifican datos y deben ejecutarse en la base aislada.
 
-`npm run test:concurrency` ejecuta una demostración adicional de concurrencia. Su implementación está en [`tests/concurrency-demo.ts`](tests/concurrency-demo.ts).
+`npm run test:concurrency` ejecuta una demostración adicional de concurrencia. Su implementación está en [`tests/concurrency-demo.ts`](shop-cart-backend/tests/concurrency-demo.ts).

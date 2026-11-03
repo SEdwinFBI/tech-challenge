@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1174" height="452" viewBox="0 0 1174 452" role="img" aria-labelledby="t">
+<title id="t">Arquitectura vertical de ShopCart</title>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<rect x="40" y="62" width="1094" height="70" fill="#c8611f" stroke="#8f3f0e" stroke-width="4"/>
+<text x="64" y="95" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="25" font-weight="600" fill="#fff">Presentación</text>
+<text x="64" y="117" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14" fill="#fff" opacity="0.92">rutas y validación Zod</text>
+<rect x="40" y="148" width="1094" height="70" fill="#3f6fc4" stroke="#24488a" stroke-width="4"/>
+<text x="64" y="181" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="25" font-weight="600" fill="#fff">Aplicación</text>
+<text x="64" y="203" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14" fill="#fff" opacity="0.92">commands y queries</text>
+<rect x="40" y="234" width="1094" height="70" fill="#5d9a3a" stroke="#3b6a22" stroke-width="4"/>
+<text x="64" y="267" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="25" font-weight="600" fill="#fff">Dominio</text>
+<text x="64" y="289" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14" fill="#fff" opacity="0.92">reglas y estados</text>
+<rect x="40" y="320" width="1094" height="70" fill="#bf9408" stroke="#856600" stroke-width="4"/>
+<text x="64" y="353" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="25" font-weight="600" fill="#fff">Acceso a datos</text>
+<text x="64" y="375" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="14" fill="#fff" opacity="0.92">repositorio y stored procedures</text>
+<rect x="340" y="40" width="62" height="372" fill="#fff6cf" stroke="#f2b705" stroke-width="4"/>
+<text x="371" y="226" transform="rotate(-90 371 226)" text-anchor="middle" dominant-baseline="central" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="19" font-weight="700" fill="#1b1b1b">auth</text>
+<rect x="418" y="40" width="62" height="372" fill="#fff6cf" stroke="#f2b705" stroke-width="4"/>
+<text x="449" y="226" transform="rotate(-90 449 226)" text-anchor="middle" dominant-baseline="central" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="19" font-weight="700" fill="#1b1b1b">catalogo</text>
+<rect x="496" y="40" width="62" height="372" fill="#fff6cf" stroke="#f2b705" stroke-width="4"/>
+<text x="527" y="226" transform="rotate(-90 527 226)" text-anchor="middle" dominant-baseline="central" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="19" font-weight="700" fill="#1b1b1b">inventario</text>
+<rect x="574" y="40" width="62" height="372" fill="#fff6cf" stroke="#f2b705" stroke-width="4"/>
+<text x="605" y="226" transform="rotate(-90 605 226)" text-anchor="middle" dominant-baseline="central" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="19" font-weight="700" fill="#1b1b1b">carrito</text>
+<rect x="652" y="40" width="62" height="372" fill="#fff6cf" stroke="#f2b705" stroke-width="4"/>
+<text x="683" y="226" transform="rotate(-90 683 226)" text-anchor="middle" dominant-baseline="central" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="19" font-weight="700" fill="#1b1b1b">cupones</text>
+<rect x="730" y="40" width="62" height="372" fill="#fff6cf" stroke="#f2b705" stroke-width="4"/>
+<text x="761" y="226" transform="rotate(-90 761 226)" text-anchor="middle" dominant-baseline="central" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="19" font-weight="700" fill="#1b1b1b">checkout</text>
+<rect x="808" y="40" width="62" height="372" fill="#fff6cf" stroke="#f2b705" stroke-width="4"/>
+<text x="839" y="226" transform="rotate(-90 839 226)" text-anchor="middle" dominant-baseline="central" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="19" font-weight="700" fill="#1b1b1b">pedidos</text>
+<rect x="886" y="40" width="62" height="372" fill="#fff6cf" stroke="#f2b705" stroke-width="4"/>
+<text x="917" y="226" transform="rotate(-90 917 226)" text-anchor="middle" dominant-baseline="central" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="19" font-weight="700" fill="#1b1b1b">favoritos</text>
+<rect x="964" y="40" width="62" height="372" fill="#fff6cf" stroke="#f2b705" stroke-width="4"/>
+<text x="995" y="226" transform="rotate(-90 995 226)" text-anchor="middle" dominant-baseline="central" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="19" font-weight="700" fill="#1b1b1b">dashboard</text>
+<rect x="1042" y="40" width="62" height="372" fill="#fff6cf" stroke="#f2b705" stroke-width="4"/>
+<text x="1073" y="226" transform="rotate(-90 1073 226)" text-anchor="middle" dominant-baseline="central" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="19" font-weight="700" fill="#1b1b1b">bitacora</text>
+</svg>
