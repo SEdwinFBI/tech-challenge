@@ -1,12 +1,6 @@
 USE ShopCartDB;
 GO
 
-IF COL_LENGTH('dbo.RefreshTokens', 'FamilyExpiresAt') IS NULL
-BEGIN
-    ALTER TABLE dbo.RefreshTokens ADD FamilyExpiresAt DATETIME2 NOT NULL CONSTRAINT DF_RefreshTokens_FamilyExp DEFAULT DATEADD(DAY, 30, SYSDATETIME());
-END
-GO
-
 -- autenticación y usuarios
 CREATE OR ALTER PROCEDURE SP_Auth_RegistrarCliente
     @Correo NVARCHAR(150),
@@ -109,7 +103,7 @@ BEGIN
             )
             BEGIN
                 COMMIT TRANSACTION;
-                THROW 50016, 'Ya se renovó esta sesión hace un instante. Intenta de nuevo.', 1;
+                THROW 50016, 'Ya se renovó esta sesión. Intenta de nuevo.', 1;
             END
 
             UPDATE RefreshTokens SET Revocado = 1 WHERE IDUsuario = @IDUsuario;
@@ -195,11 +189,16 @@ CREATE OR ALTER PROCEDURE SP_Usuarios_Listar
     @Busqueda NVARCHAR(150) = NULL,
     @Rol VARCHAR(20) = NULL,
     @Activo BIT = NULL,
+    @Orden VARCHAR(20) = 'fecha',
+    @Direccion VARCHAR(4) = 'desc',
     @Pagina INT = 1,
     @TamanoPagina INT = 20
 AS
 BEGIN
     SET NOCOUNT ON;
+    IF @Orden IS NULL OR @Orden NOT IN ('fecha', 'nombre', 'correo', 'rol') SET @Orden = 'fecha';
+    IF @Direccion IS NULL OR @Direccion NOT IN ('asc', 'desc') SET @Direccion = 'desc';
+    DECLARE @Patron NVARCHAR(500) = '%' + REPLACE(REPLACE(REPLACE(@Busqueda, '[', '[[]'), '%', '[%]'), '_', '[_]') + '%';
     IF @Pagina < 1 SET @Pagina = 1;
     IF @TamanoPagina < 1 SET @TamanoPagina = 20;
 
@@ -215,12 +214,21 @@ BEGIN
     INTO #Resultados
     FROM Usuarios u 
     INNER JOIN Roles r ON u.IDRol = r.IDRol
-    WHERE (@Busqueda IS NULL OR u.Correo LIKE '%' + @Busqueda + '%' OR u.Nombre LIKE '%' + @Busqueda + '%')
+    WHERE (@Busqueda IS NULL OR u.Correo LIKE @Patron OR u.Nombre LIKE @Patron)
       AND (@Rol IS NULL OR r.Codigo = @Rol)
       AND (@Activo IS NULL OR u.Activo = @Activo);
 
     SELECT * FROM #Resultados
-    ORDER BY IDUsuario DESC
+    ORDER BY
+        CASE WHEN @Orden = 'fecha' AND @Direccion = 'asc' THEN FechaCreacion END ASC,
+        CASE WHEN @Orden = 'fecha' AND @Direccion = 'desc' THEN FechaCreacion END DESC,
+        CASE WHEN @Orden = 'nombre' AND @Direccion = 'asc' THEN NombreCompleto END ASC,
+        CASE WHEN @Orden = 'nombre' AND @Direccion = 'desc' THEN NombreCompleto END DESC,
+        CASE WHEN @Orden = 'correo' AND @Direccion = 'asc' THEN Correo END ASC,
+        CASE WHEN @Orden = 'correo' AND @Direccion = 'desc' THEN Correo END DESC,
+        CASE WHEN @Orden = 'rol' AND @Direccion = 'asc' THEN Rol END ASC,
+        CASE WHEN @Orden = 'rol' AND @Direccion = 'desc' THEN Rol END DESC,
+        IDUsuario DESC
     OFFSET (@Pagina - 1) * @TamanoPagina ROWS
     FETCH NEXT @TamanoPagina ROWS ONLY;
     SELECT COUNT(1) AS TotalRegistros FROM #Resultados;
@@ -287,16 +295,80 @@ BEGIN
 END;
 GO
 
+CREATE OR ALTER PROCEDURE SP_Usuarios_ActualizarPerfil
+    @IDUsuario INT,
+    @Nombre NVARCHAR(150)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        SET @Nombre = LTRIM(RTRIM(@Nombre));
+        IF @Nombre IS NULL OR LEN(@Nombre) < 3
+            THROW 50097, 'El nombre debe tener al menos 3 caracteres.', 1;
+
+        DECLARE @Anterior NVARCHAR(150);
+        SELECT @Anterior = Nombre FROM Usuarios WITH (UPDLOCK) WHERE IDUsuario = @IDUsuario;
+        IF @Anterior IS NULL THROW 50098, 'El usuario no existe.', 1;
+
+        UPDATE Usuarios SET Nombre = @Nombre WHERE IDUsuario = @IDUsuario;
+
+        INSERT INTO Bitacora (IDUsuario, Modulo, Entidad, IDEntidad, Accion, ValorAnterior, ValorNuevo)
+        VALUES (@IDUsuario, 'USUARIOS', 'Usuarios', @IDUsuario, 'MODIFICACION',
+                CONCAT('{"Nombre":"', STRING_ESCAPE(@Anterior, 'json'), '"}'),
+                CONCAT('{"Nombre":"', STRING_ESCAPE(@Nombre, 'json'), '"}'));
+        COMMIT TRANSACTION;
+
+        SELECT u.IDUsuario, u.Correo, u.Nombre AS NombreCompleto, r.Codigo AS Rol, u.Activo, u.FechaCreacion
+        FROM Usuarios u INNER JOIN Roles r ON u.IDRol = r.IDRol
+        WHERE u.IDUsuario = @IDUsuario;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Usuarios_CambiarPassword
+    @IDUsuario INT,
+    @PasswordHash NVARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        IF NOT EXISTS (SELECT 1 FROM Usuarios WITH (UPDLOCK) WHERE IDUsuario = @IDUsuario)
+            THROW 50098, 'El usuario no existe.', 1;
+
+        UPDATE Usuarios SET Password = @PasswordHash WHERE IDUsuario = @IDUsuario;
+        UPDATE RefreshTokens SET Revocado = 1 WHERE IDUsuario = @IDUsuario AND Revocado = 0;
+
+        INSERT INTO Bitacora (IDUsuario, Modulo, Entidad, IDEntidad, Accion, ValorAnterior, ValorNuevo)
+        VALUES (@IDUsuario, 'USUARIOS', 'Usuarios', @IDUsuario, 'CAMBIO_PASSWORD', NULL, '{"PasswordActualizado":true}');
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END;
+GO
+
 -- catálogo de productos y categorías
 CREATE OR ALTER PROCEDURE SP_Catalogo_ListarCategorias
     @SoloActivas BIT = 1
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT IDCategoria, Nombre, Descripcion, Activo
-    FROM Categorias
-    WHERE (@SoloActivas = 0 OR Activo = 1)
-    ORDER BY Nombre ASC;
+    SELECT c.IDCategoria, c.Nombre, c.Descripcion, c.Activo,
+           c.ImagenUrl,
+           (SELECT COUNT(1) FROM Productos p WHERE p.IDCategoria = c.IDCategoria AND p.Activo = 1) AS TotalProductos
+    FROM Categorias c
+    WHERE (@SoloActivas = 0 OR c.Activo = 1)
+    ORDER BY c.Nombre ASC;
 END;
 GO
 
@@ -346,29 +418,59 @@ CREATE OR ALTER PROCEDURE SP_Catalogo_ListarProductos
     @IncluirInactivos BIT = 0,
     @OrdenarPor VARCHAR(20) = 'RECIENTES',
     @Pagina INT = 1,
-    @TamanoPagina INT = 12
+    @TamanoPagina INT = 12,
+    @SoloOfertas BIT = 0,
+    @SoloNuevos BIT = 0,
+    @SoloDestacados BIT = 0,
+    @Activo BIT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
+    DECLARE @Patron NVARCHAR(500) = '%' + REPLACE(REPLACE(REPLACE(@Busqueda, '[', '[[]'), '%', '[%]'), '_', '[_]') + '%';
     DECLARE @Offset INT = (@Pagina - 1) * @TamanoPagina;
+    DECLARE @DiasNuevo INT = ISNULL((SELECT TRY_CAST(Valor AS INT) FROM ConfiguracionSistema WHERE Clave = 'DiasProductoNuevo'), 30);
+    DECLARE @FechaNuevo DATETIME2 = DATEADD(DAY, -@DiasNuevo, SYSDATETIME());
 
     WITH ProductosFiltrados AS (
-        SELECT 
+        SELECT
             p.IDProducto, p.Nombre, p.Descripcion, p.ImagenUrl, p.Activo,
             c.IDCategoria, c.Nombre AS Categoria,
             MIN(v.Precio) AS PrecioMinimo, MAX(v.Precio) AS PrecioMaximo,
             SUM(disp.ExistenciaDisponible) AS StockTotalDisponible,
-            p.FechaCreacion
+            p.FechaCreacion,
+            p.Destacado,
+            ofe.PrecioOferta, ofe.PrecioReferencia, ofe.PorcentajeDescuento,
+            (SELECT ISNULL(SUM(pd.CantidadComprada - pd.CantidadDevuelta), 0)
+             FROM PedidoDetalles pd
+             INNER JOIN Variantes vv ON vv.IDVariante = pd.IDVariante
+             INNER JOIN Pedidos pe ON pe.IDPedido = pd.IDPedido
+             INNER JOIN EstadosPedido ep ON ep.IDEstadoPedido = pe.IDEstadoPedido
+             WHERE vv.IDProducto = p.IDProducto
+               AND ep.Codigo IN ('ENTREGADO', 'DEVUELTO_PARCIAL', 'DEVUELTO_TOTAL')) AS UnidadesVendidas
         FROM Productos p
         INNER JOIN Categorias c ON p.IDCategoria = c.IDCategoria
         INNER JOIN Variantes v ON p.IDProducto = v.IDProducto AND v.Activo = 1
         CROSS APPLY dbo.FU_Inventario_ExistenciaDisponible(v.IDVariante) disp
+        OUTER APPLY (
+            SELECT TOP 1 vo.Precio AS PrecioOferta, vo.PrecioReferencia,
+                   CAST(ROUND((vo.PrecioReferencia - vo.Precio) * 100.0 / vo.PrecioReferencia, 0) AS INT) AS PorcentajeDescuento
+            FROM Variantes vo
+            WHERE vo.IDProducto = p.IDProducto AND vo.Activo = 1
+              AND vo.PrecioReferencia > vo.Precio
+              AND (vo.PrecioReferencia - vo.Precio) * 100.0 / vo.PrecioReferencia >= 1
+            ORDER BY (vo.PrecioReferencia - vo.Precio) / vo.PrecioReferencia DESC, vo.IDVariante ASC
+        ) ofe
         WHERE (@IncluirInactivos = 1 OR (p.Activo = 1 AND c.Activo = 1))
           AND (@IDCategoria IS NULL OR p.IDCategoria = @IDCategoria)
-          AND (@Busqueda IS NULL OR p.Nombre LIKE '%' + @Busqueda + '%' OR p.Descripcion LIKE '%' + @Busqueda + '%' OR v.SKU LIKE '%' + @Busqueda + '%')
+          AND (@Activo IS NULL OR p.Activo = @Activo)
+          AND (@Busqueda IS NULL OR p.Nombre LIKE @Patron OR p.Descripcion LIKE @Patron OR v.SKU LIKE @Patron)
           AND (@PrecioMin IS NULL OR v.Precio >= @PrecioMin)
           AND (@PrecioMax IS NULL OR v.Precio <= @PrecioMax)
-        GROUP BY p.IDProducto, p.Nombre, p.Descripcion, p.ImagenUrl, p.Activo, c.IDCategoria, c.Nombre, p.FechaCreacion
+          AND (@SoloNuevos = 0 OR p.FechaCreacion >= @FechaNuevo)
+          AND (@SoloDestacados = 0 OR p.Destacado = 1)
+          AND (@SoloOfertas = 0 OR ofe.PrecioReferencia IS NOT NULL)
+        GROUP BY p.IDProducto, p.Nombre, p.Descripcion, p.ImagenUrl, p.Activo, c.IDCategoria, c.Nombre, p.FechaCreacion,
+                 p.Destacado, ofe.PrecioOferta, ofe.PrecioReferencia, ofe.PorcentajeDescuento
         HAVING (@SoloDisponibles = 0 OR SUM(disp.ExistenciaDisponible) > 0)
     )
     SELECT *, COUNT(1) OVER() AS TotalRegistros
@@ -376,11 +478,15 @@ BEGIN
     FROM ProductosFiltrados;
 
     SELECT * FROM #Resultados
-    ORDER BY 
+    ORDER BY
         CASE WHEN @OrdenarPor = 'PRECIO_ASC' THEN PrecioMinimo END ASC,
         CASE WHEN @OrdenarPor = 'PRECIO_DESC' THEN PrecioMinimo END DESC,
         CASE WHEN @OrdenarPor = 'NOMBRE_ASC' THEN Nombre END ASC,
-        CASE WHEN @OrdenarPor = 'RECIENTES' THEN FechaCreacion END DESC
+        CASE WHEN @OrdenarPor = 'NOMBRE_DESC' THEN Nombre END DESC,
+        CASE WHEN @OrdenarPor = 'MAS_VENDIDOS' THEN UnidadesVendidas END DESC,
+        CASE WHEN @OrdenarPor = 'DESTACADOS' THEN CAST(Destacado AS INT) END DESC,
+        CASE WHEN @OrdenarPor = 'RECIENTES' THEN FechaCreacion END DESC,
+        FechaCreacion DESC, IDProducto ASC
     OFFSET @Offset ROWS FETCH NEXT @TamanoPagina ROWS ONLY;
     SELECT COUNT(1) AS TotalRegistros FROM #Resultados;
 END;
@@ -391,17 +497,24 @@ CREATE OR ALTER PROCEDURE SP_Catalogo_ObtenerDetalleProducto
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT p.IDProducto, p.Nombre, p.Descripcion, p.ImagenUrl, p.Activo, c.IDCategoria, c.Nombre AS Categoria
-    FROM Productos p 
-    INNER JOIN Categorias c ON p.IDCategoria = c.IDCategoria 
+    SELECT p.IDProducto, p.Nombre, p.Descripcion, p.ImagenUrl, p.Activo, c.IDCategoria, c.Nombre AS Categoria, p.Destacado
+    FROM Productos p
+    INNER JOIN Categorias c ON p.IDCategoria = c.IDCategoria
     WHERE p.IDProducto = @IDProducto AND p.Activo = 1 AND c.Activo = 1;
 
     SELECT v.IDVariante, v.SKU, v.Talla, v.Color, v.Presentacion, v.Precio, v.Activo,
-           disp.ExistenciaFisica, disp.UnidadesReservadas, disp.ExistenciaDisponible
+           disp.ExistenciaFisica, disp.UnidadesReservadas, disp.ExistenciaDisponible,
+           CASE WHEN v.PrecioReferencia > v.Precio THEN v.PrecioReferencia END AS PrecioReferencia
     FROM Variantes v
     CROSS APPLY dbo.FU_Inventario_ExistenciaDisponible(v.IDVariante) disp
     WHERE v.IDProducto = @IDProducto AND v.Activo = 1
       AND EXISTS (SELECT 1 FROM Productos p INNER JOIN Categorias c ON p.IDCategoria = c.IDCategoria WHERE p.IDProducto = @IDProducto AND p.Activo = 1 AND c.Activo = 1);
+
+    SELECT i.IDProductoImagen, i.Url, i.Orden
+    FROM ProductoImagenes i
+    WHERE i.IDProducto = @IDProducto
+      AND EXISTS (SELECT 1 FROM Productos p INNER JOIN Categorias c ON p.IDCategoria = c.IDCategoria WHERE p.IDProducto = @IDProducto AND p.Activo = 1 AND c.Activo = 1)
+    ORDER BY i.Orden ASC;
 END;
 GO
 
@@ -681,11 +794,280 @@ BEGIN
 END;
 GO
 
+CREATE OR ALTER PROCEDURE SP_Catalogo_ListarImagenesProducto
+    @IDProducto INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT i.IDProductoImagen, i.IDProducto, i.Url, i.Orden
+    FROM ProductoImagenes i
+    INNER JOIN Productos p ON p.IDProducto = i.IDProducto AND p.Activo = 1
+    WHERE i.IDProducto = @IDProducto
+    ORDER BY i.Orden ASC;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Catalogo_AgregarImagenProducto
+    @IDProducto INT,
+    @Url NVARCHAR(500),
+    @IDUsuarioAdmin INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        IF @Url IS NULL OR (@Url NOT LIKE 'http://%' AND @Url NOT LIKE 'https://%')
+            THROW 50094, 'La URL de la imagen debe iniciar con http:// o https://.', 1;
+        IF NOT EXISTS (SELECT 1 FROM Productos WITH (UPDLOCK, HOLDLOCK) WHERE IDProducto = @IDProducto)
+            THROW 50090, 'El producto no existe.', 1;
+        IF (SELECT COUNT(1) FROM ProductoImagenes WHERE IDProducto = @IDProducto) >= 10
+            THROW 50092, 'Un producto admite como maximo 10 imagenes en su galeria.', 1;
+
+        DECLARE @Orden INT = ISNULL((SELECT MAX(Orden) FROM ProductoImagenes WHERE IDProducto = @IDProducto), 0) + 1;
+        INSERT INTO ProductoImagenes (IDProducto, Url, Orden) VALUES (@IDProducto, @Url, @Orden);
+        DECLARE @IDNuevo INT = SCOPE_IDENTITY();
+
+        INSERT INTO Bitacora (IDUsuario, Modulo, Entidad, IDEntidad, Accion, ValorAnterior, ValorNuevo)
+        VALUES (@IDUsuarioAdmin, 'PRODUCTOS', 'ProductoImagenes', @IDNuevo, 'CREACION', NULL,
+                CONCAT('{"IDProducto":', @IDProducto, ',"Url":"', STRING_ESCAPE(@Url, 'json'), '","Orden":', @Orden, '}'));
+        COMMIT TRANSACTION;
+
+        SELECT IDProductoImagen, IDProducto, Url, Orden FROM ProductoImagenes WHERE IDProductoImagen = @IDNuevo;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Catalogo_EliminarImagenProducto
+    @IDProductoImagen INT,
+    @IDUsuarioAdmin INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        DECLARE @IDProducto INT, @Url NVARCHAR(500), @Orden INT;
+        SELECT @IDProducto = IDProducto, @Url = Url, @Orden = Orden
+        FROM ProductoImagenes WITH (UPDLOCK, HOLDLOCK) WHERE IDProductoImagen = @IDProductoImagen;
+        IF @IDProducto IS NULL THROW 50091, 'La imagen no existe.', 1;
+
+        DELETE FROM ProductoImagenes WHERE IDProductoImagen = @IDProductoImagen;
+
+        INSERT INTO Bitacora (IDUsuario, Modulo, Entidad, IDEntidad, Accion, ValorAnterior, ValorNuevo)
+        VALUES (@IDUsuarioAdmin, 'PRODUCTOS', 'ProductoImagenes', @IDProductoImagen, 'DESACTIVACION',
+                CONCAT('{"IDProducto":', @IDProducto, ',"Url":"', STRING_ESCAPE(@Url, 'json'), '","Orden":', @Orden, '}'), NULL);
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Catalogo_ActualizarPrecioReferencia
+    @IDVariante INT,
+    @PrecioReferencia DECIMAL(12,2) = NULL,
+    @IDUsuarioAdmin INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        DECLARE @Precio DECIMAL(12,2), @Anterior DECIMAL(12,2), @SKU VARCHAR(50);
+        SELECT @Precio = Precio, @Anterior = PrecioReferencia, @SKU = SKU
+        FROM Variantes WITH (UPDLOCK) WHERE IDVariante = @IDVariante;
+        IF @SKU IS NULL THROW 50093, 'La variante no existe.', 1;
+        IF @PrecioReferencia IS NOT NULL AND @PrecioReferencia <= @Precio
+            THROW 50095, 'El precio de referencia debe ser mayor al precio de venta actual.', 1;
+
+        UPDATE Variantes SET PrecioReferencia = @PrecioReferencia WHERE IDVariante = @IDVariante;
+
+        INSERT INTO Bitacora (IDUsuario, Modulo, Entidad, IDEntidad, Accion, ValorAnterior, ValorNuevo)
+        VALUES (@IDUsuarioAdmin, 'PRECIOS', 'Variantes', @IDVariante, 'MODIFICACION',
+                CONCAT('{"SKU":"', STRING_ESCAPE(@SKU, 'json'), '","PrecioReferencia":', ISNULL(CONVERT(VARCHAR(20), @Anterior), 'null'), '}'),
+                CONCAT('{"SKU":"', STRING_ESCAPE(@SKU, 'json'), '","PrecioReferencia":', ISNULL(CONVERT(VARCHAR(20), @PrecioReferencia), 'null'), '}'));
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Catalogo_MarcarDestacado
+    @IDProducto INT,
+    @Destacado BIT,
+    @IDUsuarioAdmin INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        DECLARE @Anterior BIT;
+        SELECT @Anterior = Destacado FROM Productos WITH (UPDLOCK) WHERE IDProducto = @IDProducto;
+        IF @Anterior IS NULL THROW 50090, 'El producto no existe.', 1;
+
+        UPDATE Productos SET Destacado = @Destacado WHERE IDProducto = @IDProducto;
+
+        INSERT INTO Bitacora (IDUsuario, Modulo, Entidad, IDEntidad, Accion, ValorAnterior, ValorNuevo)
+        VALUES (@IDUsuarioAdmin, 'PRODUCTOS', 'Productos', @IDProducto, 'MODIFICACION',
+                CONCAT('{"Destacado":', CAST(@Anterior AS INT), '}'),
+                CONCAT('{"Destacado":', CAST(@Destacado AS INT), '}'));
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Catalogo_ActualizarImagenCategoria
+    @IDCategoria INT,
+    @ImagenUrl NVARCHAR(500) = NULL,
+    @IDUsuarioAdmin INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        IF @ImagenUrl IS NOT NULL AND @ImagenUrl NOT LIKE 'http://%' AND @ImagenUrl NOT LIKE 'https://%'
+            THROW 50094, 'La URL de la imagen debe iniciar con http:// o https://.', 1;
+
+        DECLARE @Anterior NVARCHAR(500), @Existe BIT = 0;
+        SELECT @Anterior = ImagenUrl, @Existe = 1 FROM Categorias WITH (UPDLOCK) WHERE IDCategoria = @IDCategoria;
+        IF @Existe = 0 THROW 50096, 'La categoria no existe.', 1;
+
+        UPDATE Categorias SET ImagenUrl = @ImagenUrl WHERE IDCategoria = @IDCategoria;
+
+        INSERT INTO Bitacora (IDUsuario, Modulo, Entidad, IDEntidad, Accion, ValorAnterior, ValorNuevo)
+        VALUES (@IDUsuarioAdmin, 'PRODUCTOS', 'Categorias', @IDCategoria, 'MODIFICACION',
+                CONCAT('{"ImagenUrl":', ISNULL('"' + STRING_ESCAPE(@Anterior, 'json') + '"', 'null'), '}'),
+                CONCAT('{"ImagenUrl":', ISNULL('"' + STRING_ESCAPE(@ImagenUrl, 'json') + '"', 'null'), '}'));
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Catalogo_ObtenerDetalleAdmin
+    @IDProducto INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT p.IDProducto, p.Nombre, p.Descripcion, p.ImagenUrl, p.Activo, c.IDCategoria, c.Nombre AS Categoria, p.Destacado
+    FROM Productos p
+    INNER JOIN Categorias c ON p.IDCategoria = c.IDCategoria
+    WHERE p.IDProducto = @IDProducto;
+
+    SELECT v.IDVariante, v.IDProducto, v.SKU, v.Talla, v.Color, v.Presentacion, v.Precio, v.Activo,
+           disp.ExistenciaFisica, disp.UnidadesReservadas, disp.ExistenciaDisponible,
+           v.PrecioReferencia
+    FROM Variantes v
+    CROSS APPLY dbo.FU_Inventario_ExistenciaDisponible(v.IDVariante) disp
+    WHERE v.IDProducto = @IDProducto
+    ORDER BY v.IDVariante ASC;
+
+    SELECT i.IDProductoImagen, i.IDProducto, i.Url, i.Orden
+    FROM ProductoImagenes i
+    WHERE i.IDProducto = @IDProducto
+    ORDER BY i.Orden ASC;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Favoritos_Listar
+    @IDUsuario INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT
+        p.IDProducto, p.Nombre, p.Descripcion, p.ImagenUrl, p.Activo,
+        c.IDCategoria, c.Nombre AS Categoria,
+        MIN(v.Precio) AS PrecioMinimo, MAX(v.Precio) AS PrecioMaximo,
+        SUM(disp.ExistenciaDisponible) AS StockTotalDisponible,
+        p.FechaCreacion, p.Destacado,
+        ofe.PrecioOferta, ofe.PrecioReferencia, ofe.PorcentajeDescuento,
+        f.FechaCreacion AS FechaFavorito
+    FROM Favoritos f
+    INNER JOIN Productos p ON p.IDProducto = f.IDProducto AND p.Activo = 1
+    INNER JOIN Categorias c ON c.IDCategoria = p.IDCategoria AND c.Activo = 1
+    INNER JOIN Variantes v ON v.IDProducto = p.IDProducto AND v.Activo = 1
+    CROSS APPLY dbo.FU_Inventario_ExistenciaDisponible(v.IDVariante) disp
+    OUTER APPLY (
+        SELECT TOP 1 vo.Precio AS PrecioOferta, vo.PrecioReferencia,
+               CAST(ROUND((vo.PrecioReferencia - vo.Precio) * 100.0 / vo.PrecioReferencia, 0) AS INT) AS PorcentajeDescuento
+        FROM Variantes vo
+        WHERE vo.IDProducto = p.IDProducto AND vo.Activo = 1
+          AND vo.PrecioReferencia > vo.Precio
+          AND (vo.PrecioReferencia - vo.Precio) * 100.0 / vo.PrecioReferencia >= 1
+        ORDER BY (vo.PrecioReferencia - vo.Precio) / vo.PrecioReferencia DESC, vo.IDVariante ASC
+    ) ofe
+    WHERE f.IDUsuario = @IDUsuario
+    GROUP BY p.IDProducto, p.Nombre, p.Descripcion, p.ImagenUrl, p.Activo, c.IDCategoria, c.Nombre, p.FechaCreacion,
+             p.Destacado, ofe.PrecioOferta, ofe.PrecioReferencia, ofe.PorcentajeDescuento, f.FechaCreacion
+    ORDER BY f.FechaCreacion DESC;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Favoritos_ListarIDs
+    @IDUsuario INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT IDProducto FROM Favoritos WHERE IDUsuario = @IDUsuario ORDER BY FechaCreacion DESC;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Favoritos_Agregar
+    @IDUsuario INT,
+    @IDProducto INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        IF NOT EXISTS (SELECT 1 FROM Productos WHERE IDProducto = @IDProducto AND Activo = 1)
+            THROW 50090, 'El producto no existe o no esta disponible.', 1;
+        IF NOT EXISTS (SELECT 1 FROM Favoritos WITH (UPDLOCK, HOLDLOCK) WHERE IDUsuario = @IDUsuario AND IDProducto = @IDProducto)
+            INSERT INTO Favoritos (IDUsuario, IDProducto) VALUES (@IDUsuario, @IDProducto);
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Favoritos_Quitar
+    @IDUsuario INT,
+    @IDProducto INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM Favoritos WHERE IDUsuario = @IDUsuario AND IDProducto = @IDProducto;
+END;
+GO
+
 -- inventario y kardex
 CREATE OR ALTER PROCEDURE SP_Inventario_RegistrarMovimiento
     @IDVariante INT,
     @IDUsuario INT,
-    @TipoMovimiento VARCHAR(30), -- 'ENTRADA_COMPRA', 'SALIDA_VENTA', 'AJUSTE_POSITIVO', etc.
+    @TipoMovimiento VARCHAR(30), -- 'ENTRADA_COMPRA', 'SALIDA_VENTA', 'AJUSTE_POSITIVO'
     @Cantidad INT,
     @Motivo NVARCHAR(300)
 AS
@@ -734,11 +1116,15 @@ CREATE OR ALTER PROCEDURE SP_Inventario_ListarKardex
     @TipoMovimiento VARCHAR(30) = NULL,
     @FechaDesde DATETIME2 = NULL,
     @FechaHasta DATETIME2 = NULL,
+    @Orden VARCHAR(20) = 'fecha',
+    @Direccion VARCHAR(4) = 'desc',
     @Pagina INT = 1,
     @TamanoPagina INT = 20
 AS
 BEGIN
     SET NOCOUNT ON;
+    IF @Orden IS NULL OR @Orden NOT IN ('fecha', 'cantidad', 'tipo') SET @Orden = 'fecha';
+    IF @Direccion IS NULL OR @Direccion NOT IN ('asc', 'desc') SET @Direccion = 'desc';
     DECLARE @Offset INT = (@Pagina - 1) * @TamanoPagina;
 
     SELECT 
@@ -758,9 +1144,49 @@ BEGIN
       AND (@FechaHasta IS NULL OR k.FechaMovimiento <= @FechaHasta);
 
     SELECT * FROM #Resultados
-    ORDER BY FechaMovimiento DESC
+    ORDER BY
+        CASE WHEN @Orden = 'fecha' AND @Direccion = 'asc' THEN FechaMovimiento END ASC,
+        CASE WHEN @Orden = 'fecha' AND @Direccion = 'desc' THEN FechaMovimiento END DESC,
+        CASE WHEN @Orden = 'cantidad' AND @Direccion = 'asc' THEN Cantidad END ASC,
+        CASE WHEN @Orden = 'cantidad' AND @Direccion = 'desc' THEN Cantidad END DESC,
+        CASE WHEN @Orden = 'tipo' AND @Direccion = 'asc' THEN TipoMovimiento END ASC,
+        CASE WHEN @Orden = 'tipo' AND @Direccion = 'desc' THEN TipoMovimiento END DESC,
+        IDKardex DESC
     OFFSET @Offset ROWS FETCH NEXT @TamanoPagina ROWS ONLY;
     SELECT COUNT(1) AS TotalRegistros FROM #Resultados;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Inventario_ListarExistenciasBajas
+    @Busqueda NVARCHAR(150) = NULL,
+    @Orden VARCHAR(20) = 'existencia',
+    @Direccion VARCHAR(4) = 'asc',
+    @Pagina INT = 1,
+    @TamanoPagina INT = 20
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @Orden IS NULL OR @Orden NOT IN ('existencia', 'producto', 'sku') SET @Orden = 'existencia';
+    IF @Direccion IS NULL OR @Direccion NOT IN ('asc', 'desc') SET @Direccion = 'asc';
+    DECLARE @Patron NVARCHAR(500) = '%' + REPLACE(REPLACE(REPLACE(@Busqueda, '[', '[[]'), '%', '[%]'), '_', '[_]') + '%';
+    DECLARE @Offset INT = (@Pagina - 1) * @TamanoPagina;
+
+    SELECT *, COUNT(1) OVER() AS TotalRegistros
+    INTO #Bajas
+    FROM VW_Inventario_ExistenciasBajas
+    WHERE @Busqueda IS NULL OR Producto LIKE @Patron OR SKU LIKE @Patron;
+
+    SELECT * FROM #Bajas
+    ORDER BY
+        CASE WHEN @Orden = 'existencia' AND @Direccion = 'asc' THEN ExistenciaDisponible END ASC,
+        CASE WHEN @Orden = 'existencia' AND @Direccion = 'desc' THEN ExistenciaDisponible END DESC,
+        CASE WHEN @Orden = 'producto' AND @Direccion = 'asc' THEN Producto END ASC,
+        CASE WHEN @Orden = 'producto' AND @Direccion = 'desc' THEN Producto END DESC,
+        CASE WHEN @Orden = 'sku' AND @Direccion = 'asc' THEN SKU END ASC,
+        CASE WHEN @Orden = 'sku' AND @Direccion = 'desc' THEN SKU END DESC,
+        IDVariante DESC
+    OFFSET @Offset ROWS FETCH NEXT @TamanoPagina ROWS ONLY;
+    SELECT COUNT(1) AS TotalRegistros FROM #Bajas;
 END;
 GO
 
@@ -781,7 +1207,7 @@ BEGIN
         ci.IDCarritoItem, ci.IDVariante, p.IDProducto, p.Nombre AS Producto, p.ImagenUrl,
         v.SKU, v.Talla, v.Color, v.Precio AS PrecioUnitario, ci.Cantidad,
         CAST((ci.Cantidad * v.Precio) AS DECIMAL(12,2)) AS SubtotalLinea,
-        -- Disponible para este carrito: su propia reserva de checkout no le resta.
+        -- Disponible para este carrito
         CAST(v.ExistenciaFisica - ISNULL(otros.Reservado, 0) AS INT) AS ExistenciaDisponible
     FROM CarritoItems ci
     INNER JOIN Variantes v ON ci.IDVariante = v.IDVariante
@@ -941,7 +1367,7 @@ BEGIN
         IF @IDCupon IS NULL THROW 50055, 'El código de cupón ingresado no existe.', 1;
         IF @Activo = 0 OR SYSDATETIME() > @Fin THROW 50056, 'El cupón se encuentra vencido o inactivo.', 1;
         IF SYSDATETIME() < @Inicio THROW 50099, 'El cupón todavía no está vigente.', 1;
-        IF @UsosActuales >= @LimiteTotal THROW 50057, 'El cupón se ha agotado (alcanzó el límite total de usos).', 1;
+        IF @UsosActuales >= @LimiteTotal THROW 50057, 'El cupón se ha agotado .', 1;
 
         DECLARE @Subtotal DECIMAL(12,2);
         SELECT @Subtotal = ISNULL(SUM(ci.Cantidad * v.Precio), 0)
@@ -1060,9 +1486,20 @@ END;
 GO
 
 CREATE OR ALTER PROCEDURE SP_Cupones_Listar
+    @Orden VARCHAR(20) = 'fecha',
+    @Direccion VARCHAR(4) = 'desc',
+    @Busqueda NVARCHAR(50) = NULL,
+    @Activo BIT = NULL,
+    @Vigencia VARCHAR(12) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
+    IF @Orden IS NULL OR @Orden NOT IN ('fecha', 'codigo', 'vigencia', 'usos') SET @Orden = 'fecha';
+    IF @Direccion IS NULL OR @Direccion NOT IN ('asc', 'desc') SET @Direccion = 'desc';
+    IF @Vigencia IS NOT NULL AND @Vigencia NOT IN ('VIGENTE', 'VENCIDO', 'POR_INICIAR') SET @Vigencia = NULL;
+    DECLARE @Patron NVARCHAR(200) = '%' + REPLACE(REPLACE(REPLACE(@Busqueda, '[', '[[]'), '%', '[%]'), '_', '[_]') + '%';
+    DECLARE @Ahora DATETIME2 = SYSDATETIME();
+
     SELECT 
         c.IDCupon, 
         c.Codigo, 
@@ -1078,7 +1515,22 @@ BEGIN
         c.Activo
     FROM Cupones c
     INNER JOIN TipoDescuento td ON c.IDTipoDescuento = td.IDTipoDescuento
-    ORDER BY c.IDCupon DESC;
+    WHERE (@Busqueda IS NULL OR @Busqueda = '' OR c.Codigo LIKE @Patron)
+      AND (@Activo IS NULL OR c.Activo = @Activo)
+      AND (@Vigencia IS NULL
+           OR (@Vigencia = 'VIGENTE' AND c.FechaInicio <= @Ahora AND c.FechaFin >= @Ahora)
+           OR (@Vigencia = 'VENCIDO' AND c.FechaFin < @Ahora)
+           OR (@Vigencia = 'POR_INICIAR' AND c.FechaInicio > @Ahora))
+    ORDER BY
+        CASE WHEN @Orden = 'fecha' AND @Direccion = 'asc' THEN c.IDCupon END ASC,
+        CASE WHEN @Orden = 'fecha' AND @Direccion = 'desc' THEN c.IDCupon END DESC,
+        CASE WHEN @Orden = 'codigo' AND @Direccion = 'asc' THEN c.Codigo END ASC,
+        CASE WHEN @Orden = 'codigo' AND @Direccion = 'desc' THEN c.Codigo END DESC,
+        CASE WHEN @Orden = 'vigencia' AND @Direccion = 'asc' THEN c.FechaFin END ASC,
+        CASE WHEN @Orden = 'vigencia' AND @Direccion = 'desc' THEN c.FechaFin END DESC,
+        CASE WHEN @Orden = 'usos' AND @Direccion = 'asc' THEN c.UsosActuales END ASC,
+        CASE WHEN @Orden = 'usos' AND @Direccion = 'desc' THEN c.UsosActuales END DESC,
+        c.IDCupon DESC;
 END;
 GO
 
@@ -1093,7 +1545,8 @@ CREATE OR ALTER PROCEDURE SP_Direcciones_CrearListar
     @Municipio NVARCHAR(100) = NULL,
     @DireccionExacta NVARCHAR(300) = NULL,
     @TelefonoContacto VARCHAR(20) = NULL,
-    @IDDireccion INT = NULL
+    @IDDireccion INT = NULL,
+    @Predeterminada BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1155,8 +1608,17 @@ BEGIN
             IF @IDMunicipio IS NULL
                 THROW 50060, 'No se pudo determinar el municipio para la dirección.', 1;
 
-            INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono)
-            VALUES (@IDUsuario, @IDMunicipio, @Etiqueta, @DireccionExacta, @TelefonoContacto);
+            DECLARE @TieneActivas BIT = 0;
+            IF EXISTS (SELECT 1 FROM Direcciones WITH (UPDLOCK, HOLDLOCK) WHERE IDUsuario = @IDUsuario AND Activo = 1)
+                SET @TieneActivas = 1;
+
+         
+            IF @TieneActivas = 0 SET @Predeterminada = 1;
+            ELSE IF @Predeterminada = 1
+                UPDATE Direcciones SET Predeterminada = 0 WHERE IDUsuario = @IDUsuario AND Predeterminada = 1;
+
+            INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Predeterminada)
+            VALUES (@IDUsuario, @IDMunicipio, @Etiqueta, @DireccionExacta, @TelefonoContacto, ISNULL(@Predeterminada, 0));
 
             COMMIT TRANSACTION;
         END TRY
@@ -1177,7 +1639,15 @@ BEGIN
             IF @PropietarioDireccion IS NULL THROW 50075, 'La dirección no existe.', 1;
             IF @PropietarioDireccion <> @IDUsuario THROW 50076, 'No tienes permiso para usar esta dirección.', 1;
             IF @DireccionActiva = 0 THROW 50075, 'La dirección no existe o ya fue eliminada.', 1;
-            UPDATE Direcciones SET Activo = 0 WHERE IDDireccion = @IDDireccion;
+            DECLARE @EraPredeterminada BIT;
+            SELECT @EraPredeterminada = Predeterminada FROM Direcciones WHERE IDDireccion = @IDDireccion;
+            UPDATE Direcciones SET Activo = 0, Predeterminada = 0 WHERE IDDireccion = @IDDireccion;
+
+            IF @EraPredeterminada = 1
+            BEGIN
+                UPDATE Direcciones SET Predeterminada = 1
+                WHERE IDDireccion = (SELECT MIN(IDDireccion) FROM Direcciones WHERE IDUsuario = @IDUsuario AND Activo = 1);
+            END
 
             COMMIT TRANSACTION;
         END TRY
@@ -1197,12 +1667,45 @@ BEGIN
         t.MontoMinimoGratis AS MontoMinimoEnvioGratis,
         m.Nombre AS Municipio, 
         d.Direccion AS DireccionExacta, 
-        d.Telefono AS TelefonoContacto
+        d.Telefono AS TelefonoContacto,
+        d.Predeterminada
     FROM Direcciones d 
     INNER JOIN Municipios m ON d.IDMunicipio = m.IDMunicipio
     INNER JOIN Departamentos dep ON m.IDDepartamento = dep.IDDepartamento
     LEFT JOIN TarifasEnvio t ON dep.IDDepartamento = t.IDDepartamento
-    WHERE d.IDUsuario = @IDUsuario AND d.Activo = 1;
+    WHERE d.IDUsuario = @IDUsuario AND d.Activo = 1
+    ORDER BY d.Predeterminada DESC, d.IDDireccion ASC;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Direcciones_MarcarPredeterminada
+    @IDUsuario INT,
+    @IDDireccion INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        DECLARE @Propietario INT, @EstaActiva BIT;
+        SELECT @Propietario = IDUsuario, @EstaActiva = Activo
+        FROM Direcciones WITH (UPDLOCK, HOLDLOCK) WHERE IDDireccion = @IDDireccion;
+        IF @Propietario IS NULL THROW 50075, 'La dirección no existe.', 1;
+      
+        IF @Propietario <> @IDUsuario THROW 50075, 'La dirección no existe.', 1;
+        IF @EstaActiva = 0 THROW 50075, 'La dirección no existe o ya fue eliminada.', 1;
+
+        UPDATE Direcciones SET Predeterminada = 0
+        WHERE IDUsuario = @IDUsuario AND Predeterminada = 1 AND IDDireccion <> @IDDireccion;
+        UPDATE Direcciones SET Predeterminada = 1 WHERE IDDireccion = @IDDireccion;
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END;
 GO
 
@@ -1219,8 +1722,7 @@ BEGIN
         IF NOT EXISTS (SELECT 1 FROM Carritos WITH (UPDLOCK) WHERE IDCarrito = @IDCarrito AND IDUsuario = @IDUsuario)
             THROW 50050, 'Acceso denegado al carrito.', 1;
 
-        -- Bloquea las variantes primero, aunque la condición de falta de stock sea falsa.
-        -- Revisar solo la disponibilidad puede no tomar el UPDLOCK antes de leer las reservas concurrentes.
+        -- Bloquea las variantes 
         DECLARE @ExistenciaBloqueada INT;
         SELECT @ExistenciaBloqueada = v.ExistenciaFisica
         FROM Variantes v WITH (UPDLOCK, HOLDLOCK)
@@ -1310,7 +1812,7 @@ BEGIN
         IF @IDPedidoExistente IS NOT NULL
         BEGIN
             COMMIT TRANSACTION;
-            SELECT @IDPedidoExistente AS IDPedido, 1 AS FueIdempotente, 'Pedido procesado previamente (Idempotente).' AS Mensaje;
+            SELECT @IDPedidoExistente AS IDPedido, 1 AS FueIdempotente, 'Pedido procesado previamente .' AS Mensaje;
             RETURN;
         END
 
@@ -1388,7 +1890,8 @@ BEGIN
             INNER JOIN TipoDescuento td ON c.IDTipoDescuento = td.IDTipoDescuento
             WHERE c.IDCupon = @IDCupon;
 
-            IF @Activo = 0 OR SYSDATETIME() NOT BETWEEN @Inicio AND @Fin THROW 50065, 'El cupón ha vencido.', 1;
+            IF @Activo = 0 OR SYSDATETIME() > @Fin THROW 50056, 'El cupón se encuentra vencido o inactivo.', 1;
+            IF SYSDATETIME() < @Inicio THROW 50099, 'El cupón todavía no está vigente.', 1;
             IF @UsosActuales >= @LimiteTotal THROW 50066, 'El cupón agotó su límite total de usos.', 1;
             IF @Subtotal < @Minimo THROW 50067, 'El carrito no cumple el mínimo del cupón.', 1;
 
@@ -1442,7 +1945,7 @@ BEGIN
         VALUES (@IDUsuario, @IDDireccion, @IDCupon, @IDEstadoPagado, @ClaveIdempotencia, @Subtotal, @Descuento, @CostoEnvioFinal, @Total);
         DECLARE @IDNuevoPedido INT = CAST(SCOPE_IDENTITY() AS INT);
 
-        -- Diferencias de acumulados redondeados conservan el descuento exacto.
+      
         ;WITH Lineas AS (
             SELECT ci.IDVariante, ci.Cantidad, v.Precio, ci.Cantidad * v.Precio AS Bruto,
                 CASE WHEN @IDCatCupon IS NULL OR p.IDCategoria = @IDCatCupon
@@ -1539,10 +2042,19 @@ CREATE OR ALTER PROCEDURE SP_Pedidos_ListarPaginado
     @FechaFin DATETIME2 = NULL,
     @Pagina INT = 1,
     @TamanoPagina INT = 15,
-    @Busqueda NVARCHAR(100) = NULL
+    @Busqueda NVARCHAR(100) = NULL,
+    @Orden VARCHAR(20) = 'fecha',
+    @Direccion VARCHAR(4) = 'desc',
+    @Cliente NVARCHAR(100) = NULL,
+    @TotalMin DECIMAL(12,2) = NULL,
+    @TotalMax DECIMAL(12,2) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
+    IF @Orden IS NULL OR @Orden NOT IN ('fecha', 'total', 'estado', 'cliente') SET @Orden = 'fecha';
+    IF @Direccion IS NULL OR @Direccion NOT IN ('asc', 'desc') SET @Direccion = 'desc';
+    DECLARE @Patron NVARCHAR(500) = '%' + REPLACE(REPLACE(REPLACE(@Busqueda, '[', '[[]'), '%', '[%]'), '_', '[_]') + '%';
+    DECLARE @PatronCliente NVARCHAR(500) = '%' + REPLACE(REPLACE(REPLACE(@Cliente, '[', '[[]'), '%', '[%]'), '_', '[_]') + '%';
     DECLARE @Offset INT = (@Pagina - 1) * @TamanoPagina;
 
     SELECT vh.*, COUNT(1) OVER() AS TotalRegistros
@@ -1552,14 +2064,26 @@ BEGIN
       AND (@Estado IS NULL OR vh.Estado = @Estado)
       AND (@FechaInicio IS NULL OR vh.FechaCreacion >= @FechaInicio)
       AND (@FechaFin IS NULL OR vh.FechaCreacion <= @FechaFin)
+      AND (@Cliente IS NULL OR @Cliente = '' OR vh.Cliente LIKE @PatronCliente OR vh.Correo LIKE @PatronCliente)
+      AND (@TotalMin IS NULL OR vh.Total >= @TotalMin)
+      AND (@TotalMax IS NULL OR vh.Total <= @TotalMax)
       AND (@Busqueda IS NULL OR @Busqueda = ''
-           OR vh.Cliente LIKE '%' + @Busqueda + '%'
-           OR vh.Correo LIKE '%' + @Busqueda + '%'
-           OR vh.Estado LIKE '%' + @Busqueda + '%'
+           OR vh.Cliente LIKE @Patron
+           OR vh.Correo LIKE @Patron
+           OR vh.Estado LIKE @Patron
            OR vh.IDPedido = TRY_CAST(REPLACE(UPPER(@Busqueda), 'ORD-', '') AS INT));
 
     SELECT * FROM #Resultados
-    ORDER BY FechaCreacion DESC
+    ORDER BY
+        CASE WHEN @Orden = 'fecha' AND @Direccion = 'asc' THEN FechaCreacion END ASC,
+        CASE WHEN @Orden = 'fecha' AND @Direccion = 'desc' THEN FechaCreacion END DESC,
+        CASE WHEN @Orden = 'total' AND @Direccion = 'asc' THEN Total END ASC,
+        CASE WHEN @Orden = 'total' AND @Direccion = 'desc' THEN Total END DESC,
+        CASE WHEN @Orden = 'estado' AND @Direccion = 'asc' THEN Estado END ASC,
+        CASE WHEN @Orden = 'estado' AND @Direccion = 'desc' THEN Estado END DESC,
+        CASE WHEN @Orden = 'cliente' AND @Direccion = 'asc' THEN Cliente END ASC,
+        CASE WHEN @Orden = 'cliente' AND @Direccion = 'desc' THEN Cliente END DESC,
+        IDPedido DESC
     OFFSET @Offset ROWS FETCH NEXT @TamanoPagina ROWS ONLY;
     SELECT COUNT(1) AS TotalRegistros FROM #Resultados;
 END;
@@ -1600,13 +2124,13 @@ BEGIN
         SELECT @IDEstadoNuevo = IDEstadoPedido FROM EstadosPedido WHERE Codigo = @NuevoEstado;
         IF @IDEstadoNuevo IS NULL THROW 50074, 'El nuevo estado no existe en el catálogo.', 1;
 
-        -- Validación según la matriz de transiciones (TransicionesEstadoPedido)
+        
         IF NOT EXISTS (
             SELECT 1 FROM TransicionesEstadoPedido 
             WHERE IDEstadoOrigen = @IDEstadoActual AND IDEstadoDestino = @IDEstadoNuevo
         )
         BEGIN
-            THROW 50073, 'Transición de estado no permitida según el flujo de negocio.', 1;
+            THROW 50073, 'Transición de estado no permitida.', 1;
         END
 
         UPDATE Pedidos SET IDEstadoPedido = @IDEstadoNuevo WHERE IDPedido = @IDPedido;
@@ -1671,7 +2195,7 @@ BEGIN
         WHERE p.IDPedido = @IDPedido;
 
         IF @EstadoPedidoCodigo NOT IN ('ENTREGADO', 'DEVUELTO_PARCIAL')
-            THROW 50080, 'Solo se permiten devoluciones de pedidos ENTREGADO o DEVUELTO_PARCIAL.', 1;
+            THROW 50080, 'Solo se permiten devoluciones de pedidos entregado o parcialmente devueltos.', 1;
 
         DECLARE @IDVariante INT, @Comprada INT, @DevueltaPrevia INT, @SubtotalLinea DECIMAL(12,2);
         SELECT @IDVariante = IDVariante, @Comprada = CantidadComprada, @DevueltaPrevia = CantidadDevuelta, @SubtotalLinea = SubtotalLinea
@@ -1820,11 +2344,21 @@ GO
 
 CREATE OR ALTER PROCEDURE SP_Bitacora_Listar
     @Modulo VARCHAR(50) = NULL,
+    @Orden VARCHAR(20) = 'fecha',
+    @Direccion VARCHAR(4) = 'desc',
     @Pagina INT = 1,
-    @TamanoPagina INT = 20
+    @TamanoPagina INT = 20,
+    @Accion VARCHAR(50) = NULL,
+    @Busqueda NVARCHAR(150) = NULL,
+    @FechaDesde DATETIME2 = NULL,
+    @FechaHasta DATETIME2 = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
+    IF @Orden IS NULL OR @Orden NOT IN ('fecha', 'modulo', 'usuario') SET @Orden = 'fecha';
+    IF @Direccion IS NULL OR @Direccion NOT IN ('asc', 'desc') SET @Direccion = 'desc';
+    DECLARE @PatronAccion NVARCHAR(500) = '%' + REPLACE(REPLACE(REPLACE(@Accion, '[', '[[]'), '%', '[%]'), '_', '[_]') + '%';
+    DECLARE @Patron NVARCHAR(500) = '%' + REPLACE(REPLACE(REPLACE(@Busqueda, '[', '[[]'), '%', '[%]'), '_', '[_]') + '%';
     DECLARE @Offset INT = (@Pagina - 1) * @TamanoPagina;
 
     SELECT 
@@ -1843,10 +2377,21 @@ BEGIN
     FROM Bitacora b 
     INNER JOIN Usuarios u ON b.IDUsuario = u.IDUsuario
     INNER JOIN Roles r ON u.IDRol = r.IDRol
-    WHERE (@Modulo IS NULL OR b.Modulo = @Modulo);
+    WHERE (@Modulo IS NULL OR b.Modulo = @Modulo)
+      AND (@Accion IS NULL OR @Accion = '' OR b.Accion LIKE @PatronAccion)
+      AND (@Busqueda IS NULL OR @Busqueda = '' OR u.Correo LIKE @Patron)
+      AND (@FechaDesde IS NULL OR b.FechaRegistro >= @FechaDesde)
+      AND (@FechaHasta IS NULL OR b.FechaRegistro <= @FechaHasta);
 
     SELECT * FROM #Resultados
-    ORDER BY FechaRegistro DESC
+    ORDER BY
+        CASE WHEN @Orden = 'fecha' AND @Direccion = 'asc' THEN FechaRegistro END ASC,
+        CASE WHEN @Orden = 'fecha' AND @Direccion = 'desc' THEN FechaRegistro END DESC,
+        CASE WHEN @Orden = 'modulo' AND @Direccion = 'asc' THEN Modulo END ASC,
+        CASE WHEN @Orden = 'modulo' AND @Direccion = 'desc' THEN Modulo END DESC,
+        CASE WHEN @Orden = 'usuario' AND @Direccion = 'asc' THEN Usuario END ASC,
+        CASE WHEN @Orden = 'usuario' AND @Direccion = 'desc' THEN Usuario END DESC,
+        IDBitacora DESC
     OFFSET @Offset ROWS FETCH NEXT @TamanoPagina ROWS ONLY;
     SELECT COUNT(1) AS TotalRegistros FROM #Resultados;
 END;

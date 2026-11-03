@@ -1,4 +1,4 @@
--- Esquema base (SQL Server 2019+)
+
 
 IF NOT EXISTS (SELECT 1 FROM sys.databases WHERE name = 'ShopCartDB')
 BEGIN
@@ -9,7 +9,7 @@ GO
 USE ShopCartDB;
 GO
 
--- Configuración, geografía y envío
+-- Configuración
 
 CREATE TABLE ConfiguracionSistema (
     IDConfiguracion INT IDENTITY(1,1) CONSTRAINT PK_ConfiguracionSistema PRIMARY KEY,
@@ -84,7 +84,8 @@ CREATE TABLE Direcciones (
     Etiqueta NVARCHAR(50) NOT NULL,
     Direccion NVARCHAR(300) NOT NULL,
     Telefono VARCHAR(20) NOT NULL,
-    Activo BIT NOT NULL CONSTRAINT DF_Direcciones_Activa DEFAULT 1
+    Activo BIT NOT NULL CONSTRAINT DF_Direcciones_Activa DEFAULT 1,
+    Predeterminada BIT NOT NULL CONSTRAINT DF_Direcciones_Predeterminada DEFAULT 0
 );
 GO
 
@@ -94,6 +95,7 @@ CREATE TABLE Categorias (
     IDCategoria INT IDENTITY(1,1) CONSTRAINT PK_Categorias PRIMARY KEY,
     Nombre NVARCHAR(100) NOT NULL CONSTRAINT UQ_Categorias_Nombre UNIQUE,
     Descripcion NVARCHAR(300) NULL,
+    ImagenUrl NVARCHAR(500) NULL,
     Activo BIT NOT NULL CONSTRAINT DF_Categorias_Activa DEFAULT 1
 );
 GO
@@ -105,7 +107,27 @@ CREATE TABLE Productos (
     Descripcion NVARCHAR(MAX) NULL,
     ImagenUrl NVARCHAR(500) NULL,
     Activo BIT NOT NULL CONSTRAINT DF_Productos_Activo DEFAULT 1,
+    Destacado BIT NOT NULL CONSTRAINT DF_Productos_Destacado DEFAULT 0,
     FechaCreacion DATETIME2 NOT NULL CONSTRAINT DF_Productos_Fecha DEFAULT SYSDATETIME()
+);
+GO
+
+CREATE TABLE ProductoImagenes (
+    IDProductoImagen INT IDENTITY(1,1) CONSTRAINT PK_ProductoImagenes PRIMARY KEY,
+    IDProducto INT NOT NULL CONSTRAINT FK_ProductoImagenes_Productos FOREIGN KEY REFERENCES Productos(IDProducto),
+    Url NVARCHAR(500) NOT NULL,
+    Orden INT NOT NULL CONSTRAINT CK_ProductoImagenes_Orden CHECK (Orden > 0),
+    FechaCreacion DATETIME2 NOT NULL CONSTRAINT DF_ProductoImagenes_Fecha DEFAULT SYSDATETIME(),
+    CONSTRAINT UQ_ProductoImagenes_Orden UNIQUE (IDProducto, Orden)
+);
+GO
+
+CREATE TABLE Favoritos (
+    IDFavorito INT IDENTITY(1,1) CONSTRAINT PK_Favoritos PRIMARY KEY,
+    IDUsuario INT NOT NULL CONSTRAINT FK_Favoritos_Usuarios FOREIGN KEY REFERENCES Usuarios(IDUsuario),
+    IDProducto INT NOT NULL CONSTRAINT FK_Favoritos_Productos FOREIGN KEY REFERENCES Productos(IDProducto),
+    FechaCreacion DATETIME2 NOT NULL CONSTRAINT DF_Favoritos_Fecha DEFAULT SYSDATETIME(),
+    CONSTRAINT UQ_Favoritos_UsuarioProducto UNIQUE (IDUsuario, IDProducto)
 );
 GO
 
@@ -117,6 +139,7 @@ CREATE TABLE Variantes (
     Color VARCHAR(50) NULL,
     Presentacion VARCHAR(50) NULL,
     Precio DECIMAL(12,2) NOT NULL CONSTRAINT CK_Variantes_Precio CHECK (Precio > 0),
+    PrecioReferencia DECIMAL(12,2) NULL CONSTRAINT CK_Variantes_PrecioReferencia CHECK (PrecioReferencia IS NULL OR PrecioReferencia > 0),
     ExistenciaFisica INT NOT NULL CONSTRAINT DF_Variantes_Existencia DEFAULT 0 
         CONSTRAINT CK_Variantes_ExistenciaNoNegativa CHECK (ExistenciaFisica >= 0),
     Activo BIT NOT NULL CONSTRAINT DF_Variantes_Activa DEFAULT 1
@@ -316,9 +339,10 @@ BEGIN
 END;
 GO
 
-
+--indices
 CREATE INDEX IX_Municipios_IDDepartamento ON Municipios(IDDepartamento);
 CREATE INDEX IX_Direcciones_IDUsuario_Activo ON Direcciones(IDUsuario, Activo);
+CREATE UNIQUE INDEX UX_Direcciones_Predeterminada ON Direcciones(IDUsuario) WHERE Predeterminada = 1 AND Activo = 1;
 CREATE INDEX IX_Productos_IDCategoria_Activo ON Productos(IDCategoria, Activo);
 CREATE INDEX IX_Variantes_IDProducto_Precio ON Variantes(IDProducto, Precio, Activo);
 CREATE INDEX IX_Reservas_IDVariante_Estado_Expira ON ReservasInventario(IDVariante, IDEstadoReserva, FechaExpiracion);

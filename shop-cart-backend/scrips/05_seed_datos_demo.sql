@@ -202,32 +202,32 @@ BEGIN
         INSERT (IDDepartamento, CostoEnvio, MontoMinimoGratis) 
         VALUES (Source.IDDepartamento, Source.CostoEnvio, Source.MontoMinimoGratis);
 
-    -- Usuarios de ejemplo
+    -- Usuarios 
     DECLARE @IDRolAdmin INT = (SELECT IDRol FROM Roles WHERE Codigo = 'ADMINISTRADOR');
     DECLARE @IDRolOperador INT = (SELECT IDRol FROM Roles WHERE Codigo = 'OPERADOR');
     DECLARE @IDRolCliente INT = (SELECT IDRol FROM Roles WHERE Codigo = 'CLIENTE');
     DECLARE @DefaultHash NVARCHAR(255) = '$2b$10$8J/txcqvfHYm/vSdWm4/Xuxaxtjlpdcifj518DFbwbo6Fv9qJMVpa';
 
-    -- 3 cuentas base obligatorias
+    -- cuentas 
     IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Correo = 'admin@shopcart.gt')
         INSERT INTO Usuarios (IDRol, Correo, Password, Nombre, Activo) 
-        VALUES (@IDRolAdmin, 'admin@shopcart.gt', @DefaultHash, 'J. Estuardo Del Valle (Admin)', 1);
+        VALUES (@IDRolAdmin, 'admin@shopcart.gt', @DefaultHash, 'Edwin Baquiax', 1);
     ELSE
-        UPDATE Usuarios SET IDRol = @IDRolAdmin, Password = @DefaultHash, Nombre = 'J. Estuardo Del Valle (Admin)', Activo = 1 WHERE Correo = 'admin@shopcart.gt';
+        UPDATE Usuarios SET IDRol = @IDRolAdmin, Password = @DefaultHash, Nombre = 'Edwin Baquiax', Activo = 1 WHERE Correo = 'admin@shopcart.gt';
 
     IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Correo = 'operador@shopcart.gt')
         INSERT INTO Usuarios (IDRol, Correo, Password, Nombre, Activo) 
-        VALUES (@IDRolOperador, 'operador@shopcart.gt', @DefaultHash, 'Fco. Javier "Pancho" Barrios', 1);
+        VALUES (@IDRolOperador, 'operador@shopcart.gt', @DefaultHash, 'David Garcia', 1);
     ELSE
-        UPDATE Usuarios SET IDRol = @IDRolOperador, Password = @DefaultHash, Nombre = 'Fco. Javier "Pancho" Barrios', Activo = 1 WHERE Correo = 'operador@shopcart.gt';
+        UPDATE Usuarios SET IDRol = @IDRolOperador, Password = @DefaultHash, Nombre = 'David Garcia', Activo = 1 WHERE Correo = 'operador@shopcart.gt';
 
     IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Correo = 'cliente@shopcart.gt')
         INSERT INTO Usuarios (IDRol, Correo, Password, Nombre, Activo) 
-        VALUES (@IDRolCliente, 'cliente@shopcart.gt', @DefaultHash, 'Alejandro "Alex" De León', 1);
+        VALUES (@IDRolCliente, 'cliente@shopcart.gt', @DefaultHash, 'Daniel Vasquez', 1);
     ELSE
-        UPDATE Usuarios SET IDRol = @IDRolCliente, Password = @DefaultHash, Nombre = 'Alejandro "Alex" De León', Activo = 1 WHERE Correo = 'cliente@shopcart.gt';
+        UPDATE Usuarios SET IDRol = @IDRolCliente, Password = @DefaultHash, Nombre = 'Daniel Vasquez', Activo = 1 WHERE Correo = 'cliente@shopcart.gt';
 
-    -- Operadores adicionales de bodega
+    -- Operadores 
     IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Correo = 'brayan.bodega@outlook.com')
         INSERT INTO Usuarios (IDRol, Correo, Password, Nombre, Activo)
         VALUES (@IDRolOperador, 'brayan.bodega@outlook.com', @DefaultHash, 'Brayan Oswaldo Chanchavac', 1);
@@ -236,7 +236,7 @@ BEGIN
         INSERT INTO Usuarios (IDRol, Correo, Password, Nombre, Activo)
         VALUES (@IDRolOperador, 'miriam.zapeta@gmail.com', @DefaultHash, 'Miriam Leticia Zapeta Chojolán', 1);
 
-    -- Clientes de ejemplo
+    -- Clientes 
     IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Correo = 'cmorales94@gmail.com')
         INSERT INTO Usuarios (IDRol, Correo, Password, Nombre, Activo)
         VALUES (@IDRolCliente, 'cmorales94@gmail.com', @DefaultHash, 'christian morales', 1);
@@ -320,62 +320,62 @@ BEGIN
     DECLARE @MuniAntigua INT = (SELECT IDMunicipio FROM Municipios WHERE IDDepartamento = @IDDeptoSacat AND Nombre = 'Antigua Guatemala');
     DECLARE @MuniCiudadVieja INT = (SELECT IDMunicipio FROM Municipios WHERE IDDepartamento = @IDDeptoSacat AND Nombre = 'Ciudad Vieja');
 
-    -- Insertar direcciones si no existen
+    -- Insertar direcciones
     IF @IDUserAlex IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Direcciones WHERE IDUsuario = @IDUserAlex AND Etiqueta = 'Apartamento')
-        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo)
-        VALUES (@IDUserAlex, @MuniGuate, 'Apartamento', '12 Calle 4-55 Zona 10, Edificio Plaza 10, nivel 4 depto 402', '50255551234', 1);
+        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo, Predeterminada)
+        VALUES (@IDUserAlex, @MuniGuate, 'Apartamento', '12 Calle 4-55 Zona 10, Edificio Plaza 10, nivel 4 depto 402', '50255551234', 1, 1);
 
     IF @IDUserChristian IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Direcciones WHERE IDUsuario = @IDUserChristian AND Etiqueta = 'Casa')
-        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo)
-        VALUES (@IDUserChristian, @MuniGuate, 'Casa', '4ta calle 8-12 zona 1, portón café a la par de la panadería, tocar fuerte el timbre porque a veces no suena', '+502 5512-3490', 1);
+        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo, Predeterminada)
+        VALUES (@IDUserChristian, @MuniGuate, 'Casa', '4ta calle 8-12 zona 1, portón café a la par de la panadería, tocar fuerte el timbre porque a veces no suena', '+502 5512-3490', 1, 1);
 
     IF @IDUserMafer IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Direcciones WHERE IDUsuario = @IDUserMafer AND Etiqueta = 'Oficina')
-        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo)
-        VALUES (@IDUserMafer, @MuniGuate, 'Oficina', '3a av 12-40 z. 10 edif torre azul of. 402 preguntar por mafer', '41208933', 1);
+        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo, Predeterminada)
+        VALUES (@IDUserMafer, @MuniGuate, 'Oficina', '3a av 12-40 z. 10 edif torre azul of. 402 preguntar por mafer', '41208933', 1, 1);
 
     IF @IDUserMazariegos IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Direcciones WHERE IDUsuario = @IDUserMazariegos AND Etiqueta = 'Bufete')
-        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo)
-        VALUES (@IDUserMazariegos, @MuniXela, 'Bufete', '12 avenida 5-30 zona 1, por el parque central frente a la despensa, llamar antes de llegar', '5890-4411', 1);
+        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo, Predeterminada)
+        VALUES (@IDUserMazariegos, @MuniXela, 'Bufete', '12 avenida 5-30 zona 1, por el parque central frente a la despensa, llamar antes de llegar', '5890-4411', 1, 1);
 
     IF @IDUserLuisa IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Direcciones WHERE IDUsuario = @IDUserLuisa AND Etiqueta = 'Casa')
-        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo)
-        VALUES (@IDUserLuisa, @MuniMixco, 'Casa', 'Condominio Las Luces casa 14, dejar con el guardia de la garita si no salgo', '3011 4421', 1);
+        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo, Predeterminada)
+        VALUES (@IDUserLuisa, @MuniMixco, 'Casa', 'Condominio Las Luces casa 14, dejar con el guardia de la garita si no salgo', '3011 4421', 1, 1);
 
     IF @IDUserXicara IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Direcciones WHERE IDUsuario = @IDUserXicara AND Etiqueta = 'Taller')
-        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo)
-        VALUES (@IDUserXicara, @MuniSanFrancisco, 'Taller', 'Barrio San Bartolo frente al salón municipal, preguntar por Don Pancho en la abarrotería', '5012-3344', 1);
+        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo, Predeterminada)
+        VALUES (@IDUserXicara, @MuniSanFrancisco, 'Taller', 'Barrio San Bartolo frente al salón municipal, preguntar por Don Pancho en la abarrotería', '5012-3344', 1, 1);
 
     IF @IDUserSofia IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Direcciones WHERE IDUsuario = @IDUserSofia AND Etiqueta = 'Casa Colonial')
-        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo)
-        VALUES (@IDUserSofia, @MuniAntigua, 'Casa Colonial', '7ma calle poniente #18, entre calle de los pasos y alameda, timbre de bronce', '31245590', 1);
+        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo, Predeterminada)
+        VALUES (@IDUserSofia, @MuniAntigua, 'Casa Colonial', '7ma calle poniente #18, entre calle de los pasos y alameda, timbre de bronce', '31245590', 1, 1);
 
     IF @IDUserRoberto IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Direcciones WHERE IDUsuario = @IDUserRoberto AND Etiqueta = 'Local')
-        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo)
-        VALUES (@IDUserRoberto, @MuniSanPedroSM, 'Local', '5a calle 3-45 zona 1, media cuadra antes del mercado central, dejar en la recepción de la farmacia', '4491-0021', 1);
+        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo, Predeterminada)
+        VALUES (@IDUserRoberto, @MuniSanPedroSM, 'Local', '5a calle 3-45 zona 1, media cuadra antes del mercado central, dejar en la recepción de la farmacia', '4491-0021', 1, 1);
 
     IF @IDUserClaudia IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Direcciones WHERE IDUsuario = @IDUserClaudia AND Etiqueta = 'Casa')
-        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo)
-        VALUES (@IDUserClaudia, @MuniSantaCatarina, 'Casa', 'Carretera a El Salvador km 14.5, Residenciales Los Arcos casa 23B, tocar bocina al llegar', '+502 4789 1230', 1);
+        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo, Predeterminada)
+        VALUES (@IDUserClaudia, @MuniSantaCatarina, 'Casa', 'Carretera a El Salvador km 14.5, Residenciales Los Arcos casa 23B, tocar bocina al llegar', '+502 4789 1230', 1, 1);
 
     IF @IDUserRodas IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Direcciones WHERE IDUsuario = @IDUserRodas AND Etiqueta = 'Casa Familiar')
-        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo)
-        VALUES (@IDUserRodas, @MuniHuehue, 'Casa Familiar', '6a avenida 4-22 zona 1, a la vuelta del parque de los niños, portón rojo con zaguán', '+502 5901-2244', 1);
+        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo, Predeterminada)
+        VALUES (@IDUserRodas, @MuniHuehue, 'Casa Familiar', '6a avenida 4-22 zona 1, a la vuelta del parque de los niños, portón rojo con zaguán', '+502 5901-2244', 1, 1);
 
     IF @IDUserLucy IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Direcciones WHERE IDUsuario = @IDUserLucy AND Etiqueta = 'Casa')
-        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo)
-        VALUES (@IDUserLucy, @MuniMixco, 'Casa', 'San Cristóbal sector B-1 lote 8, enfrente del parque infantil, portón blanco', '5201-9980', 1);
+        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo, Predeterminada)
+        VALUES (@IDUserLucy, @MuniMixco, 'Casa', 'San Cristóbal sector B-1 lote 8, enfrente del parque infantil, portón blanco', '5201-9980', 1, 1);
 
     IF @IDUserByron IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Direcciones WHERE IDUsuario = @IDUserByron AND Etiqueta = 'Casa')
-        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo)
-        VALUES (@IDUserByron, @MuniSalcaja, 'Casa', 'Barrio San Jacinto 2a calle 3-15, a media cuadra de la iglesia, casa de dos niveles color verde', '5501 8832', 1);
+        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo, Predeterminada)
+        VALUES (@IDUserByron, @MuniSalcaja, 'Casa', 'Barrio San Jacinto 2a calle 3-15, a media cuadra de la iglesia, casa de dos niveles color verde', '5501 8832', 1, 1);
 
     IF @IDUserDiego IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Direcciones WHERE IDUsuario = @IDUserDiego AND Etiqueta = 'Casa')
-        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo)
-        VALUES (@IDUserDiego, @MuniVillaNueva, 'Casa', '3a calle 6-50 zona 1 Villa Nueva, portón gris corredizo', '4233-1189', 1);
+        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo, Predeterminada)
+        VALUES (@IDUserDiego, @MuniVillaNueva, 'Casa', '3a calle 6-50 zona 1 Villa Nueva, portón gris corredizo', '4233-1189', 1, 1);
 
     IF @IDUserKarin IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Direcciones WHERE IDUsuario = @IDUserKarin AND Etiqueta = 'Casa de Campo')
-        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo)
-        VALUES (@IDUserKarin, @MuniCiudadVieja, 'Casa de Campo', 'Calle Real a Ciudad Vieja lote 12, portón de madera rústica', '5788 9012', 1);
+        INSERT INTO Direcciones (IDUsuario, IDMunicipio, Etiqueta, Direccion, Telefono, Activo, Predeterminada)
+        VALUES (@IDUserKarin, @MuniCiudadVieja, 'Casa de Campo', 'Calle Real a Ciudad Vieja lote 12, portón de madera rústica', '5788 9012', 1, 1);
 
     -- Categorías
     IF NOT EXISTS (SELECT 1 FROM Categorias WHERE Nombre = 'Calzado')
@@ -766,7 +766,7 @@ BEGIN
     DECLARE @V_CAF_GRA2 INT = (SELECT IDVariante FROM Variantes WHERE SKU = 'CAF-HUE-GRA-2LB');
     DECLARE @V_CAF_MOL1 INT = (SELECT IDVariante FROM Variantes WHERE SKU = 'CAF-HUE-MOL-1LB');
 
-    -- Corregir SKU para Prensa Borosilicato
+    
     DECLARE @V_PRE_INO INT = (SELECT IDVariante FROM Variantes WHERE SKU = 'PRE-FRA-800-INO');
     DECLARE @V_PRE_NEG INT = (SELECT IDVariante FROM Variantes WHERE SKU = 'PRE-FRA-800-NEG');
 
@@ -1302,4 +1302,48 @@ END;
 GO
 
 EXEC SP_Sistema_AplicarSeed;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.ConfiguracionSistema WHERE Clave = 'DiasProductoNuevo')
+BEGIN
+    INSERT INTO dbo.ConfiguracionSistema (Clave, Valor, Descripcion)
+    VALUES ('DiasProductoNuevo', '30', N'Dias durante los cuales un producto recien creado se considera "nuevo" en la tienda');
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM ProductoImagenes)
+BEGIN
+    INSERT INTO ProductoImagenes (IDProducto, Url, Orden)
+    SELECT IDProducto, ImagenUrl, 1 FROM Productos WHERE ImagenUrl IS NOT NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM Productos WHERE Destacado = 1)
+BEGIN
+    UPDATE Productos SET Destacado = 1
+    WHERE IDProducto IN (SELECT TOP (6) IDProducto FROM Productos WHERE Activo = 1 ORDER BY IDProducto ASC);
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM Variantes WHERE PrecioReferencia IS NOT NULL)
+BEGIN
+    UPDATE Variantes SET PrecioReferencia = ROUND(Precio * 1.25, 2)
+    WHERE Activo = 1 AND IDVariante % 3 = 0;
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM Categorias WHERE ImagenUrl IS NOT NULL)
+BEGIN
+    UPDATE c SET ImagenUrl = (SELECT TOP 1 p.ImagenUrl FROM Productos p
+                              WHERE p.IDCategoria = c.IDCategoria AND p.ImagenUrl IS NOT NULL
+                              ORDER BY p.IDProducto ASC)
+    FROM Categorias c;
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.ConfiguracionSistema WHERE Clave = 'UmbralExistenciasBajas')
+BEGIN
+    INSERT INTO dbo.ConfiguracionSistema (Clave, Valor, Descripcion)
+    VALUES ('UmbralExistenciasBajas', '5', N'Una variante activa con existencia disponible menor o igual a este valor aparece en el reporte de existencias bajas');
+END
 GO

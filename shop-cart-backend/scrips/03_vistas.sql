@@ -50,3 +50,19 @@ INNER JOIN Municipios m ON d.IDMunicipio = m.IDMunicipio
 INNER JOIN Departamentos dep ON m.IDDepartamento = dep.IDDepartamento
 LEFT JOIN Cupones c ON p.IDCupon = c.IDCupon;
 GO
+
+CREATE OR ALTER VIEW VW_Inventario_ExistenciasBajas
+AS
+SELECT
+    v.IDVariante, v.SKU, v.Talla, v.Color, v.Presentacion,
+    p.IDProducto, p.Nombre AS Producto,
+    c.IDCategoria, c.Nombre AS Categoria,
+    disp.ExistenciaFisica, disp.UnidadesReservadas, disp.ExistenciaDisponible,
+    cfg.Umbral AS UmbralAplicado
+FROM Variantes v
+INNER JOIN Productos p ON p.IDProducto = v.IDProducto AND p.Activo = 1
+INNER JOIN Categorias c ON c.IDCategoria = p.IDCategoria AND c.Activo = 1
+CROSS APPLY dbo.FU_Inventario_ExistenciaDisponible(v.IDVariante) disp
+CROSS APPLY (SELECT ISNULL(TRY_CAST((SELECT Valor FROM ConfiguracionSistema WHERE Clave = 'UmbralExistenciasBajas') AS INT), 5) AS Umbral) cfg
+WHERE v.Activo = 1 AND disp.ExistenciaDisponible <= cfg.Umbral;
+GO
