@@ -44,7 +44,7 @@ Completar las credenciales de SQL Server y los secretos de JWT antes de iniciar 
 | --- | --- |
 | `PORT` | Puerto HTTP; por defecto, `3000`. |
 | `NODE_ENV` | Entorno: `development`, `test` o `production`. |
-| `RESERVATION_TTL_MINUTES` | Minutos durante los que se apartan los productos al pasar al pago
+| `RESERVATION_TTL_MINUTES` | Minutos durante los que se apartan los productos al pasar al pago. |
 | `DB_HOST`, `DB_PORT` | Dirección y puerto de SQL Server. |
 | `DB_USER`, `DB_PASSWORD` | Credenciales de conexión. |
 | `DB_NAME` | Nombre de la base de datos. |
