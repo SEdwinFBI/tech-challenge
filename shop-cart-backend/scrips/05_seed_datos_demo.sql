@@ -406,10 +406,18 @@ BEGIN
     -- Productos
     IF NOT EXISTS (SELECT 1 FROM Productos WHERE Nombre = 'Botín de Cuero Artesanal')
         INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo)
-        VALUES (@CatCalzado, 'Botín de Cuero Artesanal', 'Botín 100% cuero vacuno curtido en Pastores, Sacatepéquez. Ojo: la horma viene un poco reducida, si tenés el pie ancho pedí media talla más. La suela es de hule cocida, aguanta buen trote en empedrado.', 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800', 1);
+        VALUES (@CatCalzado, 'Botín de Cuero Artesanal', 'Botín 100% cuero vacuno curtido en Pastores, Sacatepéquez. Ojo: la horma viene un poco reducida, si tenés el pie ancho pedí media talla más. La suela es de hule cocida, aguanta buen trote en empedrado.', NULL, 1);
     ELSE
         UPDATE Productos SET Descripcion = 'Botín 100% cuero vacuno curtido en Pastores, Sacatepéquez. Ojo: la horma viene un poco reducida, si tenés el pie ancho pedí media talla más. La suela es de hule cocida, aguanta buen trote en empedrado.' WHERE Nombre = 'Botín de Cuero Artesanal';
 
+    UPDATE Productos SET ImagenUrl = NULL
+    WHERE Nombre = 'Botín de Cuero Artesanal'
+      AND ImagenUrl = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800';
+
+    DELETE i FROM ProductoImagenes i
+    INNER JOIN Productos p ON p.IDProducto = i.IDProducto
+    WHERE p.Nombre = 'Botín de Cuero Artesanal'
+      AND i.Url = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800';
     IF NOT EXISTS (SELECT 1 FROM Productos WHERE Nombre = 'Camisa Oxford Clásica')
         INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo)
         VALUES (@CatCamisas, 'Camisa Oxford Clásica', 'Camisa de algodón con tramado oxford. Corte regular fit clásico. Lavar a mano con agua fría porque si la metés a secadora caliente encoge casi media talla. Viene con repuesto de dos botones en la etiqueta interior.', 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800', 1);
