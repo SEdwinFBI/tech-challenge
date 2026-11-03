@@ -1480,7 +1480,7 @@ BEGIN
         ELSE
         BEGIN
             UPDATE Cupones 
-            SET IDTipoDescuento = @IDTipoDescuento, Valor = @Valor, MontoMinimoCompra = @MontoMinimoCompra,
+            SET Codigo = @Codigo, IDTipoDescuento = @IDTipoDescuento, Valor = @Valor, MontoMinimoCompra = @MontoMinimoCompra,
                 LimiteTotalUsos = @LimiteTotalUsos, LimiteUsosPorCliente = @LimiteUsosPorCliente,
                 IDCategoriaAplica = @IDCategoriaAplica, FechaInicio = @FechaInicio, FechaFin = @FechaFin, Activo = @Activo
             WHERE IDCupon = @IDCupon;
