@@ -44,10 +44,12 @@ export const globalErrorHandler = (err: any, _req: Request, res: Response, _next
     if (unauthorizedCodes.includes(err.number)) status = 401;
     if (err.number === 50075 || [50090, 50091, 50093, 50096, 50098].includes(err.number)) status = 404;
 
+    const minimo = couponMinimumDetails(err.number, err.message);
     return res.status(status).json({
       ok: false,
       codigo: codigoDeNegocio(err.number, err.message),
-      mensaje: err.message,
+      mensaje: minimo ? 'Tu compra no alcanza el mínimo requerido por el cupón.' : err.message,
+      ...(minimo ? { datos: minimo } : {}),
     });
   }
 
@@ -58,3 +60,14 @@ export const globalErrorHandler = (err: any, _req: Request, res: Response, _next
     mensaje: 'Error interno.',
   });
 };
+
+function couponMinimumDetails(number: number, message: string): { montoMinimo: number; subtotal: number; montoFaltante: number } | null {
+  if (number !== 50058 && number !== 50067) return null;
+  try {
+    const data = JSON.parse(message);
+    if ([data.montoMinimo, data.subtotal, data.montoFaltante].every(value => typeof value === 'number' && Number.isFinite(value) && value >= 0)) {
+      return { montoMinimo: data.montoMinimo, subtotal: data.subtotal, montoFaltante: data.montoFaltante };
+    }
+  } catch {}
+  return null;
+}

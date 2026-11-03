@@ -1,7 +1,5 @@
-import dotenv from 'dotenv';
 import { z } from 'zod';
 
-dotenv.config();
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
@@ -18,6 +16,7 @@ const envSchema = z.object({
   JWT_FAMILY_EXPIRES_IN_DAYS: z.coerce.number().default(30),
   RATE_LIMIT_AUTH_MAX: z.coerce.number().default(15),
   RATE_LIMIT_AUTH_WINDOW_MIN: z.coerce.number().default(15),
+  RESERVATION_TTL_MINUTES: z.coerce.number().int().min(1).max(1440).optional(),
   CORS_ALLOW_ORIGIN: z.string()
 });
 

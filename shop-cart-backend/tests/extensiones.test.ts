@@ -667,3 +667,34 @@ describe('Filtros por columna de las tablas de administración', () => {
     assert.equal(GetUsersSchema.safeParse({ q: 'x'.repeat(151) }).success, false);
   });
 });
+
+describe('Errores de cupón: estado y mínimo de compra', () => {
+  it('distingue el cupón inactivo del vencido', () => {
+    assert.equal(codigoDeNegocio(50100), 'COUPON_INACTIVE');
+    assert.equal(codigoDeNegocio(50056), 'COUPON_EXPIRED');
+  });
+
+  for (const number of [50058, 50067]) {
+    it(`devuelve importes estructurados para el mínimo en SQL ${number}`, () => {
+      let status: number | undefined;
+      let body: any;
+      const res = { status(value: number) { status = value; return this; }, json(value: unknown) { body = value; } };
+      globalErrorHandler({ number, message: JSON.stringify({ montoMinimo: 500, subtotal: 275, montoFaltante: 225 }) }, {} as never, res as never, (() => {}) as never);
+      assert.equal(status, 400);
+      assert.equal(body.codigo, 'COUPON_MINIMUM_NOT_MET');
+      assert.deepEqual(body.datos, { montoMinimo: 500, subtotal: 275, montoFaltante: 225 });
+      assert.equal(body.mensaje, 'Tu compra no alcanza el mínimo requerido por el cupón.');
+    });
+  }
+
+  it('conserva errores antiguos y no publica importes inválidos', () => {
+    for (const message of ['El carrito no cumple el mínimo del cupón.', '{"montoMinimo":-1,"subtotal":10,"montoFaltante":0}', 'null']) {
+      let body: any;
+      const res = { status() { return this; }, json(value: unknown) { body = value; } };
+      globalErrorHandler({ number: 50058, message }, {} as never, res as never, (() => {}) as never);
+      assert.equal(body.codigo, 'COUPON_MINIMUM_NOT_MET');
+      assert.equal(body.mensaje, message);
+      assert.equal(body.datos, undefined);
+    }
+  });
+});

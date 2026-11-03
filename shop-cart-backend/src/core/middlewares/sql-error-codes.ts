@@ -54,6 +54,7 @@ const CODIGOS: Record<number, string> = {
   50097: 'NAME_TOO_SHORT',
   50098: 'USER_NOT_FOUND',
   50099: 'COUPON_NOT_STARTED',
+  50100: 'COUPON_INACTIVE',
 };
 
 export function codigoDeNegocio(numero: number, mensaje = ''): string {

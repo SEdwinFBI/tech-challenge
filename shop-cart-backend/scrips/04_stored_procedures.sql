@@ -1365,7 +1365,8 @@ BEGIN
         FROM Cupones WITH (UPDLOCK) WHERE Codigo = @CodigoCupon;
 
         IF @IDCupon IS NULL THROW 50055, 'El código de cupón ingresado no existe.', 1;
-        IF @Activo = 0 OR SYSDATETIME() > @Fin THROW 50056, 'El cupón se encuentra vencido o inactivo.', 1;
+        IF @Activo = 0 THROW 50100, 'El cupón se encuentra inactivo.', 1;
+        IF SYSDATETIME() > @Fin THROW 50056, 'El cupón se encuentra vencido.', 1;
         IF SYSDATETIME() < @Inicio THROW 50099, 'El cupón todavía no está vigente.', 1;
         IF @UsosActuales >= @LimiteTotal THROW 50057, 'El cupón se ha agotado .', 1;
 
@@ -1373,7 +1374,14 @@ BEGIN
         SELECT @Subtotal = ISNULL(SUM(ci.Cantidad * v.Precio), 0)
         FROM CarritoItems ci INNER JOIN Variantes v ON ci.IDVariante = v.IDVariante WHERE ci.IDCarrito = @IDCarrito;
 
-        IF @Subtotal < @Minimo THROW 50058, 'El monto de tu carrito no cumple el mínimo de compra requerido por este cupón.', 1;
+        IF @Subtotal < @Minimo
+        BEGIN
+            DECLARE @ErrorMinimo NVARCHAR(2048) = (
+                SELECT @Minimo AS montoMinimo, @Subtotal AS subtotal, @Minimo - @Subtotal AS montoFaltante
+                FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+            );
+            THROW 50058, @ErrorMinimo, 1;
+        END;
 
         IF @IDCatCupon IS NOT NULL AND NOT EXISTS (
             SELECT 1
@@ -1711,7 +1719,8 @@ GO
 
 CREATE OR ALTER PROCEDURE SP_Inventario_ReservarExistencia
     @IDUsuario INT,
-    @IDCarrito INT
+    @IDCarrito INT,
+    @DuracionMinutos INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1747,9 +1756,11 @@ BEGIN
             THROW 50051, 'Uno o más artículos de tu carrito agotaron su existencia disponible.', 1;
         END
 
-        DECLARE @MinutosReserva INT = 15;
-        SELECT @MinutosReserva = TRY_CAST(Valor AS INT) FROM ConfiguracionSistema WHERE Clave = 'DURACION_RESERVA_MINUTOS';
-        DECLARE @Expiracion DATETIME2 = DATEADD(MINUTE, ISNULL(@MinutosReserva, 15), SYSDATETIME());
+        DECLARE @MinutosReserva INT = @DuracionMinutos;
+        IF @MinutosReserva IS NULL
+            SELECT @MinutosReserva = TRY_CAST(Valor AS INT) FROM ConfiguracionSistema WHERE Clave = 'DURACION_RESERVA_MINUTOS';
+        IF @MinutosReserva IS NULL OR @MinutosReserva NOT BETWEEN 1 AND 1440 SET @MinutosReserva = 15;
+        DECLARE @Expiracion DATETIME2 = DATEADD(MINUTE, @MinutosReserva, SYSDATETIME());
 
         INSERT INTO ReservasInventario (IDCarrito, IDVariante, IDEstadoReserva, Cantidad, FechaExpiracion)
         SELECT @IDCarrito, IDVariante, @IDEstadoActiva, Cantidad, @Expiracion 
@@ -1757,7 +1768,8 @@ BEGIN
         WHERE IDCarrito = @IDCarrito;
 
         COMMIT TRANSACTION;
-        SELECT @Expiracion AS FechaExpiracionReserva;
+        SELECT @Expiracion AS FechaExpiracionReserva, SYSDATETIME() AS FechaServidor,
+               @MinutosReserva * 60 AS DuracionReservaSegundos;
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
@@ -1817,7 +1829,7 @@ BEGIN
         END
 
         IF @SimularFalloPago = 1
-            THROW 50060, 'Pago rechazado por el emisor. Tu reserva de inventario sigue activa por 15 minutos.', 1;
+            THROW 50060, 'Pago rechazado por el emisor. Puedes reintentar mientras tu reserva siga vigente.', 1;
 
         DECLARE @IDCupon INT;
         SELECT @IDCupon = IDCupon FROM Carritos WHERE IDCarrito = @IDCarrito AND IDUsuario = @IDUsuario;
@@ -1890,10 +1902,18 @@ BEGIN
             INNER JOIN TipoDescuento td ON c.IDTipoDescuento = td.IDTipoDescuento
             WHERE c.IDCupon = @IDCupon;
 
-            IF @Activo = 0 OR SYSDATETIME() > @Fin THROW 50056, 'El cupón se encuentra vencido o inactivo.', 1;
+            IF @Activo = 0 THROW 50100, 'El cupón se encuentra inactivo.', 1;
+            IF SYSDATETIME() > @Fin THROW 50056, 'El cupón se encuentra vencido.', 1;
             IF SYSDATETIME() < @Inicio THROW 50099, 'El cupón todavía no está vigente.', 1;
             IF @UsosActuales >= @LimiteTotal THROW 50066, 'El cupón agotó su límite total de usos.', 1;
-            IF @Subtotal < @Minimo THROW 50067, 'El carrito no cumple el mínimo del cupón.', 1;
+            IF @Subtotal < @Minimo
+            BEGIN
+                DECLARE @ErrorMinimo NVARCHAR(2048) = (
+                    SELECT @Minimo AS montoMinimo, @Subtotal AS subtotal, @Minimo - @Subtotal AS montoFaltante
+                    FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+                );
+                THROW 50067, @ErrorMinimo, 1;
+            END;
 
             IF (
                 SELECT COUNT(1) 

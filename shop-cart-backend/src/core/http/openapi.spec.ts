@@ -8,6 +8,7 @@ const CODIGOS_NEGOCIO = [
   'CATEGORY_NOT_FOUND',
   'COUPON_EXHAUSTED',
   'COUPON_EXPIRED',
+  'COUPON_INACTIVE',
   'COUPON_MINIMUM_NOT_MET',
   'COUPON_NOT_APPLICABLE',
   'COUPON_NOT_FOUND',
@@ -118,6 +119,11 @@ export const openApiSpec = {
           },
           mensaje: { type: 'string', example: 'Los datos proporcionados no cumplen con el esquema requerido.' },
           detalles: { type: 'object' },
+          datos: {
+            type: 'object',
+            description: 'Importes para COUPON_MINIMUM_NOT_MET.',
+            properties: { montoMinimo: { type: 'number' }, subtotal: { type: 'number' }, montoFaltante: { type: 'number' } },
+          },
         },
       },
       Usuario: {
@@ -1021,7 +1027,7 @@ export const openApiSpec = {
         },
         responses: {
           200: { description: 'Cupón aplicado' },
-          400: { description: 'Código inexistente (COUPON_NOT_FOUND), cupón vencido o inactivo (COUPON_EXPIRED), todavía no vigente (COUPON_NOT_STARTED), por debajo del mínimo (COUPON_MINIMUM_NOT_MET), sin aplicación a la categoría (COUPON_NOT_APPLICABLE) o límite por cliente (COUPON_USER_LIMIT)' },
+          400: { description: 'Código inexistente (COUPON_NOT_FOUND), vencido (COUPON_EXPIRED), inactivo (COUPON_INACTIVE), todavía no vigente (COUPON_NOT_STARTED), por debajo del mínimo (COUPON_MINIMUM_NOT_MET, con datos.montoMinimo/subtotal/montoFaltante), sin aplicación a la categoría (COUPON_NOT_APPLICABLE) o límite por cliente (COUPON_USER_LIMIT)' },
           409: { description: 'Cupón agotado (COUPON_EXHAUSTED)' },
         },
       },
@@ -1161,7 +1167,7 @@ export const openApiSpec = {
       post: {
         tags: ['Checkout'],
         summary: 'Reservar existencias',
-        description: 'Vence a los 15 minutos. Bloquea las existencias para evitar sobreventas.',
+        description: 'Aparta existencias durante el plazo configurado (15 minutos por defecto; perfil de pruebas: 3). La respuesta incluye vencimiento, reloj del servidor y duración.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -1177,16 +1183,16 @@ export const openApiSpec = {
         },
         responses: {
           200: {
-            description: 'Reserva confirmada por 15 minutos',
+            description: 'Reserva confirmada durante el plazo configurado',
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
                   properties: {
                     ok: { type: 'boolean', example: true },
-                    idReserva: { type: 'integer' },
-                    fechaExpiracion: { type: 'string', format: 'date-time' },
-                    minutosRestantes: { type: 'integer', example: 15 },
+                    FechaExpiracionReserva: { type: 'string', format: 'date-time' },
+                    FechaServidor: { type: 'string', format: 'date-time' },
+                    DuracionReservaSegundos: { type: 'integer', example: 180 },
                   },
                 },
               },

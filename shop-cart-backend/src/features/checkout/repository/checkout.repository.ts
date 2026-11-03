@@ -1,4 +1,5 @@
 import { getDbPool, sql } from '@/core/config/db';
+import { env } from '@/core/config/env';
 import { ICheckoutRepository } from '../abstracts/checkout.repository.interface';
 import {
   AddressDTO,
@@ -74,6 +75,7 @@ export class CheckoutRepository implements ICheckoutRepository {
       .request()
       .input('IDUsuario', sql.Int, idUsuario)
       .input('IDCarrito', sql.Int, idCarrito)
+      .input('DuracionMinutos', sql.Int, env.RESERVATION_TTL_MINUTES ?? null)
       .execute('SP_Inventario_ReservarExistencia');
     return res.recordset[0] as ReserveStockResult;
   }
