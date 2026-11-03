@@ -436,7 +436,7 @@ BEGIN
             p.IDProducto, p.Nombre, p.Descripcion, p.ImagenUrl, p.Activo,
             c.IDCategoria, c.Nombre AS Categoria,
             MIN(v.Precio) AS PrecioMinimo, MAX(v.Precio) AS PrecioMaximo,
-            SUM(disp.ExistenciaDisponible) AS StockTotalDisponible,
+            SUM(CASE WHEN v.Activo = 1 THEN disp.ExistenciaDisponible ELSE 0 END) AS StockTotalDisponible,
             p.FechaCreacion,
             p.Destacado,
             ofe.PrecioOferta, ofe.PrecioReferencia, ofe.PorcentajeDescuento,
@@ -449,7 +449,7 @@ BEGIN
                AND ep.Codigo IN ('ENTREGADO', 'DEVUELTO_PARCIAL', 'DEVUELTO_TOTAL')) AS UnidadesVendidas
         FROM Productos p
         INNER JOIN Categorias c ON p.IDCategoria = c.IDCategoria
-        INNER JOIN Variantes v ON p.IDProducto = v.IDProducto AND v.Activo = 1
+        INNER JOIN Variantes v ON p.IDProducto = v.IDProducto AND (v.Activo = 1 OR (@IncluirInactivos = 1 AND NOT EXISTS (SELECT 1 FROM Variantes v2 WHERE v2.IDProducto = p.IDProducto AND v2.Activo = 1)))
         CROSS APPLY dbo.FU_Inventario_ExistenciaDisponible(v.IDVariante) disp
         OUTER APPLY (
             SELECT TOP 1 vo.Precio AS PrecioOferta, vo.PrecioReferencia,
@@ -471,7 +471,7 @@ BEGIN
           AND (@SoloOfertas = 0 OR ofe.PrecioReferencia IS NOT NULL)
         GROUP BY p.IDProducto, p.Nombre, p.Descripcion, p.ImagenUrl, p.Activo, c.IDCategoria, c.Nombre, p.FechaCreacion,
                  p.Destacado, ofe.PrecioOferta, ofe.PrecioReferencia, ofe.PorcentajeDescuento
-        HAVING (@SoloDisponibles = 0 OR SUM(disp.ExistenciaDisponible) > 0)
+        HAVING (@SoloDisponibles = 0 OR SUM(CASE WHEN v.Activo = 1 THEN disp.ExistenciaDisponible ELSE 0 END) > 0)
     )
     SELECT *, COUNT(1) OVER() AS TotalRegistros
     INTO #Resultados
@@ -614,6 +614,9 @@ BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
 
+        IF NOT EXISTS (SELECT 1 FROM Productos WITH (UPDLOCK) WHERE IDProducto = @IDProducto)
+            THROW 50022, 'El producto no existe.', 1;
+
         IF EXISTS (SELECT 1 FROM PedidoDetalles pd INNER JOIN Variantes v ON pd.IDVariante = v.IDVariante WHERE v.IDProducto = @IDProducto)
         BEGIN
             UPDATE Productos SET Activo = 0 WHERE IDProducto = @IDProducto;
@@ -628,6 +631,8 @@ BEGIN
             DELETE FROM CarritoItems WHERE IDVariante IN (SELECT IDVariante FROM Variantes WHERE IDProducto = @IDProducto);
             DELETE FROM ReservasInventario WHERE IDVariante IN (SELECT IDVariante FROM Variantes WHERE IDProducto = @IDProducto);
             DELETE FROM Kardex WHERE IDVariante IN (SELECT IDVariante FROM Variantes WHERE IDProducto = @IDProducto);
+            DELETE FROM ProductoImagenes WHERE IDProducto = @IDProducto;
+            DELETE FROM Favoritos WHERE IDProducto = @IDProducto;
             DELETE FROM Variantes WHERE IDProducto = @IDProducto;
             DELETE FROM Productos WHERE IDProducto = @IDProducto;
             INSERT INTO Bitacora (IDUsuario, Modulo, Entidad, IDEntidad, Accion, ValorAnterior, ValorNuevo)

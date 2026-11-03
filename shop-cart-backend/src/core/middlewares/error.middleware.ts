@@ -42,7 +42,7 @@ export const globalErrorHandler = (err: any, _req: Request, res: Response, _next
     if (conflictCodes.includes(err.number)) status = 409;
     if (forbiddenCodes.includes(err.number)) status = 403;
     if (unauthorizedCodes.includes(err.number)) status = 401;
-    if (err.number === 50075 || [50090, 50091, 50093, 50096, 50098].includes(err.number)) status = 404;
+    if (err.number === 50075 || [50021, 50022, 50090, 50091, 50093, 50096, 50098].includes(err.number)) status = 404;
 
     const minimo = couponMinimumDetails(err.number, err.message);
     return res.status(status).json({
