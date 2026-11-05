@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router';
-import { Boxes, LayoutDashboard, Layers, LogOut, Menu, Package, ScrollText, Store, TicketPercent, Users, X } from 'lucide-react';
+import { Boxes, CreditCard, LayoutDashboard, Layers, LogOut, Menu, Package, ScrollText, Store, TicketPercent, Users, X } from 'lucide-react';
 import { useAuth } from '@/features/auth';
 import { BrandMark } from '@/shared/ui/BrandMark';
 
@@ -34,6 +34,7 @@ export const BackofficeLayout: React.FC = () => {
               { to: '/admin/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-[18px] w-[18px]" /> },
               { to: '/admin/catalogo', label: 'Catálogo', icon: <Layers className="h-[18px] w-[18px]" /> },
               { to: '/admin/cupones', label: 'Cupones', icon: <TicketPercent className="h-[18px] w-[18px]" /> },
+              { to: '/admin/pagos', label: 'Pagos', icon: <CreditCard className="h-[18px] w-[18px]" /> },
               { to: '/admin/usuarios', label: 'Usuarios', icon: <Users className="h-[18px] w-[18px]" /> },
               { to: '/admin/bitacora', label: 'Bitácora', icon: <ScrollText className="h-[18px] w-[18px]" /> },
             ],

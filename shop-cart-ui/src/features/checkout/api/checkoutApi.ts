@@ -21,7 +21,7 @@ export interface ConfirmOrderPayload {
   idCarrito: number;
   idDireccion: number;
   claveIdempotencia: string;
-  simularFalloPago?: boolean;
+  simulacionPago?: 'APROBADO' | 'RECHAZADO' | 'ERROR_TRAS_COBRO' | 'TIMEOUT';
 }
 
 export interface ConfirmOrderResponse {

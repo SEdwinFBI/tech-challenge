@@ -24,6 +24,7 @@ import { AdminCouponsPage } from '@/features/coupons';
 import { AdminDashboardPage } from '@/features/dashboard';
 import { AdminUsersPage } from '@/features/users';
 import { AdminAuditLogPage } from '@/features/audit-log';
+import { AdminPaymentsPage } from '@/features/payments';
 
 import { ForbiddenPage } from '../pages/ForbiddenPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
@@ -175,6 +176,14 @@ export const AppRouter: React.FC = () => {
             element={
               <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
                 <AdminUsersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="pagos"
+            element={
+              <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
+                <AdminPaymentsPage />
               </ProtectedRoute>
             }
           />

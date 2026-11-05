@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { Link, useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, CreditCard, Loader2, Lock, MapPin, Plus, Trash2, TicketPercent, Truck } from 'lucide-react';
 import { useCart } from '@/features/cart/hooks/useCart';
 import { cartApi } from '@/features/cart/api/cartApi';
 import { CouponDialog } from '@/features/cart/components/CouponDialog';
-import { checkoutApi } from '../api/checkoutApi';
+import { checkoutApi, type ConfirmOrderPayload } from '../api/checkoutApi';
 import { AddressFormModal, hasAddressDraft } from '../components/AddressFormModal';
 import { OrderSummary } from '../components/OrderSummary';
 import { ConfirmDialog, ErrorState, Illustration, ReservationCountdown, Stepper } from '@/shared/ui';
@@ -15,7 +16,7 @@ import { formatMoney } from '@/shared/lib/formatters';
 import { quoteShipping } from '@/shared/lib/pricing';
 import { formatPhone } from '@/shared/lib/phone';
 import type { Address } from '@/shared/types/domain';
-import { apiErrorMessage } from '@/shared/lib/apiErrors';
+import { apiErrorMessage, errorCode } from '@/shared/lib/apiErrors';
 
 type Step = 0 | 1;
 
@@ -37,6 +38,7 @@ function loadCheckoutDraft(): CheckoutDraft | null {
 }
 
 export const CheckoutPage: React.FC = () => {
+  const online = useOnlineStatus();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { cart, isLoading: cartLoading, isError: cartError, refetch: refetchCart, removeCoupon, isRemovingCoupon } = useCart();
@@ -65,7 +67,8 @@ export const CheckoutPage: React.FC = () => {
   // Una clave por visita: los reintentos no duplican pedido ni cobro
   const idempotencyKey = useRef<string>(saved?.idempotencyKey ?? crypto.randomUUID());
   const [paying, setPaying] = useState(false);
-  const [simulateFailure, setSimulateFailure] = useState(false);
+  const [simulacion, setSimulacion] = useState<NonNullable<ConfirmOrderPayload['simulacionPago']>>('APROBADO');
+  const [reconciling, setReconciling] = useState(false);
 
   useEffect(() => {
     if (addresses.length === 0) return;
@@ -136,7 +139,7 @@ export const CheckoutPage: React.FC = () => {
         idCarrito: cart.idCarrito,
         idDireccion: selected.IDDireccion,
         claveIdempotencia: idempotencyKey.current,
-        simularFalloPago: import.meta.env.DEV ? simulateFailure : false,
+        ...(import.meta.env.DEV && simulacion !== 'APROBADO' ? { simulacionPago: simulacion } : {}),
       });
       clearDraft(CHECKOUT_DRAFT);
       await queryClient.invalidateQueries({ queryKey: ['cart'] });
@@ -145,6 +148,12 @@ export const CheckoutPage: React.FC = () => {
     } catch (err: unknown) {
       const msg =
         apiErrorMessage(err, 'No se procesó el pago. No hubo cobro.');
+      if (errorCode(err) === 'PAGO_EN_CONCILIACION') {
+        setReconciling(true);
+        setPaying(false);
+        toast.warning('Estamos confirmando tu pago', msg);
+        return;
+      }
       toast.error('No se completó la compra', msg);
       setPaying(false);
     }
@@ -333,7 +342,8 @@ export const CheckoutPage: React.FC = () => {
               <button
                 type="button"
                 onClick={reserve}
-                disabled={!selected || reserving || overLimit}
+                disabled={!selected || reserving || overLimit || !online}
+                title={online ? undefined : 'Sin conexión'}
                 className="inline-flex h-14 items-center justify-center gap-2 rounded-full bg-cta px-8 text-base font-extrabold text-cta-fg shadow-lift transition hover:bg-cta-hover active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {reserving ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
@@ -372,12 +382,25 @@ export const CheckoutPage: React.FC = () => {
                 </div>
               </div>
               {import.meta.env.DEV && (
-                <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-dashed border-slate-300 p-3 text-xs text-slate-600">
-                  <input type="checkbox" checked={simulateFailure} onChange={e => setSimulateFailure(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--color-brand)]" />
-                  <span><strong className="text-slate-800">Modo de prueba:</strong> simular fallo de pago.</span>
+                <label className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-dashed border-slate-300 p-3 text-xs text-slate-600">
+                  <span><strong className="text-slate-800">Modo de prueba:</strong> simular pago</span>
+                  <select value={simulacion} onChange={e => setSimulacion(e.target.value as typeof simulacion)} className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs">
+                    <option value="APROBADO">Aprobado</option>
+                    <option value="RECHAZADO">Rechazado</option>
+                    <option value="ERROR_TRAS_COBRO">Error tras el cobro</option>
+                    <option value="TIMEOUT">Sin respuesta</option>
+                  </select>
                 </label>
               )}
             </section>
+
+            {reconciling && (
+              <div role="alert" className="rounded-2xl bg-amber-50 p-4">
+                <p className="text-sm font-bold text-amber-900">Estamos confirmando tu pago.</p>
+                <p className="mt-1 text-sm text-amber-800">Revisa Mis pedidos en unos minutos; no vuelvas a pagar.</p>
+                <Link to="/cuenta/pedidos" className="mt-3 inline-flex text-sm font-extrabold text-amber-900 underline">Ir a Mis pedidos</Link>
+              </div>
+            )}
 
             {expired && (
               <div className="rounded-2xl bg-rose-50 p-4">
@@ -400,7 +423,8 @@ export const CheckoutPage: React.FC = () => {
               <button
                 type="button"
                 onClick={pay}
-                disabled={paying || expired}
+                disabled={paying || expired || reconciling || !online}
+                title={online ? undefined : 'Sin conexión'}
                 aria-busy={paying}
                 className="inline-flex h-14 min-w-64 items-center justify-center gap-2 rounded-full bg-cta px-8 text-base font-extrabold text-cta-fg shadow-lift transition hover:bg-cta-hover active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
               >
