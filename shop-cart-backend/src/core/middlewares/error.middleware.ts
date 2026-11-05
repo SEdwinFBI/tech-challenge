@@ -34,7 +34,7 @@ export const globalErrorHandler = (err: any, _req: Request, res: Response, _next
   }
 
   if (typeof err.number === 'number' && err.number >= 50000) {
-    const conflictCodes = [50010, 50016, 50023, 50033, 50040, 50041, 50051, 50057, 50063, 50066, 50073, 50082, 50092, 50110];
+    const conflictCodes = [50010, 50016, 50023, 50033, 50040, 50041, 50051, 50057, 50063, 50066, 50073, 50082, 50092, 50110, 50112, 50113];
     const forbiddenCodes = [50050, 50061, 50076, 50071, 50072];
     const unauthorizedCodes = [50011, 50012, 50013];
 

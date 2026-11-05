@@ -36,6 +36,8 @@ const MENSAJES: Record<string, string> = {
   // inventario
   INSUFFICIENT_STOCK: 'No hay existencia suficiente.',
   STOCK_EXHAUSTED: 'Ese producto se agotó.',
+  RESERVA_VENCIDA: 'Tu reserva venció. Vuelve a reservar para pagar.',
+  CLAVE_IDEMPOTENCIA_EN_USO: 'Esta compra ya está en proceso. Intenta de nuevo.',
   LAST_UNIT_TAKEN: 'Alguien más se llevó la última unidad.',
   STOCK_WOULD_BE_NEGATIVE: 'El ajuste dejaría la existencia en negativo.',
   MOVEMENT_REASON_REQUIRED: 'Escribe el motivo del movimiento.',

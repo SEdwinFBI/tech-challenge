@@ -1834,6 +1834,16 @@ BEGIN
             RETURN;
         END
 
+        IF EXISTS (SELECT 1 FROM Pedidos WHERE ClaveIdempotencia = @ClaveIdempotencia AND IDUsuario <> @IDUsuario)
+            THROW 50113, 'Esa clave de idempotencia ya está en uso.', 1;
+
+        IF EXISTS (
+            SELECT 1 FROM ReservasInventario r
+            INNER JOIN EstadosReserva e ON r.IDEstadoReserva = e.IDEstadoReserva
+            WHERE r.IDReserva = (SELECT MAX(r2.IDReserva) FROM ReservasInventario r2 WHERE r2.IDCarrito = @IDCarrito)
+              AND (e.Codigo = 'EXPIRADA' OR (e.Codigo = 'ACTIVA' AND r.FechaExpiracion <= SYSDATETIME())))
+            THROW 50112, 'Tu reserva venció. Vuelve a reservar para pagar.', 1;
+
         IF @SimularFalloPago = 1
             THROW 50060, 'Pago rechazado por el emisor. Puedes reintentar mientras tu reserva siga vigente.', 1;
 
@@ -2035,7 +2045,16 @@ BEGIN
         (SELECT TOP 1 i.Estado FROM IntentosPago i
          WHERE i.ClaveIdempotencia = @ClaveIdempotencia AND i.IDUsuario = @IDUsuario
            AND i.Estado IN ('AUTORIZADO','PENDIENTE_CONCILIACION')
-         ORDER BY i.IDIntentoPago DESC) AS EstadoIntentoActivo;
+         ORDER BY i.IDIntentoPago DESC) AS EstadoIntentoActivo,
+        CAST(CASE WHEN EXISTS (SELECT 1 FROM Pedidos p WHERE p.ClaveIdempotencia = @ClaveIdempotencia AND p.IDUsuario <> @IDUsuario)
+                    OR EXISTS (SELECT 1 FROM IntentosPago i WHERE i.ClaveIdempotencia = @ClaveIdempotencia AND i.IDUsuario <> @IDUsuario)
+                  THEN 1 ELSE 0 END AS BIT) AS ClaveEnUsoPorOtro,
+        CAST(CASE WHEN EXISTS (
+                    SELECT 1 FROM ReservasInventario r
+                    INNER JOIN EstadosReserva e ON r.IDEstadoReserva = e.IDEstadoReserva
+                    WHERE r.IDReserva = (SELECT MAX(r2.IDReserva) FROM ReservasInventario r2 WHERE r2.IDCarrito = @IDCarrito)
+                      AND (e.Codigo = 'EXPIRADA' OR (e.Codigo = 'ACTIVA' AND r.FechaExpiracion <= SYSDATETIME())))
+                  THEN 1 ELSE 0 END AS BIT) AS ReservaVencida;
 END;
 GO
 

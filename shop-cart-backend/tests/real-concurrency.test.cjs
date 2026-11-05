@@ -20,7 +20,7 @@ async function verify() {
     return (await req.query(q)).recordset;
   }
   try {
-    const admin = (await call("POST", "/auth/login", { correo: "admin@shopcart.gt", password: "Admin123!" })).data.accessToken;
+    const admin = (await call("POST", "/auth/login", { correo: "admin@shopcart.gt", password: process.env.AUDIT_PASSWORD ?? "Admin123!" })).data.accessToken;
     const category = (await call("GET", "/catalogo/categorias")).data.datos[0].IDCategoria;
     const municipality = (await call("GET", "/checkout/municipios")).data.datos[0].IDMunicipio;
     const clients = [];

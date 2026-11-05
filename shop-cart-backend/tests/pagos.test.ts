@@ -146,7 +146,7 @@ describe('ConfirmOrderCommandHandler con pasarela de pago', () => {
 
   it('reintento idempotente con pedido existente: no autoriza ni registra intentos', async () => {
     const { payments, gateway, events, handler } = armar(async () => ({ IDPedido: 77, FueIdempotente: 1 }));
-    payments.contexto = { IDPedidoExistente: 77, MontoTotal: 100, EstadoIntentoActivo: null };
+    payments.contexto = { IDPedidoExistente: 77, MontoTotal: 100, EstadoIntentoActivo: null, ClaveEnUsoPorOtro: false, ReservaVencida: false };
 
     const res = await handler.handle(cmd);
     assert.equal(res.FueIdempotente, 1);
@@ -155,9 +155,44 @@ describe('ConfirmOrderCommandHandler con pasarela de pago', () => {
     assert.equal(events.eventos.length, 0);
   });
 
+  it('clave de otro usuario: 409 CLAVE_IDEMPOTENCIA_EN_USO sin autorizar ni registrar intentos', async () => {
+    const { payments, gateway, handler, creaciones } = armar();
+    payments.contexto = { ...payments.contexto, ClaveEnUsoPorOtro: true };
+
+    await assert.rejects(
+      () => handler.handle(cmd),
+      (err: unknown) => err instanceof DomainError && err.code === 'CLAVE_IDEMPOTENCIA_EN_USO' && err.httpStatus === 409,
+    );
+    assert.deepEqual(gateway.llamadas, []);
+    assert.equal(payments.registrados.length, 0);
+    assert.equal(creaciones(), 0);
+  });
+
+  it('violación de la llave única tras autorizar: anula el cobro y no deja conciliación', async () => {
+    const duplicado = Object.assign(new Error('Violation of UNIQUE KEY constraint UQ_Pedidos_Idempotencia'), { number: 2627 });
+    const { payments, gateway, handler } = armar(async () => {
+      throw duplicado;
+    });
+    await assert.rejects(() => handler.handle(cmd), (err: unknown) => err === duplicado);
+    assert.equal(gateway.llamadas.includes('anular:REF-1'), true);
+    assert.equal(payments.actualizaciones[0]!.estado, 'ANULADO');
+  });
+
+  it('reserva vencida: 409 RESERVA_VENCIDA sin autorizar el cobro', async () => {
+    const { payments, gateway, handler, creaciones } = armar();
+    payments.contexto = { ...payments.contexto, ReservaVencida: true };
+
+    await assert.rejects(
+      () => handler.handle(cmd),
+      (err: unknown) => err instanceof DomainError && err.code === 'RESERVA_VENCIDA' && err.httpStatus === 409,
+    );
+    assert.deepEqual(gateway.llamadas, []);
+    assert.equal(creaciones(), 0);
+  });
+
   it('reintento mientras el pago está en conciliación: 503 sin volver a autorizar', async () => {
     const { payments, gateway, handler } = armar();
-    payments.contexto = { IDPedidoExistente: null, MontoTotal: 100, EstadoIntentoActivo: 'PENDIENTE_CONCILIACION' };
+    payments.contexto = { IDPedidoExistente: null, MontoTotal: 100, EstadoIntentoActivo: 'PENDIENTE_CONCILIACION', ClaveEnUsoPorOtro: false, ReservaVencida: false };
 
     await assert.rejects(
       () => handler.handle(cmd),

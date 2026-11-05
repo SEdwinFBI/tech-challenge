@@ -14,7 +14,7 @@ const dateRangeError = { message: 'La fecha final debe ser posterior o igual a l
 
 export const GetDashboardSummarySchema = z.object({
   ...dashboardRangeFields,
-  agrupacion: z.string().optional(),
+  agrupacion: z.preprocess((v) => (typeof v === 'string' ? v.toUpperCase() : v), z.enum(['DIA', 'SEMANA', 'MES']).optional()),
 }).refine(validDateRange, dateRangeError);
 
 export type GetDashboardSummaryDTO = z.infer<typeof GetDashboardSummarySchema>;

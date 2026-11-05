@@ -899,7 +899,7 @@ describe('Handlers CQRS con repositorios mock', () => {
       const queryFija = {
         fechaInicio: new Date('2026-10-01T00:00:00Z'),
         fechaFin: new Date('2026-10-31T23:59:59Z'),
-        agrupacion: 'DIA',
+        agrupacion: 'DIA' as const,
       };
 
       const primerResultado: any = await handler.handle(queryFija);

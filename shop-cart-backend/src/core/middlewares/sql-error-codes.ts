@@ -57,6 +57,8 @@ const CODIGOS: Record<number, string> = {
   50100: 'COUPON_INACTIVE',
   50110: 'PAYMENT_STATE_INVALID',
   50111: 'PAYMENT_NOT_FOUND',
+  50112: 'RESERVA_VENCIDA',
+  50113: 'CLAVE_IDEMPOTENCIA_EN_USO',
 };
 
 export function codigoDeNegocio(numero: number, mensaje = ''): string {

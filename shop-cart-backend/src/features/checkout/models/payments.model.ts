@@ -4,6 +4,8 @@ export interface ContextoPago {
   IDPedidoExistente: number | null;
   MontoTotal: number | null;
   EstadoIntentoActivo: EstadoIntentoPago | null;
+  ClaveEnUsoPorOtro: boolean;
+  ReservaVencida: boolean;
 }
 
 export interface RegistrarIntentoParams {

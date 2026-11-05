@@ -701,3 +701,16 @@ describe('Errores de cupón: estado y mínimo de compra', () => {
     }
   });
 });
+
+describe('Agrupación del resumen del dashboard', () => {
+  it('acepta DIA, SEMANA y MES sin importar mayúsculas', () => {
+    assert.equal(GetDashboardSummarySchema.parse({ agrupacion: 'mes' }).agrupacion, 'MES');
+    assert.equal(GetDashboardSummarySchema.parse({}).agrupacion, undefined);
+  });
+
+  it('rechaza valores desconocidos o demasiado largos', () => {
+    for (const agrupacion of ['ANIO', 'x'.repeat(40), 'cache1700000000000']) {
+      assert.equal(GetDashboardSummarySchema.safeParse({ agrupacion }).success, false);
+    }
+  });
+});

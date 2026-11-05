@@ -12,7 +12,9 @@ import { CheckoutRepository } from '../repository/checkout.repository';
 import { PaymentsRepository } from '../repository/payments.repository';
 
 const esErrorDeNegocio = (err: unknown): boolean =>
-  err instanceof DomainError || (typeof (err as { number?: unknown })?.number === 'number' && (err as { number: number }).number >= 50000);
+  err instanceof DomainError ||
+  [2627, 2601].includes((err as { number?: number })?.number ?? 0) ||
+  (typeof (err as { number?: unknown })?.number === 'number' && (err as { number: number }).number >= 50000);
 
 const crearEnConciliacion = () =>
   new DomainError(
@@ -39,7 +41,14 @@ export class ConfirmOrderCommandHandler implements ICommandHandler<ConfirmOrderC
     const contexto = await this.payments.obtenerContexto(cmd.idUsuario, cmd.idCarrito, cmd.idDireccion, cmd.claveIdempotencia);
 
     if (contexto.IDPedidoExistente !== null) return this.contar(await this.crearPedido(cmd));
+    if (contexto.ClaveEnUsoPorOtro) {
+      throw new DomainError('Esa clave de idempotencia ya está en uso.', 'CLAVE_IDEMPOTENCIA_EN_USO', 409);
+    }
     if (contexto.EstadoIntentoActivo === 'PENDIENTE_CONCILIACION') throw this.enConciliacion();
+
+    if (contexto.ReservaVencida) {
+      throw new DomainError('Tu reserva venció. Vuelve a reservar para pagar.', 'RESERVA_VENCIDA', 409);
+    }
 
     const monto = contexto.MontoTotal;
     if (monto === null || !(monto > 0)) return this.finalizar(await this.crearPedido(cmd));

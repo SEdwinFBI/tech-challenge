@@ -78,8 +78,13 @@ async function verify() {
   const first = await confirm(clients[0], sharedKey);
   assert.equal(first.status, 201);
   const second = await confirm(clients[1], sharedKey);
-  assert.ok(second.status >= 400);
+  assert.equal(second.status, 409);
+  assert.equal(second.data.codigo, "CLAVE_IDEMPOTENCIA_EN_USO");
   assert.notEqual(second.data.IDPedido, first.data.IDPedido, "otro usuario recibio el pedido ajeno");
+  for (const estado of ["AUTORIZADO", "PENDIENTE_CONCILIACION"]) {
+    const pagos = (await call("GET", "/checkout/pagos?tamanoPagina=100&estado=" + estado, void 0, admin)).data.datos;
+    assert.equal(pagos.filter((p) => p.ClaveIdempotencia === sharedKey && p.IDUsuario === clients[1].id).length, 0);
+  }
   evidence.cases.push({ scenario: "misma-clave-otro-usuario", primero: first.status, segundo: second.status, codigo: second.data.codigo, pedidoPropio: first.data.IDPedido, pedidoDelSegundo: second.data.IDPedido ?? null, stock: (await inventory(ip.pid, ip.vid)).ExistenciaFisica });
   await clear();
 
@@ -98,7 +103,10 @@ async function verify() {
   assert.equal((await reserve(clients[3])).status, 200);
   const lateOwner = await confirm(clients[2], prefix + "-late-owner");
   assert.equal(lateOwner.status, 409);
+  assert.equal(lateOwner.data.codigo, "RESERVA_VENCIDA");
   const lateAlone = await confirm(clients[4], prefix + "-late-alone");
+  assert.equal(lateAlone.status, 409);
+  assert.equal(lateAlone.data.codigo, "RESERVA_VENCIDA");
   evidence.cases.push({ scenario: "reserva-expirada", disponibleTrasExpirar: released.ExistenciaDisponible, otroClienteReserva: 200, confirmacionDelTitularVencido: lateOwner.status, codigo: lateOwner.data.codigo, confirmacionSinCompetencia: lateAlone.status });
   await clear();
 

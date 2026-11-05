@@ -54,7 +54,7 @@ export interface RegistroIntento {
 }
 
 export class FakePaymentsRepo implements IPaymentsRepository {
-  contexto: ContextoPago = { IDPedidoExistente: null, MontoTotal: 120.5, EstadoIntentoActivo: null };
+  contexto: ContextoPago = { IDPedidoExistente: null, MontoTotal: 120.5, EstadoIntentoActivo: null, ClaveEnUsoPorOtro: false, ReservaVencida: false };
   registrados: RegistrarIntentoParams[] = [];
   actualizaciones: Array<{ id: number; estado: EstadoIntentoPago; idPedido?: number | null }> = [];
   pendientes: IntentoPendienteDTO[] = [];
