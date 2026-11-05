@@ -60,6 +60,7 @@ Completar las credenciales de SQL Server y los secretos de JWT antes de iniciar 
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Credenciales de AWS; si no se definen, se usa la cadena de credenciales por defecto del SDK. |
 | `REDIS_URL` | URL de Redis, por ejemplo `redis://localhost:6379`; opcional. Sin ella, el estado compartido queda en memoria del proceso. |
 | `INSTANCE_ID` | Nombre de la instancia que se devuelve en el encabezado `X-Instancia`; por defecto, el hostname. |
+| `GRAFANA_ADMIN_PASSWORD` | Contraseña del administrador de Grafana; va en el `.env` de la raíz, junto a `MSSQL_SA_PASSWORD`. |
 | `TRUST_PROXY` | `1` cuando la API está detrás de Nginx, para que el límite de intentos use la IP del cliente; opcional. |
 
 ### Base de datos
@@ -108,6 +109,26 @@ docker compose --profile app up -d --build
 
 La aplicación queda en `http://localhost:8080`. El encabezado `X-Instancia` indica qué réplica respondió. Para apagar todo: `docker compose --profile app down`.
 
+
+
+### Observabilidad
+
+Con `docker compose --profile app up -d --build` también arrancan Prometheus y Grafana.
+
+- Grafana: `http://localhost:3002`, dashboard "ShopCart" con acceso anónimo de solo lectura. El usuario `admin` usa `GRAFANA_ADMIN_PASSWORD`.
+- Prometheus: `http://localhost:9090`. Lee `/metrics` de `api-1` y `api-2` cada 15 segundos.
+- `/metrics` no se publica por Nginx; solo se llega desde la red de Docker.
+
+Paneles del dashboard:
+
+- Peticiones por segundo, latencia p50 y p95, y porcentaje de errores 5xx, por instancia.
+- Checkout por resultado y confirmados en la última hora.
+- Intentos de pago por estado en la última hora.
+- Clientes SSE conectados por instancia.
+- Los 10 procedimientos almacenados más lentos (p95).
+- Memoria y retraso del event loop por instancia.
+
+Cada respuesta lleva `X-Request-Id`; si el cliente lo envía, se respeta. Los errores del servidor lo incluyen en el log.
 
 
 ## Organización del código

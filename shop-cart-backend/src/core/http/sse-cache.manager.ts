@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { medirClientesSse } from '@/core/observability/metrics';
 
 class SseAndCacheManager {
   private cache = new Map<string, { data: unknown; expiresAt: number }>();
@@ -7,6 +8,7 @@ class SseAndCacheManager {
 
   constructor() {
     this.startHeartbeat();
+    medirClientesSse(() => this.clients.size);
   }
 
   private startHeartbeat() {

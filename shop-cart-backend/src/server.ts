@@ -9,6 +9,8 @@ import { instanceId } from '@/core/config/instance';
 import { duplicarRedis, getRedis } from '@/core/config/redis';
 import { suscribirEventos } from '@/core/events/redis-event-publisher';
 import { ejecutarConLock } from '@/core/jobs/redis-lock';
+import { medirHttp, registro } from '@/core/observability/metrics';
+import { requestId } from '@/core/middlewares/request-id.middleware';
 import { globalErrorHandler } from '@/core/middlewares/error.middleware';
 import { openApiSpec } from '@/core/http/openapi.spec';
 import apiRouter from '@/features';
@@ -21,6 +23,14 @@ if (env.TRUST_PROXY) app.set('trust proxy', Number(env.TRUST_PROXY) || 1);
 app.use((_req, res, next) => {
   res.setHeader('X-Instancia', instanceId);
   next();
+});
+
+app.use(requestId);
+app.use(medirHttp);
+
+app.get('/metrics', async (_req, res) => {
+  res.setHeader('Content-Type', registro.contentType);
+  res.end(await registro.metrics());
 });
 
 app.use(

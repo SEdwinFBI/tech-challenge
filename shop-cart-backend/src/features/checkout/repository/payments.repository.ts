@@ -1,4 +1,5 @@
 import { getDbPool, sql } from '@/core/config/db';
+import { IMetrics, obtenerMetrics } from '@/core/observability/metrics';
 import { IPaymentsRepository } from '../abstracts/payments.repository.interface';
 import {
   ActualizarEstadoOpciones,
@@ -12,6 +13,8 @@ import {
 } from '../models/payments.model';
 
 export class PaymentsRepository implements IPaymentsRepository {
+  constructor(private readonly metrics: IMetrics = obtenerMetrics()) {}
+
   async obtenerContexto(idUsuario: number, idCarrito: number, idDireccion: number, clave: string): Promise<ContextoPago> {
     const pool = await getDbPool();
     const res = await pool
@@ -35,6 +38,7 @@ export class PaymentsRepository implements IPaymentsRepository {
       .input('ReferenciaPasarela', sql.NVarChar(100), params.referencia)
       .input('Detalle', sql.NVarChar(400), params.detalle)
       .execute<{ IDIntentoPago: number }>('SP_Pagos_RegistrarIntento');
+    this.metrics.pagoIntento(params.estado);
     return (res.recordset[0] as { IDIntentoPago: number }).IDIntentoPago;
   }
 
@@ -52,6 +56,7 @@ export class PaymentsRepository implements IPaymentsRepository {
       .input('Detalle', sql.NVarChar(400), opciones.detalle ?? null)
       .input('Monto', sql.Decimal(12, 2), opciones.monto ?? null)
       .execute('SP_Pagos_ActualizarEstado');
+    this.metrics.pagoIntento(nuevoEstado);
   }
 
   async listarPendientes(): Promise<IntentoPendienteDTO[]> {

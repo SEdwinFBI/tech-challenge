@@ -1,5 +1,6 @@
 import sql from 'mssql';
 import { env } from './env';
+import { observarProcedimiento } from '@/core/observability/metrics';
 
 const dbConfig: sql.config = {
   user: env.DB_USER,
@@ -19,5 +20,16 @@ export const getDbPool = async (): Promise<sql.ConnectionPool> => {
   }
   return poolPromise;
 };
+
+const ejecutarOriginal = sql.Request.prototype.execute;
+
+sql.Request.prototype.execute = function (this: sql.Request, ...args: any[]) {
+  if (typeof args[args.length - 1] === 'function') return (ejecutarOriginal as any).apply(this, args);
+  const inicio = process.hrtime.bigint();
+  const medir = () => observarProcedimiento(String(args[0]), Number(process.hrtime.bigint() - inicio) / 1e9);
+  const resultado = (ejecutarOriginal as any).apply(this, args) as Promise<unknown>;
+  resultado.then(medir, medir);
+  return resultado;
+} as typeof sql.Request.prototype.execute;
 
 export { sql };

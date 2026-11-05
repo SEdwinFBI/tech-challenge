@@ -53,7 +53,7 @@ export const globalErrorHandler = (err: any, _req: Request, res: Response, _next
     });
   }
 
-  console.error('Error:', err);
+  console.error(`[${res.locals.requestId ?? '-'}] Error:`, err);
   return res.status(500).json({
     ok: false,
     codigo: 'INTERNAL_ERROR',

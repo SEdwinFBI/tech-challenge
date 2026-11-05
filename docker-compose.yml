@@ -108,6 +108,35 @@ services:
     networks:
       - shopcart-network
 
+  prometheus:
+    image: prom/prometheus
+    profiles: ["app"]
+    restart: unless-stopped
+    volumes:
+      - ./infra/prometheus:/etc/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - shopcart-network
+
+  grafana:
+    image: grafana/grafana
+    profiles: ["app"]
+    restart: unless-stopped
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-}"
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards
+    ports:
+      - "3002:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - shopcart-network
+
 volumes:
   mssql_data:
     driver: local

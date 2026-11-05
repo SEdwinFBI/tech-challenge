@@ -2,6 +2,7 @@ import { ICommandHandler } from '@/core/cqrs/index';
 import { DomainError } from '@/core/domain/domain.error';
 import { IEventPublisher } from '@/core/events/event-publisher.interface';
 import { obtenerEventPublisher } from '@/core/events/event-publisher.factory';
+import { IMetrics, obtenerMetrics } from '@/core/observability/metrics';
 import { ICheckoutRepository } from '../abstracts/checkout.repository.interface';
 import { IPaymentGateway, PasarelaTimeoutError, SimulacionPago } from '../abstracts/payment-gateway.interface';
 import { IPaymentsRepository } from '../abstracts/payments.repository.interface';
@@ -13,7 +14,7 @@ import { PaymentsRepository } from '../repository/payments.repository';
 const esErrorDeNegocio = (err: unknown): boolean =>
   err instanceof DomainError || (typeof (err as { number?: unknown })?.number === 'number' && (err as { number: number }).number >= 50000);
 
-const enConciliacion = () =>
+const crearEnConciliacion = () =>
   new DomainError(
     'El pago fue autorizado pero el pedido aún no se confirma. Lo estamos conciliando; no vuelvas a pagar.',
     'PAGO_EN_CONCILIACION',
@@ -26,13 +27,19 @@ export class ConfirmOrderCommandHandler implements ICommandHandler<ConfirmOrderC
     private readonly payments: IPaymentsRepository = new PaymentsRepository(),
     private readonly gateway: IPaymentGateway = new SimulatedPaymentGateway(),
     private readonly events: IEventPublisher = obtenerEventPublisher(),
+    private readonly metrics: IMetrics = obtenerMetrics(),
   ) {}
+
+  private enConciliacion(): DomainError {
+    this.metrics.checkout('CONCILIACION');
+    return crearEnConciliacion();
+  }
 
   async handle(cmd: ConfirmOrderCommand): Promise<ConfirmOrderResult> {
     const contexto = await this.payments.obtenerContexto(cmd.idUsuario, cmd.idCarrito, cmd.idDireccion, cmd.claveIdempotencia);
 
-    if (contexto.IDPedidoExistente !== null) return this.crearPedido(cmd);
-    if (contexto.EstadoIntentoActivo === 'PENDIENTE_CONCILIACION') throw enConciliacion();
+    if (contexto.IDPedidoExistente !== null) return this.contar(await this.crearPedido(cmd));
+    if (contexto.EstadoIntentoActivo === 'PENDIENTE_CONCILIACION') throw this.enConciliacion();
 
     const monto = contexto.MontoTotal;
     if (monto === null || !(monto > 0)) return this.finalizar(await this.crearPedido(cmd));
@@ -51,7 +58,7 @@ export class ConfirmOrderCommandHandler implements ICommandHandler<ConfirmOrderC
         referencia,
         detalle: 'La pasarela no respondió durante la autorización.',
       });
-      throw enConciliacion();
+      throw this.enConciliacion();
     }
 
     if (!autorizacion.aprobado || !autorizacion.referencia) {
@@ -61,6 +68,7 @@ export class ConfirmOrderCommandHandler implements ICommandHandler<ConfirmOrderC
         referencia: null,
         detalle: autorizacion.motivo ?? 'Pago rechazado.',
       });
+      this.metrics.checkout('RECHAZADO');
       throw new DomainError(
         autorizacion.motivo ?? 'Pago rechazado por el emisor. Puedes reintentar mientras tu reserva siga vigente.',
         'PAGO_RECHAZADO',
@@ -87,7 +95,7 @@ export class ConfirmOrderCommandHandler implements ICommandHandler<ConfirmOrderC
         await this.payments.actualizarEstado(idIntento, 'PENDIENTE_CONCILIACION', {
           detalle: 'Error de infraestructura al crear el pedido.',
         });
-        throw enConciliacion();
+        throw this.enConciliacion();
       }
       await this.compensar(idIntento, referencia, 'Anulado: el pedido no se pudo crear.');
       throw err;
@@ -95,7 +103,7 @@ export class ConfirmOrderCommandHandler implements ICommandHandler<ConfirmOrderC
 
     if (pedido.FueIdempotente) {
       await this.compensar(idIntento, referencia, 'Anulado: el pedido ya existía para esta clave.');
-      return pedido;
+      return this.contar(pedido);
     }
 
     if (pedido.Total !== undefined && Math.round(pedido.Total * 100) !== Math.round(monto * 100)) {
@@ -103,7 +111,8 @@ export class ConfirmOrderCommandHandler implements ICommandHandler<ConfirmOrderC
         idPedido: pedido.IDPedido,
         detalle: 'Monto distinto al autorizado',
       });
-      return this.finalizar(pedido);
+      this.metrics.checkout('CONCILIACION');
+      return this.publicar(pedido);
     }
 
     try {
@@ -136,6 +145,7 @@ export class ConfirmOrderCommandHandler implements ICommandHandler<ConfirmOrderC
     try {
       await this.gateway.anular(referencia);
       await this.payments.actualizarEstado(idIntento, 'ANULADO', { detalle });
+      this.metrics.checkout('ANULADO');
     } catch (err) {
       console.error('No se pudo anular el pago; queda para conciliación:', err);
       await this.payments
@@ -144,7 +154,17 @@ export class ConfirmOrderCommandHandler implements ICommandHandler<ConfirmOrderC
     }
   }
 
+  private contar(pedido: ConfirmOrderResult): ConfirmOrderResult {
+    this.metrics.checkout(pedido.FueIdempotente ? 'IDEMPOTENTE' : 'CONFIRMADO');
+    return pedido;
+  }
+
   private async finalizar(pedido: ConfirmOrderResult): Promise<ConfirmOrderResult> {
+    this.contar(pedido);
+    return this.publicar(pedido);
+  }
+
+  private async publicar(pedido: ConfirmOrderResult): Promise<ConfirmOrderResult> {
     if (!pedido.FueIdempotente) {
       await this.events.publish({ tipo: 'NUEVO_PEDIDO', payload: { idPedido: pedido.IDPedido } });
     }
