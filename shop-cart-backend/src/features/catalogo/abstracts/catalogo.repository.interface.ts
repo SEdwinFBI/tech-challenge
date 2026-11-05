@@ -30,7 +30,7 @@ export interface ICatalogRepository {
   deleteOrDeactivateProduct(idProducto: number, idAdmin: number): Promise<DeleteProductResult>;
   getProductImages(idProducto: number): Promise<ProductImageDTO[]>;
   addProductImage(idProducto: number, url: string, idAdmin: number): Promise<ProductImageDTO>;
-  deleteProductImage(idProductoImagen: number, idAdmin: number): Promise<void>;
+  deleteProductImage(idProductoImagen: number, idAdmin: number): Promise<string | null>;
   setReferencePrice(idVariante: number, precioReferencia: number | null, idAdmin: number): Promise<void>;
   setFeatured(idProducto: number, destacado: boolean, idAdmin: number): Promise<void>;
   updateCategoryImage(idCategoria: number, imagenUrl: string | null, idAdmin: number): Promise<void>;

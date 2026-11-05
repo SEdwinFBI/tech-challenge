@@ -190,13 +190,14 @@ export class CatalogRepository implements ICatalogRepository {
     return res.recordset[0] as ProductImageDTO;
   }
 
-  async deleteProductImage(idProductoImagen: number, idAdmin: number): Promise<void> {
+  async deleteProductImage(idProductoImagen: number, idAdmin: number): Promise<string | null> {
     const pool = await getDbPool();
-    await pool
+    const res = await pool
       .request()
       .input('IDProductoImagen', sql.Int, idProductoImagen)
       .input('IDUsuarioAdmin', sql.Int, idAdmin)
-      .execute('SP_Catalogo_EliminarImagenProducto');
+      .execute<{ Url: string }>('SP_Catalogo_EliminarImagenProducto');
+    return res.recordset?.[0]?.Url ?? null;
   }
 
   async setReferencePrice(idVariante: number, precioReferencia: number | null, idAdmin: number): Promise<void> {

@@ -164,3 +164,13 @@ export interface SetCategoryImageCommand {
   imagenUrl: string | null;
   idAdmin: number;
 }
+
+export const CreateImageUploadUrlSchema = z.object({
+  contentType: z.enum(['image/webp', 'image/jpeg', 'image/png']),
+  tamanoBytes: z.number().int().min(1).max(2_097_152),
+});
+export type CreateImageUploadUrlDTO = z.infer<typeof CreateImageUploadUrlSchema>;
+
+export type CreateImageUploadUrlCommand = CreateImageUploadUrlDTO & {
+  idProducto: number;
+};

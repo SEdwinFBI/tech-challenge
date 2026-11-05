@@ -11,6 +11,7 @@ import { DeleteProductCommandHandler } from './commands/delete-product.command';
 import { CreateVariantCommandHandler } from './commands/create-variant.command';
 import { UpdateVariantCommandHandler } from './commands/update-variant.command';
 import { UpdatePriceCommandHandler } from './commands/update-price.command';
+import { CreateImageUploadUrlCommandHandler } from './commands/create-image-upload-url.command';
 import { AddProductImageCommandHandler } from './commands/add-product-image.command';
 import { DeleteProductImageCommandHandler } from './commands/delete-product-image.command';
 import { SetReferencePriceCommandHandler } from './commands/set-reference-price.command';
@@ -28,6 +29,7 @@ import {
   UpdateProductSchema,
   UpdateVariantSchema,
   AddProductImageSchema,
+  CreateImageUploadUrlSchema,
   SetFeaturedSchema,
   SetReferencePriceSchema,
   SetCategoryImageSchema,
@@ -214,6 +216,7 @@ catalogoRouter.patch('/variantes/:id/precio', requireAuth, requireRoles('ADMINIS
 const getProductImagesQueryHandler = new GetProductImagesQueryHandler();
 const addProductImageCommandHandler = new AddProductImageCommandHandler();
 const deleteProductImageCommandHandler = new DeleteProductImageCommandHandler();
+const createImageUploadUrlCommandHandler = new CreateImageUploadUrlCommandHandler();
 const setReferencePriceCommandHandler = new SetReferencePriceCommandHandler();
 const setFeaturedCommandHandler = new SetFeaturedCommandHandler();
 
@@ -240,6 +243,22 @@ catalogoRouter.post(
         idAdmin: req.user!.idUsuario,
       });
       res.status(201).json({ ok: true, datos: imagen });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+catalogoRouter.post(
+  '/productos/:id/imagenes/firma',
+  requireAuth,
+  requireRoles('ADMINISTRADOR'),
+  requireNumericId,
+  async (req, res, next) => {
+    try {
+      const dto = CreateImageUploadUrlSchema.parse(req.body);
+      const datos = await createImageUploadUrlCommandHandler.handle({ ...dto, idProducto: Number(req.params.id) });
+      res.json({ ok: true, datos });
     } catch (err) {
       next(err);
     }

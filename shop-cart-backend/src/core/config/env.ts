@@ -19,7 +19,12 @@ const envSchema = z.object({
   RATE_LIMIT_AUTH_MAX: z.coerce.number().default(15),
   RATE_LIMIT_AUTH_WINDOW_MIN: z.coerce.number().default(15),
   RESERVATION_TTL_MINUTES: z.coerce.number().int().min(1).max(1440).optional(),
-  CORS_ALLOW_ORIGIN: z.string()
+  CORS_ALLOW_ORIGIN: z.string(),
+  S3_BUCKET: z.string().optional(),
+  S3_REGION: z.string().optional(),
+  CDN_BASE_URL: z.string().optional(),
+  AWS_ACCESS_KEY_ID: z.string().optional(),
+  AWS_SECRET_ACCESS_KEY: z.string().optional()
 });
 
 export const env = envSchema.parse(process.env);
