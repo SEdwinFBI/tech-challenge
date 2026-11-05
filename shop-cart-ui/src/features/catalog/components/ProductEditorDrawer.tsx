@@ -10,6 +10,8 @@ import { discountPercent } from '@/shared/lib/pricing';
 import type { Category, Variant } from '@/shared/types/domain';
 import { readDraft, saveDraft, clearDraft } from '@/shared/lib/draft';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
+import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
+import { ImageUploadField } from './ImageUploadField';
 
 type Tab = 'datos' | 'imagenes' | 'variantes';
 const MAX_IMAGES = 10;
@@ -55,6 +57,8 @@ export interface ProductEditorDrawerProps {
 
 export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ productId, categories, onClose }) => {
   const queryClient = useQueryClient();
+  const online = useOnlineStatus();
+  const offlineTitle = online ? undefined : 'Sin conexión';
   const [tab, setTab] = useState<Tab>('datos');
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -298,10 +302,22 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
                 </div>
                 <SafeImage src={imagenUrl || undefined} alt="Portada" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
               </div>
+              <ImageUploadField
+                key={producto.IDProducto}
+                productId={producto.IDProducto}
+                label="Subir portada"
+                onUploaded={async url => {
+                  await catalogApi.updateProduct(producto.IDProducto, { imagenUrl: url });
+                  setImagenUrl(url);
+                  toast.success('Portada actualizada');
+                  refreshAll();
+                }}
+              />
               <div className="flex justify-end border-t border-slate-100 pt-4">
                 <button
                   type="submit"
-                  disabled={!dirty || saving}
+                  disabled={!dirty || saving || !online}
+                  title={offlineTitle}
                   className="inline-flex h-11 items-center gap-2 rounded-full bg-cta px-6 text-sm font-extrabold text-cta-fg hover:bg-cta-hover disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving && <Loader2 className="h-4 w-4 animate-spin" />} Guardar
@@ -338,6 +354,17 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
                   ))}
                 </ul>
               )}
+              <ImageUploadField
+                key={producto.IDProducto}
+                productId={producto.IDProducto}
+                label="Subir imagen"
+                disabled={imagenes.length >= MAX_IMAGES}
+                onUploaded={async url => {
+                  await catalogApi.addProductImage(producto.IDProducto, url);
+                  toast.success('Imagen agregada');
+                  refreshAll();
+                }}
+              />
               <div className="flex items-end gap-3 rounded-2xl bg-canvas p-4">
                 <div className="flex-1">
                   <Input label="URL de imagen" value={newImage} onChange={e => setNewImage(e.target.value)} placeholder="https://…" disabled={imagenes.length >= MAX_IMAGES} />
@@ -345,7 +372,8 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
                 <button
                   type="button"
                   onClick={addImage}
-                  disabled={imagenes.length >= MAX_IMAGES || !newImage.trim()}
+                  disabled={imagenes.length >= MAX_IMAGES || !newImage.trim() || !online}
+                  title={offlineTitle}
                   className="inline-flex h-10 items-center gap-1.5 rounded-full bg-brand px-5 text-sm font-bold text-white hover:bg-brand-hover disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4" /> Agregar
@@ -389,7 +417,7 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
                                 className="h-9 w-24 rounded-lg border border-slate-300 px-2 text-sm font-bold tabular outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
                               />
                               {priceVal !== String(v.Precio) && (
-                                <button type="button" onClick={() => savePrice(v)} className="h-9 rounded-lg bg-brand px-3 text-xs font-bold text-white hover:bg-brand-hover">Guardar</button>
+                                <button type="button" onClick={() => savePrice(v)} disabled={!online} title={offlineTitle} className="h-9 rounded-lg bg-brand px-3 text-xs font-bold text-white disabled:opacity-50 hover:bg-brand-hover">Guardar</button>
                               )}
                             </div>
                           </td>
@@ -405,7 +433,7 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
                                 className="h-9 w-24 rounded-lg border border-slate-300 px-2 text-sm tabular outline-none placeholder:text-xs focus:border-brand focus:ring-2 focus:ring-brand/20"
                               />
                               {refVal !== (v.PrecioReferencia != null ? String(v.PrecioReferencia) : '') && (
-                                <button type="button" onClick={() => saveReference(v)} className="h-9 rounded-lg bg-slate-800 px-3 text-xs font-bold text-white hover:bg-slate-700">Guardar</button>
+                                <button type="button" onClick={() => saveReference(v)} disabled={!online} title={offlineTitle} className="h-9 rounded-lg bg-slate-800 px-3 text-xs font-bold text-white disabled:opacity-50 hover:bg-slate-700">Guardar</button>
                               )}
                             </div>
                             {pct > 0 && <p className="mt-1 text-[11px] font-bold text-sale">-{pct}%</p>}
@@ -442,7 +470,7 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
                   <Input label="Existencia inicial" inputMode="numeric" value={newVariant.existencia} onChange={e => setNewVariant(s => ({ ...s, existencia: e.target.value.replace(/\D/g, '') }))} />
                 </div>
                 <div className="flex justify-end">
-                  <button type="submit" disabled={creating} className="inline-flex h-10 items-center gap-2 rounded-full bg-brand px-5 text-sm font-bold text-white hover:bg-brand-hover disabled:opacity-60">
+                  <button type="submit" disabled={creating || !online} title={offlineTitle} className="inline-flex h-10 items-center gap-2 rounded-full bg-brand px-5 text-sm font-bold text-white hover:bg-brand-hover disabled:opacity-60">
                     {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Crear variante
                   </button>
                 </div>

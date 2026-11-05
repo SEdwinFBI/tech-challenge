@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit3, Plus, Star } from 'lucide-react';
 import { catalogApi, type GetProductsParams } from '../api/catalogApi';
@@ -52,6 +53,7 @@ const toCatalogOrder = (orden: ProductSortColumn, direccion: 'asc' | 'desc'): No
 const FILTROS = ['q', 'categoria', 'activo'] as const;
 
 export const AdminCatalogPage: React.FC = () => {
+  const online = useOnlineStatus();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<'productos' | 'categorias'>('productos');
 
@@ -359,7 +361,7 @@ export const AdminCatalogPage: React.FC = () => {
           </div>
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
             <Button type="button" variant="outline" onClick={closeNewProduct}>Cancelar</Button>
-            <Button type="submit" loading={creatingProduct}>Crear</Button>
+            <Button type="submit" loading={creatingProduct} disabled={!online} title={online ? undefined : 'Sin conexión'}>Crear</Button>
           </div>
         </form>
       </Modal>
@@ -382,7 +384,7 @@ export const AdminCatalogPage: React.FC = () => {
           </label>
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
             <Button type="button" variant="outline" onClick={() => setCategoryModal({ open: false, editing: null })}>Cancelar</Button>
-            <Button type="submit" loading={savingCategory}>Guardar</Button>
+            <Button type="submit" loading={savingCategory} disabled={!online} title={online ? undefined : 'Sin conexión'}>Guardar</Button>
           </div>
         </form>
       </Modal>

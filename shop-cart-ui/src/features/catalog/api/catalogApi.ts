@@ -52,7 +52,23 @@ export interface CreateProductPayload {
   existenciaInicial?: number;
 }
 
+export interface ImageUploadSignature {
+  urlSubida: string;
+  urlPublica: string;
+  clave: string;
+  expiraEn: string;
+  cabeceras?: Record<string, string>;
+}
+
 export const catalogApi = {
+  requestImageUpload: async (idProducto: number, contentType: string, tamanoBytes: number): Promise<ImageUploadSignature> => {
+    const res = await apiClient.post<{ ok: boolean; datos?: ImageUploadSignature } & Partial<ImageUploadSignature>>(
+      `/catalogo/productos/${idProducto}/imagenes/firma`,
+      { contentType, tamanoBytes },
+    );
+    return (res.data.datos ?? res.data) as ImageUploadSignature;
+  },
+
   getProductInventory: async (id: number): Promise<ProductInventoryResponse> => {
     const res = await apiClient.get<ProductInventoryResponse>(`/catalogo/productos/${id}/inventario`);
     return res.data;
