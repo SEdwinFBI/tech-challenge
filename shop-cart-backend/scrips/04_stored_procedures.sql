@@ -2543,3 +2543,11 @@ BEGIN
     SELECT COUNT(1) AS TotalRegistros FROM #Resultados;
 END;
 GO
+
+CREATE OR ALTER PROCEDURE SP_Sistema_Ping
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 1 AS Ok;
+END;
+GO

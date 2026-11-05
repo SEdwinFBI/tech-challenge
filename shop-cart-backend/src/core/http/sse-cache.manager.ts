@@ -40,8 +40,12 @@ class SseAndCacheManager {
     this.cache.set(key, { data, expiresAt: Date.now() + ttlSeconds * 1000 });
   }
 
-  invalidateAndBroadcast(event: string, payload: unknown) {
+  clearCache() {
     this.cache.clear();
+  }
+
+  invalidateAndBroadcast(event: string, payload: unknown) {
+    this.clearCache();
     const frame = `data: ${JSON.stringify({ event, payload, timestamp: new Date().toISOString() })}\n\n`;
     for (const client of this.clients) {
       try {

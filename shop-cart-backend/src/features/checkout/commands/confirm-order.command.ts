@@ -1,7 +1,7 @@
 import { ICommandHandler } from '@/core/cqrs/index';
 import { DomainError } from '@/core/domain/domain.error';
 import { IEventPublisher } from '@/core/events/event-publisher.interface';
-import { LocalEventPublisher } from '@/core/events/local-event-publisher';
+import { obtenerEventPublisher } from '@/core/events/event-publisher.factory';
 import { ICheckoutRepository } from '../abstracts/checkout.repository.interface';
 import { IPaymentGateway, PasarelaTimeoutError, SimulacionPago } from '../abstracts/payment-gateway.interface';
 import { IPaymentsRepository } from '../abstracts/payments.repository.interface';
@@ -25,7 +25,7 @@ export class ConfirmOrderCommandHandler implements ICommandHandler<ConfirmOrderC
     private readonly repo: ICheckoutRepository = new CheckoutRepository(),
     private readonly payments: IPaymentsRepository = new PaymentsRepository(),
     private readonly gateway: IPaymentGateway = new SimulatedPaymentGateway(),
-    private readonly events: IEventPublisher = new LocalEventPublisher(),
+    private readonly events: IEventPublisher = obtenerEventPublisher(),
   ) {}
 
   async handle(cmd: ConfirmOrderCommand): Promise<ConfirmOrderResult> {

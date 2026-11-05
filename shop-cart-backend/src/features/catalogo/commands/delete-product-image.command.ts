@@ -1,6 +1,6 @@
 import { ICommandHandler } from '@/core/cqrs/index';
 import { IEventPublisher } from '@/core/events/event-publisher.interface';
-import { LocalEventPublisher } from '@/core/events/local-event-publisher';
+import { obtenerEventPublisher } from '@/core/events/event-publisher.factory';
 import { ICatalogRepository } from '../abstracts/catalogo.repository.interface';
 import { IImageStorage } from '../abstracts/image-storage.interface';
 import { DeleteProductImageCommand } from '../models/catalogo.schema';
@@ -11,7 +11,7 @@ export class DeleteProductImageCommandHandler implements ICommandHandler<DeleteP
   constructor(
     private readonly repo: ICatalogRepository = new CatalogRepository(),
     private readonly storage: IImageStorage = new S3ImageStorage(),
-    private readonly events: IEventPublisher = new LocalEventPublisher(),
+    private readonly events: IEventPublisher = obtenerEventPublisher(),
   ) {}
 
   async handle(cmd: DeleteProductImageCommand): Promise<void> {

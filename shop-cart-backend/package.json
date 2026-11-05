@@ -9,7 +9,7 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "db:setup": "tsx src/core/config/db-setup.ts",
-    "test": "tsx --test tests/domain.test.ts tests/extensiones.test.ts tests/pagos.test.ts tests/imagenes.test.ts",
+    "test": "tsx --test tests/domain.test.ts tests/extensiones.test.ts tests/pagos.test.ts tests/imagenes.test.ts tests/escalado.test.ts",
     "test:concurrency": "tsx tests/concurrency-demo.ts",
     "test:integration": "tsx --test tests/audit-regression.test.ts tests/pagos-integracion.test.ts",
     "test:concurrency:http": "node --test tests/real-concurrency.test.cjs"
@@ -28,9 +28,11 @@
     "express": "^5.3.0",
     "express-rate-limit": "^8.7.1",
     "helmet": "^8.3.0",
+    "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
     "mssql": "^12.7.13",
     "node-cron": "^4.6.0",
+    "rate-limit-redis": "^6.0.2",
     "zod": "^4.6.7"
   },
   "devDependencies": {

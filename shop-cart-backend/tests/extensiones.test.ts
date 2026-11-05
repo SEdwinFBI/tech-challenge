@@ -576,19 +576,19 @@ describe('Códigos de error de negocio', () => {
 });
 
 describe('Ticket del stream del dashboard', () => {
-  it('sirve una sola vez', () => {
-    const { ticket } = issueStreamTicket();
-    assert.equal(consumeStreamTicket(ticket), true);
-    assert.equal(consumeStreamTicket(ticket), false);
+  it('sirve una sola vez', async () => {
+    const { ticket } = await issueStreamTicket();
+    assert.equal(await consumeStreamTicket(ticket), true);
+    assert.equal(await consumeStreamTicket(ticket), false);
   });
 
-  it('vence a los 30 segundos y no acepta valores desconocidos', () => {
+  it('vence a los 30 segundos y no acepta valores desconocidos', async () => {
     const ahora = Date.now();
-    const { ticket, expiraEnSegundos } = issueStreamTicket(ahora);
+    const { ticket, expiraEnSegundos } = await issueStreamTicket(ahora);
     assert.equal(expiraEnSegundos, 30);
-    assert.equal(consumeStreamTicket(ticket, ahora + 31_000), false);
-    assert.equal(consumeStreamTicket('no-existe'), false);
-    assert.equal(consumeStreamTicket(''), false);
+    assert.equal(await consumeStreamTicket(ticket, ahora + 31_000), false);
+    assert.equal(await consumeStreamTicket('no-existe'), false);
+    assert.equal(await consumeStreamTicket(''), false);
   });
 
   it('el token enviado en la URL ya no autentica', async () => {

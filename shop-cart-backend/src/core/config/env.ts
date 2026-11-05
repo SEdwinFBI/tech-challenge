@@ -24,7 +24,10 @@ const envSchema = z.object({
   S3_REGION: z.string().optional(),
   CDN_BASE_URL: z.string().optional(),
   AWS_ACCESS_KEY_ID: z.string().optional(),
-  AWS_SECRET_ACCESS_KEY: z.string().optional()
+  AWS_SECRET_ACCESS_KEY: z.string().optional(),
+  REDIS_URL: z.string().optional().transform((v) => v || undefined),
+  INSTANCE_ID: z.string().optional(),
+  TRUST_PROXY: z.string().optional()
 });
 
 export const env = envSchema.parse(process.env);

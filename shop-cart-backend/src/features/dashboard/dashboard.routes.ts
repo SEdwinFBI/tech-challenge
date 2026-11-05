@@ -25,13 +25,17 @@ dashboardRouter.get('/resumen', requireAuth, requireRoles('ADMINISTRADOR'), asyn
   }
 });
 
-dashboardRouter.post('/stream-ticket', requireAuth, requireRoles('ADMINISTRADOR'), (_req, res) => {
-  res.json({ ok: true, ...issueStreamTicket() });
+dashboardRouter.post('/stream-ticket', requireAuth, requireRoles('ADMINISTRADOR'), async (_req, res, next) => {
+  try {
+    res.json({ ok: true, ...(await issueStreamTicket()) });
+  } catch (err) {
+    next(err);
+  }
 });
 
-dashboardRouter.get('/stream', (req, res, next) => {
+dashboardRouter.get('/stream', async (req, res, next) => {
   const ticket = typeof req.query.ticket === 'string' ? req.query.ticket : '';
-  if (!consumeStreamTicket(ticket)) {
+  if (!(await consumeStreamTicket(ticket))) {
     return next(new DomainError('Ticket de conexión inválido o vencido.', 'STREAM_TICKET_INVALID', 401));
   }
   sseCacheManager.subscribe(res);
