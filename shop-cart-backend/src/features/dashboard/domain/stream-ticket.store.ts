@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { getRedis } from '@/core/config/redis';
+import { DomainError } from '@/core/domain/domain.error';
 
 const VIDA_MS = 30_000;
 const PREFIJO = 'shopcart:ticket:';
@@ -28,6 +29,9 @@ export class MemoryStreamTicketStore implements IStreamTicketStore {
   }
 }
 
+const tiempoRealNoDisponible = () =>
+  new DomainError('El tiempo real no está disponible por ahora.', 'TIEMPO_REAL_NO_DISPONIBLE', 503);
+
 export interface RedisTicketClient {
   set(key: string, value: string, mode: 'EX', ttl: number, nx: 'NX'): Promise<unknown>;
   getdel(key: string): Promise<string | null>;
@@ -38,14 +42,23 @@ export class RedisStreamTicketStore implements IStreamTicketStore {
 
   async issue() {
     const ticket = randomBytes(24).toString('hex');
-    const guardado = await this.redis.set(PREFIJO + ticket, '1', 'EX', VIDA_MS / 1000, 'NX');
-    if (guardado !== 'OK') throw new Error('No se pudo emitir el ticket');
+    let guardado: unknown;
+    try {
+      guardado = await this.redis.set(PREFIJO + ticket, '1', 'EX', VIDA_MS / 1000, 'NX');
+    } catch {
+      throw tiempoRealNoDisponible();
+    }
+    if (guardado !== 'OK') throw tiempoRealNoDisponible();
     return { ticket, expiraEnSegundos: VIDA_MS / 1000 };
   }
 
   async consume(ticket: string) {
     if (!ticket) return false;
-    return (await this.redis.getdel(PREFIJO + ticket)) !== null;
+    try {
+      return (await this.redis.getdel(PREFIJO + ticket)) !== null;
+    } catch {
+      throw tiempoRealNoDisponible();
+    }
   }
 }
 

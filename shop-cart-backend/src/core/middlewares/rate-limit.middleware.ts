@@ -6,6 +6,21 @@ import { getRedis } from '@/core/config/redis';
 const windowMinutes = Number(env.RATE_LIMIT_AUTH_WINDOW_MIN);
 const maxRequests = Number(env.RATE_LIMIT_AUTH_MAX);
 const redis = getRedis();
+let conectado = false;
+redis?.once('ready', () => {
+  conectado = true;
+});
+
+async function esperarConexion(): Promise<void> {
+  if (!redis || redis.status === 'ready') return;
+  await new Promise<void>((resolver, rechazar) => {
+    const espera = setTimeout(() => rechazar(new Error('Redis no está listo')), 5000);
+    redis.once('ready', () => {
+      clearTimeout(espera);
+      resolver();
+    });
+  });
+}
 
 export const authRateLimiter = rateLimit({
   windowMs: windowMinutes * 60 * 1000,
@@ -17,7 +32,10 @@ export const authRateLimiter = rateLimit({
     ? {
         store: new RedisStore({
           prefix: 'shopcart:rl:',
-          sendCommand: (...args: string[]) => redis.call(args[0] as string, ...args.slice(1)) as Promise<RedisReply>,
+          sendCommand: async (...args: string[]) => {
+            if (!conectado && args[0]?.toUpperCase() === 'SCRIPT') await esperarConexion();
+            return redis.call(args[0] as string, ...args.slice(1)) as Promise<RedisReply>;
+          },
         }),
       }
     : {}),
