@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronRight, Heart, Loader2, MapPin, ShoppingCart, Truck } from 'lucide-react';
@@ -23,7 +24,7 @@ import {
 } from '../lib/variantMatrix';
 import { DiscountBadge, ErrorState, Illustration, IvaBreakdown, PriceTag, QuantityStepper, Rail, SectionHeader, StockIndicator } from '@/shared/ui';
 import { toast } from '@/shared/ui/toastStore';
-import { formatMoney } from '@/shared/lib/formatters';
+import { formatMoney, plural } from '@/shared/lib/formatters';
 import { discountPercent, quoteShipping } from '@/shared/lib/pricing';
 import { trackRecentlyViewed, useRecentlyViewed } from '@/shared/lib/recentlyViewed';
 
@@ -34,6 +35,7 @@ const TABS = [
 ];
 
 export const ProductDetailPage: React.FC = () => {
+  const online = useOnlineStatus();
   const { id } = useParams();
   const productId = Number(id);
   const navigate = useNavigate();
@@ -164,7 +166,7 @@ export const ProductDetailPage: React.FC = () => {
     ['SKU', variant.SKU],
     ['Categoría', producto.Categoria],
     ...(attrs.map(a => [ATTR_LABEL[a], String(variant[a] ?? '')]) as Array<[string, string]>).filter(([, v]) => v),
-    ['Existencia', `${variant.ExistenciaDisponible} unidades`],
+    ['Existencia', plural(variant.ExistenciaDisponible, 'unidad', 'unidades')],
   ];
 
   return (
@@ -269,7 +271,8 @@ export const ProductDetailPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleAdd}
-                  disabled={noMore || isUpserting}
+                  disabled={noMore || isUpserting || !online}
+                  title={online ? undefined : 'Sin conexión'}
                   className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-cta text-base font-extrabold text-cta-fg shadow-lift transition hover:bg-cta-hover active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isUpserting ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShoppingCart className="h-5 w-5" />}
@@ -381,6 +384,7 @@ export const ProductDetailPage: React.FC = () => {
         disabled={soldOut || noMore}
         loading={isUpserting}
         onAdd={handleAdd}
+        offline={!online}
         tabs={TABS}
       />
     </div>

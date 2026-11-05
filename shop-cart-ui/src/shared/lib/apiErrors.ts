@@ -78,7 +78,12 @@ const MENSAJES: Record<string, string> = {
   RETURN_NOT_ALLOWED: 'Este pedido no admite devoluciones.',
   RETURN_EXCEEDS_SOLD: 'No puedes devolver más unidades de las compradas.',
   RETURN_QUANTITY_INVALID: 'La cantidad a devolver debe ser positiva.',
+  PAGO_RECHAZADO: 'El pago fue rechazado. No se hizo ningún cobro.',
+  PAGO_REVERTIDO: 'No se pudo crear el pedido. El cobro fue anulado.',
+  PAGO_EN_CONCILIACION: 'Estamos confirmando tu pago. Revisa Mis pedidos en unos minutos; no vuelvas a pagar.',
+  ALMACENAMIENTO_NO_CONFIGURADO: 'La carga de imágenes no está disponible. Pega una URL.',
   // generales
+  SIN_CONEXION: 'No hay conexión con el servidor. Revisa tu internet.',
   DUPLICATE_KEY: 'Ya existe un registro con ese valor.',
   VALIDATION_ERROR: 'Revisa los datos del formulario.',
   INTERNAL_ERROR: 'Algo salió mal de nuestro lado. Intenta de nuevo.',
@@ -87,10 +92,24 @@ const MENSAJES: Record<string, string> = {
 interface CuerpoError {
   codigo?: string;
   mensaje?: string;
+  detalles?: Array<{ campo?: string; mensaje?: string }>;
   datos?: { montoMinimo?: number; subtotal?: number; montoFaltante?: number };
 }
 
+export function isNetworkError(err: unknown): boolean {
+  if (err instanceof TypeError) return true;
+  const e = err as AxiosError | undefined;
+  return Boolean(e?.isAxiosError && !e.response && e.code !== 'ERR_CANCELED');
+}
+
+export function apiFieldErrors(err: unknown): Array<{ campo: string; mensaje: string }> {
+  const detalles = (err as AxiosError<CuerpoError>)?.response?.data?.detalles;
+  if (!Array.isArray(detalles)) return [];
+  return detalles.flatMap((d) => (d?.campo && d.mensaje ? [{ campo: d.campo, mensaje: d.mensaje }] : []));
+}
+
 export function errorCode(err: unknown): string | undefined {
+  if (isNetworkError(err)) return 'SIN_CONEXION';
   return (err as AxiosError<CuerpoError>)?.response?.data?.codigo;
 }
 
@@ -107,6 +126,10 @@ export function apiErrorMessage(
     const falta = typeof datos.montoFaltante === 'number' && Number.isFinite(datos.montoFaltante) && datos.montoFaltante > 0
       ? ` Te faltan ${formatMoney(datos.montoFaltante)}.` : '';
     return `Este cupón requiere una compra mínima de ${formatMoney(datos.montoMinimo)}.${falta}`;
+  }
+  if (codigo === 'VALIDATION_ERROR') {
+    const campos = apiFieldErrors(err);
+    if (campos.length > 0) return campos.map((c) => c.mensaje).join(' ');
   }
   if (codigo && MENSAJES[codigo]) return MENSAJES[codigo];
   return (err as AxiosError<CuerpoError>)?.response?.data?.mensaje || fallback;

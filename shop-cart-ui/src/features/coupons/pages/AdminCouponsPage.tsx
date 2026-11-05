@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { couponsApi, CouponPayload, type CouponSortColumn, type CouponValidity } from '../api/couponsApi';
 import { useCategories } from '@/features/catalog/hooks/useCatalog';
@@ -124,6 +125,7 @@ const toPayload = (f: CouponForm): CouponPayload => ({
 });
 
 export const AdminCouponsPage: React.FC = () => {
+  const online = useOnlineStatus();
   const queryClient = useQueryClient();
   const { sort, toggle } = useSort<CouponSortColumn>({ orden: 'fecha', direccion: 'desc' });
   const { values: f, patch, clearAll, anyActive } = useColumnFilters(FILTROS);
@@ -385,7 +387,7 @@ export const AdminCouponsPage: React.FC = () => {
             <Button type="button" variant="outline" onClick={closeModal}>
               Cancelar
             </Button>
-            <Button type="submit" loading={saveMutation.isPending}>
+            <Button type="submit" loading={saveMutation.isPending} disabled={!online} title={online ? undefined : 'Sin conexión'}>
               Guardar
             </Button>
           </div>

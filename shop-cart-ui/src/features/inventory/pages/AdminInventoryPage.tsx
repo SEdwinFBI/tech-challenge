@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, PackagePlus, Plus } from 'lucide-react';
 import { inventoryApi, type KardexSortColumn, type LowStockSortColumn } from '../api/inventoryApi';
@@ -6,7 +7,7 @@ import { useSort } from '@/shared/hooks/useSort';
 import { useColumnFilters } from '@/shared/hooks/useColumnFilters';
 import { dateRangeToIso, type FilterDef } from '@/shared/lib/columnFilters';
 import { VariantPicker, type VariantInfo } from '../components/VariantPicker';
-import { formatDateTime } from '@/shared/lib/formatters';
+import { formatDateTime, plural } from '@/shared/lib/formatters';
 import {
   Badge,
   Button,
@@ -56,6 +57,7 @@ const BAJAS_FILTROS = ['q'] as const;
 const BAJAS_DEF: FilterDef = { type: 'texto', key: 'q', label: 'SKU / Producto', placeholder: 'SKU o nombre' };
 
 export const AdminInventoryPage: React.FC = () => {
+  const online = useOnlineStatus();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>('kardex');
 
@@ -117,7 +119,7 @@ export const AdminInventoryPage: React.FC = () => {
   const mutation = useMutation({
     mutationFn: inventoryApi.createMovement,
     onSuccess: res => {
-      toast.success('Movimiento registrado en el kardex', `Nuevo saldo en bodega: ${res.saldoPosterior} unidades.`);
+      toast.success('Movimiento registrado en el kardex', `Nuevo saldo en bodega: ${plural(res.saldoPosterior, 'unidad', 'unidades')}.`);
       setModalOpen(false);
       queryClient.invalidateQueries({ queryKey: ['kardex'] });
       queryClient.invalidateQueries({ queryKey: ['low-stock'] });
@@ -370,7 +372,7 @@ export const AdminInventoryPage: React.FC = () => {
 
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
             <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
-            <Button type="submit" loading={mutation.isPending} disabled={!variant || invalidQty || negative || !motivoOk}>Registrar movimiento</Button>
+            <Button type="submit" loading={mutation.isPending} disabled={!variant || invalidQty || negative || !motivoOk || !online} title={online ? undefined : 'Sin conexión'}>Registrar movimiento</Button>
           </div>
         </form>
       </Modal>

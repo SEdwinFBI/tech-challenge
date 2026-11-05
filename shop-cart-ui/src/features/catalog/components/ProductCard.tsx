@@ -1,4 +1,5 @@
 import React from 'react';
+import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { SafeImage } from '@/shared/ui/SafeImage';
 import { Link } from 'react-router';
 import { Heart, ImageOff, Loader2, ShoppingCart } from 'lucide-react';
@@ -22,6 +23,7 @@ function isNew(fecha?: string): boolean {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, variant = 'grid' }) => {
+  const online = useOnlineStatus();
   const { isFavorite, toggle } = useFavorites();
   const { add, pendingId } = useQuickAdd();
   const fav = isFavorite(product.IDProducto);
@@ -90,7 +92,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, variant = 'gr
 
         <button
           type="button"
-          disabled={soldOut || adding}
+          disabled={soldOut || adding || !online}
+          title={online ? undefined : 'Sin conexión'}
           onClick={() => add(product.IDProducto)}
           className="mt-auto inline-flex h-10 w-full items-center justify-center gap-2 rounded-full border border-slate-300 bg-white text-sm font-bold text-slate-800 shadow-xs transition hover:border-brand hover:bg-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-300 disabled:hover:bg-white disabled:hover:text-slate-800"
         >

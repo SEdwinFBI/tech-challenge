@@ -3,6 +3,7 @@ import { User } from '@/shared/types/domain';
 import { authApi } from '../api/authApi';
 import { setAccessToken, setOnUnauthorizedCallback } from '@/shared/lib/apiClient';
 import { toast } from '@/shared/ui/toastStore';
+import { isNetworkError } from '@/shared/lib/apiErrors';
 import { claimDrafts, clearAllDrafts } from '@/shared/lib/draft';
 
 const SESSION_KEY = 'shopcart_session';
@@ -52,7 +53,11 @@ export const useAuthStore = create<AuthState>()((set) => ({
           const data = await authApi.refresh();
           claimDrafts(data.usuario.idUsuario);
           set({ user: data.usuario, status: 'authenticated' });
-        } catch {
+        } catch (err) {
+          if (isNetworkError(err)) {
+            set({ user: null, status: 'unauthenticated' });
+            return;
+          }
           setAccessToken(null);
           recordarSesion(false);
           set({ user: null, status: 'unauthenticated' });

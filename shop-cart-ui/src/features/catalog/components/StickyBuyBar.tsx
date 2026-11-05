@@ -10,10 +10,11 @@ export interface StickyBuyBarProps {
   disabled: boolean;
   loading: boolean;
   onAdd: () => void;
+  offline?: boolean;
   tabs: Array<{ id: string; label: string }>;
 }
 
-export const StickyBuyBar: React.FC<StickyBuyBarProps> = ({ visible, name, price, compareAt, disabled, loading, onAdd, tabs }) => (
+export const StickyBuyBar: React.FC<StickyBuyBarProps> = ({ visible, name, price, compareAt, disabled, loading, onAdd, offline, tabs }) => (
   <div
     className={`fixed inset-x-0 bottom-14 z-30 px-3 transition duration-300 lg:bottom-4 ${
       visible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-6 opacity-0'
@@ -34,7 +35,8 @@ export const StickyBuyBar: React.FC<StickyBuyBarProps> = ({ visible, name, price
         <button
           type="button"
           tabIndex={visible ? 0 : -1}
-          disabled={disabled || loading}
+          disabled={disabled || loading || offline}
+          title={offline ? 'Sin conexión' : undefined}
           onClick={onAdd}
           className="inline-flex h-11 items-center gap-2 rounded-full bg-cta px-5 text-sm font-extrabold text-cta-fg transition hover:bg-cta-hover disabled:cursor-not-allowed disabled:opacity-50"
         >

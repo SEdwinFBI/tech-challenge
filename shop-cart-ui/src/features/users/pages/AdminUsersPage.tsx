@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import { apiErrorMessage } from '@/shared/lib/apiErrors';
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authApi, type UserSortColumn } from '@/features/auth/api/authApi';
 import { useSort } from '@/shared/hooks/useSort';
@@ -64,7 +65,7 @@ export const AdminUsersPage: React.FC = () => {
   const { values: f, patch, clearAll, anyActive } = useColumnFilters(FILTROS, resetPage);
   const { sort, toggle } = useSort<UserSortColumn>({ orden: 'fecha', direccion: 'desc' }, resetPage);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['admin-users', page, f, sort.orden, sort.direccion],
     placeholderData: keepPreviousData,
     queryFn: () =>
@@ -114,7 +115,7 @@ export const AdminUsersPage: React.FC = () => {
 
       <FilterChips defs={Object.values(DEFS)} values={f} onChange={patch} onClearAll={clearAll} />
 
-      {!isLoading && users.length === 0 && !anyActive ? (
+      {!isLoading && !isError && users.length === 0 && !anyActive ? (
         <EmptyState
           title="No se encontraron usuarios"
           description="Todavía no hay usuarios registrados."
@@ -134,6 +135,13 @@ export const AdminUsersPage: React.FC = () => {
             <TableBody>
               {isLoading ? (
                 <TableRowsSkeleton rows={8} cols={5} />
+              ) : isError ? (
+                <TableMessageRow colSpan={5}>
+                  {apiErrorMessage(error, 'No se pudo cargar usuarios.')}{' '}
+                  <button type="button" onClick={() => { void refetch(); }} className="font-semibold text-indigo-700 hover:underline">
+                    Reintentar
+                  </button>
+                </TableMessageRow>
               ) : users.length === 0 ? (
                 <TableMessageRow colSpan={5}>Ningún usuario coincide con los filtros.</TableMessageRow>
               ) : users.map((u) => (

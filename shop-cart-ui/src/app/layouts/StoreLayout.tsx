@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { plural } from '@/shared/lib/formatters';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { Heart, LayoutGrid, ShoppingCart, Sparkles, Tag, Flame, Star, Truck } from 'lucide-react';
 import { useAuth } from '@/features/auth';
@@ -92,7 +93,7 @@ export const StoreLayout: React.FC = () => {
                 </span>
               )}
             </Link>
-            <Link to="/carrito" className={iconBtn} aria-label={`Carrito, ${totalItemsCount} productos`}>
+            <Link to="/carrito" className={iconBtn} aria-label={`Carrito, ${plural(totalItemsCount, 'producto')}`}>
               <ShoppingCart className="h-5 w-5" />
               {totalItemsCount > 0 && (
                 <span

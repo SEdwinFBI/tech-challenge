@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import { apiErrorMessage } from '@/shared/lib/apiErrors';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { auditLogApi, AuditLogEntry, type AuditSortColumn } from '../api/auditLogApi';
 import { useSort } from '@/shared/hooks/useSort';
@@ -44,7 +45,7 @@ export const AdminAuditLogPage: React.FC = () => {
   const { values: f, patch, clearAll, anyActive } = useColumnFilters(FILTROS, resetPage);
   const { sort, toggle } = useSort<AuditSortColumn>({ orden: 'fecha', direccion: 'desc' }, resetPage);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['admin-audit-log', page, f, sort.orden, sort.direccion],
     placeholderData: keepPreviousData,
     queryFn: () =>
@@ -81,7 +82,7 @@ export const AdminAuditLogPage: React.FC = () => {
 
       <FilterChips defs={Object.values(DEFS)} values={f} onChange={patch} onClearAll={clearAll} />
 
-      {!isLoading && logs.length === 0 && !anyActive ? (
+      {!isLoading && !isError && logs.length === 0 && !anyActive ? (
         <EmptyState
           title="Sin registros de auditoría"
           description="Todavía no hay eventos."
@@ -101,6 +102,13 @@ export const AdminAuditLogPage: React.FC = () => {
             <TableBody>
               {isLoading ? (
                 <TableRowsSkeleton rows={8} cols={5} />
+              ) : isError ? (
+                <TableMessageRow colSpan={5}>
+                  {apiErrorMessage(error, 'No se pudo cargar la bitácora.')}{' '}
+                  <button type="button" onClick={() => { void refetch(); }} className="font-semibold text-indigo-700 hover:underline">
+                    Reintentar
+                  </button>
+                </TableMessageRow>
               ) : logs.length === 0 ? (
                 <TableMessageRow colSpan={5}>Ningún evento coincide con los filtros.</TableMessageRow>
               ) : logs.map((log) => (
