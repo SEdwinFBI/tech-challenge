@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Heart, LogOut, MapPin, Package, ShieldCheck, User as UserIcon, UserCog } from 'lucide-react';
+import { Download, Heart, LogOut, MapPin, Package, ShieldCheck, User as UserIcon, UserCog } from 'lucide-react';
 import { useAuth } from '@/features/auth';
+import { usePwa } from '@/shared/lib/pwa';
 
 const ROLE_LABEL: Record<string, string> = {
   CLIENTE: 'Cliente',
@@ -14,6 +15,8 @@ export const AccountMenu: React.FC = () => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const canInstall = usePwa((s) => s.installEvent !== null && !s.installed);
+  const install = usePwa((s) => s.install);
 
   useEffect(() => {
     if (!open) return;
@@ -32,6 +35,11 @@ export const AccountMenu: React.FC = () => {
   if (!user) {
     return (
       <div className="ml-1 flex items-center gap-1">
+        {canInstall && (
+          <button type="button" onClick={install} aria-label="Instalar app" title="Instalar app" className="flex h-10 w-10 items-center justify-center rounded-full text-white hover:bg-white/15">
+            <Download className="h-5 w-5" />
+          </button>
+        )}
         <Link to="/login" className="hidden rounded-full px-3 py-2 text-sm font-bold text-white hover:bg-white/15 sm:block">
           Ingresar
         </Link>
@@ -104,6 +112,19 @@ export const AccountMenu: React.FC = () => {
             >
               <ShieldCheck className="h-4 w-4" /> Panel de control
             </Link>
+          )}
+          {canInstall && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                void install();
+              }}
+              className={`${item} w-full`}
+            >
+              <Download className="h-4 w-4 text-slate-400" /> Instalar app
+            </button>
           )}
           <button
             type="button"
