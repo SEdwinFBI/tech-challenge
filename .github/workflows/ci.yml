@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: shop-cart-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: shop-cart-backend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: shop-cart-ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: shop-cart-ui/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  integracion:
+    needs: backend
+    runs-on: ubuntu-latest
+    env:
+      SA_PASSWORD: ShopCart_Ci_2026!
+      RUN_AUDIT_INTEGRATION: '1'
+      AUDIT_DB_NAME: ShopCartAudit_ci
+      AUDIT_API_URL: http://localhost:3107/api/v1
+      AUDIT_PASSWORD: Admin123!
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: ShopCart_Ci_2026!
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P $MSSQL_SA_PASSWORD -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: shop-cart-backend/package-lock.json
+      - name: Instalar dependencias del backend
+        working-directory: shop-cart-backend
+        run: npm ci
+      - name: Preparar variables del backend
+        run: |
+          {
+            echo "PORT=3107"
+            echo "NODE_ENV=test"
+            echo "DB_HOST=localhost"
+            echo "DB_PORT=1433"
+            echo "DB_USER=sa"
+            echo "DB_PASSWORD=$SA_PASSWORD"
+            echo "DB_NAME=ShopCartAudit_ci"
+            echo "JWT_ACCESS_SECRET=$(openssl rand -hex 32)"
+            echo "JWT_REFRESH_SECRET=$(openssl rand -hex 32)"
+            echo "JWT_ACCESS_EXPIRES_IN_MIN=15m"
+            echo "JWT_REFRESH_EXPIRES_IN_DAYS=7"
+            echo "JWT_FAMILY_EXPIRES_IN_DAYS=30"
+            echo "RATE_LIMIT_AUTH_MAX=500"
+            echo "RATE_LIMIT_AUTH_WINDOW_MIN=15"
+            echo "CORS_ALLOW_ORIGIN=http://localhost:5173"
+          } >> "$GITHUB_ENV"
+      - name: Crear base de datos de auditoria
+        working-directory: shop-cart-backend
+        run: npm run db:setup
+      - name: Levantar API
+        working-directory: shop-cart-backend
+        run: nohup npm run dev > api.log 2>&1 &
+      - name: Esperar a que la API responda
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3107/health; then
+              echo
+              exit 0
+            fi
+            sleep 2
+          done
+          cat shop-cart-backend/api.log
+          exit 1
+      - name: Pruebas de integracion
+        working-directory: shop-cart-backend
+        run: npm run test:integration
+      - name: Pruebas de concurrencia HTTP
+        working-directory: shop-cart-backend
+        run: npm run test:concurrency:http
