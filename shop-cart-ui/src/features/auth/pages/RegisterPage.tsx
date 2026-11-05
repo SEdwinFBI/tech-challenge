@@ -7,7 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import { registerSchema, type RegisterFormData } from '../schemas/authSchemas';
 import { AuthShell, authInput } from '../components/AuthShell';
 import { toast } from '@/shared/ui/toastStore';
-import { apiErrorMessage } from '@/shared/lib/apiErrors';
+import { apiErrorMessage, apiFieldErrors } from '@/shared/lib/apiErrors';
 
 export function passwordStrength(pw: string): { score: 0 | 1 | 2 | 3 | 4; label: string } {
   if (!pw) return { score: 0, label: '' };
@@ -32,10 +32,11 @@ export const RegisterPage: React.FC = () => {
     register,
     handleSubmit,
     watch,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
-    mode: 'onBlur',
+    mode: 'onTouched',
     defaultValues: { nombreCompleto: '', correo: '', password: '' },
   });
 
@@ -49,9 +50,9 @@ export const RegisterPage: React.FC = () => {
       toast.success('Cuenta creada');
       navigate('/', { replace: true });
     } catch (err: unknown) {
-      const msg =
-        apiErrorMessage(err, 'No se pudo crear la cuenta. Revisa el correo.');
-      setServerError(msg);
+      const campos = apiFieldErrors(err).filter(c => c.campo in data);
+      campos.forEach(c => setError(c.campo as keyof RegisterFormData, { type: 'server', message: c.mensaje }));
+      if (campos.length === 0) setServerError(apiErrorMessage(err, 'No se pudo crear la cuenta. Revisa el correo.'));
     }
   };
 

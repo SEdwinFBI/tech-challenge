@@ -8,7 +8,7 @@ import { ORDER_OPTIONS, PAGE_SIZE, useCatalogFilters, type CatalogMode, type Cat
 import { FilterPanel } from '../components/FilterPanel';
 import { ProductCard, ProductCardSkeletonV2 } from '../components/ProductCard';
 import { ErrorState, Illustration, NumberedPagination } from '@/shared/ui';
-import { formatMoney } from '@/shared/lib/formatters';
+import { formatMoney, plural } from '@/shared/lib/formatters';
 
 export interface CatalogPageProps {
   mode?: CatalogMode;
@@ -91,7 +91,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({ mode = 'all' }) => {
             <h1 className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">{category.Nombre}</h1>
             {category.Descripcion && <p className="mt-2 text-sm text-white/85">{category.Descripcion}</p>}
             {category.TotalProductos != null && (
-              <p className="mt-3 inline-block rounded-full bg-white/15 px-3 py-1 text-xs font-bold">{category.TotalProductos} productos</p>
+              <p className="mt-3 inline-block rounded-full bg-white/15 px-3 py-1 text-xs font-bold">{plural(category.TotalProductos, 'producto')}</p>
             )}
           </div>
         </div>

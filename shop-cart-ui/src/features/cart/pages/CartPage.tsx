@@ -11,7 +11,7 @@ import { useAuth } from '@/features/auth';
 import { useFavorites } from '@/features/wishlist/hooks/useFavorites';
 import { ErrorState, FreeShippingProgress, Illustration, IvaBreakdown, PriceTag, QuantityStepper, StockIndicator } from '@/shared/ui';
 import { toast } from '@/shared/ui/toastStore';
-import { formatMoney } from '@/shared/lib/formatters';
+import { formatMoney, plural } from '@/shared/lib/formatters';
 import { quoteShipping } from '@/shared/lib/pricing';
 import type { CartItem } from '@/shared/types/domain';
 
@@ -51,7 +51,7 @@ export const CartPage: React.FC = () => {
 
   const changeQty = (item: CartItem, next: number) => {
     if (next > item.ExistenciaDisponible) {
-      toast.warning('Límite de existencia', `Solo hay ${item.ExistenciaDisponible} unidades.`);
+      toast.warning('Límite de existencia', `Solo hay ${plural(item.ExistenciaDisponible, 'unidad', 'unidades')}.`);
       return;
     }
     if (next <= 0) removeItem(item.IDVariante);

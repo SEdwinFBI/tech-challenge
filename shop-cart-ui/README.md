@@ -10,7 +10,7 @@ npm install
 npm run dev          # http://localhost:5173, con proxy /api -> http://localhost:3000
 ```
 
-El backend debe estar corriendo (`shop-cart-backend`, `npm run dev` o `npm start`) con la base creada mediante `npm run db:setup`, que aplica los scripts 01 a 06.
+El backend debe estar corriendo (`shop-cart-backend`, `npm run dev` o `npm start`) con la base creada mediante `npm run db:setup`, que aplica los scripts 01 a 05.
 Para apuntar a otro backend sin tocar código: `API_TARGET=http://localhost:3001 npm run dev`.
 
 | Comando | Qué hace |
@@ -53,6 +53,19 @@ El menú muestra solo lo que el rol puede usar y el backend vuelve a validarlo (
 6. **Dashboard en vivo**: `EventSource` no envía cabeceras, así que el token viaja en la dirección del canal y se reconecta con uno nuevo si cae. Gráficas con una sola escala por vista, vista alternativa en tabla y exportación a Excel.
 7. **Imágenes**: `SafeImage` muestra un marcador si una URL falla, para que el diseño no se rompa.
 8. **Precio de referencia**: solo muestra el descuento. Nunca cambia lo que se cobra ni los pedidos ya hechos.
+
+## PWA
+
+La tienda se puede instalar en el teléfono o en el escritorio.
+
+- **Android y Chrome de escritorio**: usa "Instalar app" en el menú de tu cuenta, o el aviso del navegador.
+- **iPhone (Safari)**: toca Compartir y luego "Agregar a inicio". La app muestra un aviso con esos pasos una sola vez.
+- **Actualizaciones**: cuando hay una versión nueva aparece "Hay una versión nueva" con el botón "Actualizar".
+- **Qué se guarda**: los archivos de la interfaz (JS, CSS, íconos), las imágenes de productos (hasta 200, 30 días) y las fuentes.
+- **Qué nunca se guarda**: las respuestas de `/api`. Precios, existencias y pedidos siempre vienen del servidor.
+- **Sin internet**: la app abre, avisa que no hay conexión y pausa las acciones que la necesitan. Al volver la red recarga los datos.
+
+El service worker solo se genera con `npm run build`. Para probarlo: `npm run build && npm run preview`.
 
 ## Estructura
 

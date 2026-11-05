@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ordersApi } from '../api/ordersApi';
 import { OrderStatus, OrderItem } from '@/shared/types/domain';
-import { formatMoney, formatDateTime } from '@/shared/lib/formatters';
+import { formatMoney, formatDateTime, plural } from '@/shared/lib/formatters';
 import { orderStatusMeta } from '@/shared/lib/orderStatus';
 import {
   getOrderStatusBadge,
@@ -182,7 +182,7 @@ export const AdminOrderDetailPage: React.FC = () => {
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
         <div className="p-5 border-b border-slate-100 flex items-center justify-between">
           <h3 className="font-bold text-slate-900 text-sm">Líneas</h3>
-          <span className="text-xs text-slate-400">{detalles.length} artículos</span>
+          <span className="text-xs text-slate-400">{plural(detalles.length, 'artículo')}</span>
         </div>
 
         <div className="divide-y divide-slate-100">

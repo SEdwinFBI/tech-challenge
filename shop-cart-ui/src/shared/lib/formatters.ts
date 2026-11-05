@@ -46,3 +46,6 @@ export function formatDateTime(dateString: string | null | undefined): string {
     return dateString;
   }
 }
+
+export const plural = (n: number, singular: string, pluralForm: string = `${singular}s`): string =>
+  `${n} ${n === 1 ? singular : pluralForm}`;

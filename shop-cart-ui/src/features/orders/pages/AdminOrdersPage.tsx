@@ -63,8 +63,12 @@ export const AdminOrdersPage: React.FC = () => {
   const { sort, toggle } = useSort<OrderSortColumn>({ orden: 'fecha', direccion: 'desc' }, resetPage);
   const { values: f, patch, clearAll, anyActive } = useColumnFilters(FILTROS, resetPage);
 
+  const totalMinN = numberOrUndefined(f.totalMin);
+  const totalMaxN = numberOrUndefined(f.totalMax);
+  const rangeInvalid = totalMinN !== undefined && totalMaxN !== undefined && totalMinN > totalMaxN;
+
   const { data, isLoading, isError, isPaused, failureCount, refetch } = useQuery({
-    queryKey: ['admin-orders', page, search, f, sort.orden, sort.direccion],
+    queryKey: ['admin-orders', page, search, f, rangeInvalid, sort.orden, sort.direccion],
     queryFn: () =>
       ordersApi.getOrders({
         pagina: page,
@@ -73,8 +77,8 @@ export const AdminOrdersPage: React.FC = () => {
         cliente: f.cliente.trim() || undefined,
         numeroSeguimiento: search.trim() || undefined,
         ...dateRangeToIso(f.desde, f.hasta),
-        totalMin: numberOrUndefined(f.totalMin),
-        totalMax: numberOrUndefined(f.totalMax),
+        totalMin: rangeInvalid ? undefined : totalMinN,
+        totalMax: rangeInvalid ? undefined : totalMaxN,
         orden: sort.orden,
         direccion: sort.direccion,
       }),
@@ -125,6 +129,12 @@ export const AdminOrdersPage: React.FC = () => {
       </div>
 
       <FilterChips defs={Object.values(DEFS)} values={f} onChange={patch} onClearAll={clearAll} />
+
+      {rangeInvalid && (
+        <p role="alert" className="rounded-xl bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700">
+          El total mínimo no puede ser mayor al máximo. Ese filtro no se aplicó.
+        </p>
+      )}
 
       {isPaused || isError || failureCount > 0 ? (
         <ErrorState

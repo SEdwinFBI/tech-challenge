@@ -4,7 +4,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, LabelList, ResponsiveCon
 import { BarChart3, Download, PackageCheck, Radio, Receipt, ShoppingCart, Table2, TrendingUp } from 'lucide-react';
 import { dashboardApi } from '../api/dashboardApi';
 import { useDashboardStream } from '../hooks/useDashboardStream';
-import { formatMoney } from '@/shared/lib/formatters';
+import { formatMoney, plural } from '@/shared/lib/formatters';
 import { Button, ErrorState, PageHeader, Skeleton } from '@/shared/ui';
 import { toast } from '@/shared/ui/toastStore';
 
@@ -202,7 +202,7 @@ export const AdminDashboardPage: React.FC = () => {
                   <YAxis tick={{ fontSize: 11, fill: AXIS }} tickLine={false} axisLine={false} width={metrica === 'ventas' ? 52 : 32} allowDecimals={false} tickFormatter={(v: number) => (metrica === 'ventas' ? compactQ(v) : String(v))} />
                   <Tooltip
                     cursor={{ stroke: AXIS, strokeDasharray: '3 3' }}
-                    formatter={(v: unknown) => [metrica === 'ventas' ? formatMoney(Number(v)) : `${Number(v)} pedidos`, metrica === 'ventas' ? 'Ventas' : 'Pedidos']}
+                    formatter={(v: unknown) => [metrica === 'ventas' ? formatMoney(Number(v)) : plural(Number(v), 'pedido'), metrica === 'ventas' ? 'Ventas' : 'Pedidos']}
                     contentStyle={{ borderRadius: 12, border: '1px solid #e7e5e4', fontSize: 12 }}
                   />
                   <Area type="monotone" dataKey={metricKey} stroke={SERIES} strokeWidth={2} fill="url(#serieFill)" dot={serie.length <= 14 ? { r: 3, fill: '#fff', stroke: SERIES, strokeWidth: 2 } : false} activeDot={{ r: 5, stroke: '#fff', strokeWidth: 2 }} />
