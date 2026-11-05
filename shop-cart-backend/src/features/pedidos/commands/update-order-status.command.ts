@@ -1,13 +1,17 @@
 import { ICommandHandler } from '@/core/cqrs/index';
 import { DomainError } from '@/core/domain/domain.error';
-import { sseCacheManager } from '@/core/http/sse-cache.manager';
+import { IEventPublisher } from '@/core/events/event-publisher.interface';
+import { LocalEventPublisher } from '@/core/events/local-event-publisher';
 import { IOrdersRepository } from '../abstracts/pedidos.repository.interface';
 import { OrderStatePolicy } from '../domain/order-state.machine';
 import { UpdateOrderStatusCommand, UpdateOrderStatusResult } from '../models/pedidos.schema';
 import { OrdersRepository } from '../repository/pedidos.repository';
 
 export class UpdateOrderStatusCommandHandler implements ICommandHandler<UpdateOrderStatusCommand, UpdateOrderStatusResult> {
-  constructor(private readonly repo: IOrdersRepository = new OrdersRepository()) {}
+  constructor(
+    private readonly repo: IOrdersRepository = new OrdersRepository(),
+    private readonly events: IEventPublisher = new LocalEventPublisher(),
+  ) {}
 
   async handle(cmd: UpdateOrderStatusCommand): Promise<UpdateOrderStatusResult> {
     const agregado = await this.repo.getById(cmd.idPedido);
@@ -27,7 +31,7 @@ export class UpdateOrderStatusCommandHandler implements ICommandHandler<UpdateOr
       comentario: cmd.comentario,
     });
 
-    sseCacheManager.invalidateAndBroadcast('CAMBIO_ESTADO_PEDIDO', { idPedido: cmd.idPedido, estado: cmd.nuevoEstado });
+    await this.events.publish({ tipo: 'CAMBIO_ESTADO_PEDIDO', payload: { idPedido: cmd.idPedido, estado: cmd.nuevoEstado } });
     return { idPedido: cmd.idPedido, estado: cmd.nuevoEstado };
   }
 }

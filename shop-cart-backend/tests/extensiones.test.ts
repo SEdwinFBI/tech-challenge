@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
+import { FakePublisher } from './fakes';
 import { DomainError } from '@/core/domain/domain.error';
 import {
   AddProductImageSchema,
@@ -234,6 +235,7 @@ describe('Extensiones de tienda: handlers de catálogo', () => {
           llamado = true;
         },
       }),
+      new FakePublisher(),
     );
     await assert.rejects(
       () => handler.handle({ idVariante: 1, precioReferencia: 0, idAdmin: 1 }),
@@ -250,6 +252,7 @@ describe('Extensiones de tienda: handlers de catálogo', () => {
           llamadas.push(precio);
         },
       }),
+      new FakePublisher(),
     );
     await handler.handle({ idVariante: 1, precioReferencia: null, idAdmin: 1 });
     assert.deepEqual(llamadas, [null]);
