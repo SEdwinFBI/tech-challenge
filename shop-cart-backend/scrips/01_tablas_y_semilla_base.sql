@@ -305,6 +305,25 @@ CREATE TABLE Devoluciones (
 );
 GO
 
+CREATE TABLE IntentosPago (
+    IDIntentoPago INT IDENTITY(1,1) CONSTRAINT PK_IntentosPago PRIMARY KEY,
+    IDUsuario INT NOT NULL CONSTRAINT FK_IntentosPago_Usuarios FOREIGN KEY REFERENCES Usuarios(IDUsuario),
+    ClaveIdempotencia NVARCHAR(100) NOT NULL,
+    Monto DECIMAL(12,2) NOT NULL CONSTRAINT CK_IntentosPago_Monto CHECK (Monto >= 0),
+    Estado NVARCHAR(30) NOT NULL CONSTRAINT CK_IntentosPago_Estado
+        CHECK (Estado IN ('AUTORIZADO','CAPTURADO','RECHAZADO','ANULADO','PENDIENTE_CONCILIACION')),
+    ReferenciaPasarela NVARCHAR(100) NULL,
+    Detalle NVARCHAR(400) NULL,
+    IDPedido INT NULL CONSTRAINT FK_IntentosPago_Pedidos FOREIGN KEY REFERENCES Pedidos(IDPedido),
+    FechaCreacion DATETIME2 NOT NULL CONSTRAINT DF_IntentosPago_Fecha DEFAULT SYSDATETIME(),
+    FechaActualizacion DATETIME2 NOT NULL CONSTRAINT DF_IntentosPago_Actualizacion DEFAULT SYSDATETIME()
+);
+GO
+
+CREATE INDEX IX_IntentosPago_Estado ON IntentosPago(Estado);
+CREATE INDEX IX_IntentosPago_Clave_Usuario ON IntentosPago(ClaveIdempotencia, IDUsuario);
+GO
+
 CREATE TABLE PedidoHistorialEstados (
     IDPedidoHistorial INT IDENTITY(1,1) CONSTRAINT PK_PedidoHistorial PRIMARY KEY,
     IDPedido INT NOT NULL CONSTRAINT FK_Historial_Pedidos FOREIGN KEY REFERENCES Pedidos(IDPedido),

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { optionalAuth, requireAuth } from '@/core/middlewares/auth.middleware';
+import { optionalAuth, requireAuth, requireRoles } from '@/core/middlewares/auth.middleware';
 import { requireNumericId } from '@/core/middlewares/validate-param.middleware';
 import { GetMunicipalitiesQueryHandler } from './queries/get-municipalities.query';
 import { GetAddressesQueryHandler } from './queries/get-addresses.query';
@@ -8,9 +8,11 @@ import { DeleteAddressCommandHandler } from './commands/delete-address.command';
 import { SetDefaultAddressCommandHandler } from './commands/set-default-address.command';
 import { ReserveStockCommandHandler } from './commands/reserve-stock.command';
 import { ConfirmOrderCommandHandler } from './commands/confirm-order.command';
+import { ListPaymentsQueryHandler } from './queries/list-payments.query';
 import {
   ConfirmOrderSchema,
   CreateAddressSchema,
+  ListPaymentsSchema,
   ReserveStockSchema,
   SetDefaultAddressSchema,
 } from './models/checkout.schema';
@@ -24,6 +26,7 @@ const deleteAddressCommandHandler = new DeleteAddressCommandHandler();
 const setDefaultAddressCommandHandler = new SetDefaultAddressCommandHandler();
 const reserveStockCommandHandler = new ReserveStockCommandHandler();
 const confirmOrderCommandHandler = new ConfirmOrderCommandHandler();
+const listPaymentsQueryHandler = new ListPaymentsQueryHandler();
 
 checkoutRouter.get('/municipios', optionalAuth, async (_req, res, next) => {
   try {
@@ -100,6 +103,16 @@ checkoutRouter.post('/confirmar', requireAuth, async (req, res, next) => {
     });
 
     res.status(resultado.FueIdempotente ? 200 : 201).json({ ok: true, ...resultado });
+  } catch (err) {
+    next(err);
+  }
+});
+
+checkoutRouter.get('/pagos', requireAuth, requireRoles('ADMINISTRADOR'), async (req, res, next) => {
+  try {
+    const query = ListPaymentsSchema.parse(req.query);
+    const { items, totalRegistros } = await listPaymentsQueryHandler.handle(query);
+    res.json({ ok: true, datos: items, total: totalRegistros, pagina: query.pagina, tamanoPagina: query.tamanoPagina });
   } catch (err) {
     next(err);
   }

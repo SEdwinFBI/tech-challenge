@@ -864,9 +864,10 @@ BEGIN
         DELETE FROM ProductoImagenes WHERE IDProductoImagen = @IDProductoImagen;
 
         INSERT INTO Bitacora (IDUsuario, Modulo, Entidad, IDEntidad, Accion, ValorAnterior, ValorNuevo)
-        VALUES (@IDUsuarioAdmin, 'PRODUCTOS', 'ProductoImagenes', @IDProductoImagen, 'DESACTIVACION',
+        VALUES (@IDUsuarioAdmin, 'PRODUCTOS', 'ProductoImagenes', @IDProductoImagen, 'ELIMINACION_FISICA',
                 CONCAT('{"IDProducto":', @IDProducto, ',"Url":"', STRING_ESCAPE(@Url, 'json'), '","Orden":', @Orden, '}'), NULL);
         COMMIT TRANSACTION;
+        SELECT @Url AS Url;
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
@@ -1847,15 +1848,8 @@ BEGIN
         IF @PropietarioDireccion <> @IDUsuario THROW 50076, 'No tienes permiso para usar esta dirección.', 1;
         IF @DireccionActiva = 0 THROW 50075, 'La dirección no existe o ya fue eliminada.', 1;
 
-        DECLARE @CostoEnvioBase DECIMAL(12,2), @MinimoEnvioGratis DECIMAL(12,2);
-        SELECT 
-            @CostoEnvioBase = t.CostoEnvio, 
-            @MinimoEnvioGratis = t.MontoMinimoGratis
-        FROM Direcciones d 
-        INNER JOIN Municipios m ON d.IDMunicipio = m.IDMunicipio
-        INNER JOIN Departamentos dep ON m.IDDepartamento = dep.IDDepartamento
-        INNER JOIN TarifasEnvio t ON dep.IDDepartamento = t.IDDepartamento
-        WHERE d.IDDireccion = @IDDireccion AND d.IDUsuario = @IDUsuario AND d.Activo = 1;
+        DECLARE @CostoEnvioBase DECIMAL(12,2);
+        SELECT @CostoEnvioBase = CostoEnvioBase FROM dbo.FU_Pedidos_CalcularTotal(@IDUsuario, @IDCarrito, @IDDireccion);
 
         IF @CostoEnvioBase IS NULL THROW 50062, 'Dirección inválida o no pertenece al cliente.', 1;
 
@@ -1882,11 +1876,12 @@ BEGIN
             THROW 50063, 'Otro cliente acaba de comprar la última unidad disponible.', 1;
         END
 
-        DECLARE @Subtotal DECIMAL(12,2) = 0;
-        SELECT @Subtotal = SUM(ci.Cantidad * v.Precio) FROM CarritoItems ci INNER JOIN Variantes v ON ci.IDVariante = v.IDVariante WHERE ci.IDCarrito = @IDCarrito;
+        DECLARE @Subtotal DECIMAL(12,2), @CostoEnvioFinal DECIMAL(12,2), @Total DECIMAL(12,2), @Descuento DECIMAL(12,2) = 0;
+        SELECT @Subtotal = Subtotal, @Descuento = Descuento, @CostoEnvioFinal = CostoEnvio, @Total = Total
+        FROM dbo.FU_Pedidos_CalcularTotal(@IDUsuario, @IDCarrito, @IDDireccion);
         IF @Subtotal IS NULL OR @Subtotal <= 0 THROW 50064, 'El carrito está vacío.', 1;
 
-        DECLARE @Descuento DECIMAL(12,2) = 0, @IDCatCupon INT = NULL;
+        DECLARE @IDCatCupon INT = NULL;
         IF @IDCupon IS NOT NULL
         BEGIN
             DECLARE @TipoDescuento VARCHAR(20), @Valor DECIMAL(12,2), @Minimo DECIMAL(12,2),
@@ -1942,9 +1937,6 @@ BEGIN
                 IF @BaseDescuento <= 0 THROW 50069, 'El cupón no aplica a estos productos.', 1;
             END
 
-            SET @Descuento = CASE WHEN @TipoDescuento = 'PORCENTAJE' THEN ROUND(@BaseDescuento * (@Valor / 100.0), 2)
-                                  ELSE CASE WHEN @Valor > @BaseDescuento THEN @BaseDescuento ELSE @Valor END END;
-            IF @Descuento > @Subtotal SET @Descuento = @Subtotal;
             UPDATE Cupones SET UsosActuales = UsosActuales + 1 WHERE IDCupon = @IDCupon;
 
             IF EXISTS (SELECT 1 FROM CuponesUsosPorCliente WHERE IDCupon = @IDCupon AND IDUsuario = @IDUsuario)
@@ -1960,8 +1952,6 @@ BEGIN
             END
         END
 
-        DECLARE @CostoEnvioFinal DECIMAL(12,2) = CASE WHEN (@Subtotal - @Descuento) >= @MinimoEnvioGratis THEN 0.00 ELSE @CostoEnvioBase END;
-        DECLARE @Total DECIMAL(12,2) = (@Subtotal - @Descuento) + @CostoEnvioFinal;
 
         DECLARE @IDEstadoPagado INT;
         SELECT @IDEstadoPagado = IDEstadoPedido FROM EstadosPedido WHERE Codigo = 'PAGADO';
@@ -2026,6 +2016,138 @@ BEGIN
         IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
         THROW;
     END CATCH
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Pagos_ObtenerContexto
+    @IDUsuario INT,
+    @IDCarrito INT,
+    @IDDireccion INT,
+    @ClaveIdempotencia NVARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT
+        (SELECT TOP 1 p.IDPedido FROM Pedidos p
+         WHERE p.ClaveIdempotencia = @ClaveIdempotencia AND p.IDUsuario = @IDUsuario) AS IDPedidoExistente,
+        (SELECT t.Total FROM dbo.FU_Pedidos_CalcularTotal(@IDUsuario, @IDCarrito, @IDDireccion) t
+         WHERE t.Subtotal > 0 AND t.CostoEnvioBase IS NOT NULL) AS MontoTotal,
+        (SELECT TOP 1 i.Estado FROM IntentosPago i
+         WHERE i.ClaveIdempotencia = @ClaveIdempotencia AND i.IDUsuario = @IDUsuario
+           AND i.Estado IN ('AUTORIZADO','PENDIENTE_CONCILIACION')
+         ORDER BY i.IDIntentoPago DESC) AS EstadoIntentoActivo;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Pagos_RegistrarIntento
+    @IDUsuario INT,
+    @ClaveIdempotencia NVARCHAR(100),
+    @Monto DECIMAL(12,2),
+    @Estado NVARCHAR(30),
+    @ReferenciaPasarela NVARCHAR(100) = NULL,
+    @Detalle NVARCHAR(400) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRY
+        IF @Estado NOT IN ('AUTORIZADO','RECHAZADO','PENDIENTE_CONCILIACION')
+            THROW 50110, 'Estado inicial de intento de pago inválido.', 1;
+
+        INSERT INTO IntentosPago (IDUsuario, ClaveIdempotencia, Monto, Estado, ReferenciaPasarela, Detalle)
+        VALUES (@IDUsuario, @ClaveIdempotencia, @Monto, @Estado, @ReferenciaPasarela, @Detalle);
+
+        SELECT CAST(SCOPE_IDENTITY() AS INT) AS IDIntentoPago;
+    END TRY
+    BEGIN CATCH
+        THROW;
+    END CATCH
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Pagos_ActualizarEstado
+    @IDIntentoPago INT,
+    @NuevoEstado NVARCHAR(30),
+    @IDPedido INT = NULL,
+    @Detalle NVARCHAR(400) = NULL,
+    @Monto DECIMAL(12,2) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        DECLARE @EstadoActual NVARCHAR(30);
+        SELECT @EstadoActual = Estado FROM IntentosPago WITH (UPDLOCK, HOLDLOCK) WHERE IDIntentoPago = @IDIntentoPago;
+        IF @EstadoActual IS NULL THROW 50111, 'El intento de pago no existe.', 1;
+
+        IF @EstadoActual <> @NuevoEstado
+        BEGIN
+            IF NOT (
+                (@EstadoActual = 'AUTORIZADO' AND @NuevoEstado IN ('CAPTURADO','ANULADO','PENDIENTE_CONCILIACION'))
+                OR (@EstadoActual = 'PENDIENTE_CONCILIACION' AND @NuevoEstado IN ('CAPTURADO','ANULADO'))
+            )
+                THROW 50110, 'Transición de estado de pago no permitida.', 1;
+
+            UPDATE IntentosPago
+            SET Estado = @NuevoEstado,
+                IDPedido = ISNULL(@IDPedido, IDPedido),
+                Detalle = ISNULL(@Detalle, Detalle),
+                Monto = ISNULL(@Monto, Monto),
+                FechaActualizacion = SYSDATETIME()
+            WHERE IDIntentoPago = @IDIntentoPago;
+        END
+
+        COMMIT TRANSACTION;
+        SELECT IDIntentoPago, Estado, IDPedido, Monto FROM IntentosPago WHERE IDIntentoPago = @IDIntentoPago;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Pagos_ListarPendientes
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT i.IDIntentoPago, i.IDUsuario, i.ClaveIdempotencia, i.Monto, i.Estado, i.ReferenciaPasarela,
+           i.FechaCreacion, DATEDIFF(MINUTE, i.FechaCreacion, SYSDATETIME()) AS MinutosAntiguedad,
+           ped.IDPedido AS IDPedidoExistente, ped.Total AS TotalPedido
+    FROM IntentosPago i
+    OUTER APPLY (
+        SELECT TOP 1 p.IDPedido, p.Total FROM Pedidos p
+        WHERE p.ClaveIdempotencia = i.ClaveIdempotencia AND p.IDUsuario = i.IDUsuario
+    ) ped
+    WHERE i.Estado = 'PENDIENTE_CONCILIACION'
+    ORDER BY i.IDIntentoPago;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Pagos_Listar
+    @Estado NVARCHAR(30) = NULL,
+    @Pagina INT = 1,
+    @TamanoPagina INT = 15,
+    @Direccion VARCHAR(4) = 'desc'
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @Direccion IS NULL OR @Direccion NOT IN ('asc', 'desc') SET @Direccion = 'desc';
+    DECLARE @Offset INT = (@Pagina - 1) * @TamanoPagina;
+
+    SELECT i.IDIntentoPago, i.IDUsuario, u.Correo, i.ClaveIdempotencia, i.Monto, i.Estado,
+           i.ReferenciaPasarela, i.Detalle, i.IDPedido, i.FechaCreacion, i.FechaActualizacion
+    FROM IntentosPago i
+    INNER JOIN Usuarios u ON u.IDUsuario = i.IDUsuario
+    WHERE (@Estado IS NULL OR i.Estado = @Estado)
+    ORDER BY
+        CASE WHEN @Direccion = 'asc' THEN i.FechaCreacion END ASC,
+        CASE WHEN @Direccion = 'desc' THEN i.FechaCreacion END DESC,
+        i.IDIntentoPago DESC
+    OFFSET @Offset ROWS FETCH NEXT @TamanoPagina ROWS ONLY;
+
+    SELECT COUNT(1) AS TotalRegistros FROM IntentosPago WHERE (@Estado IS NULL OR Estado = @Estado);
 END;
 GO
 

@@ -8,6 +8,7 @@ import { getDbPool } from '@/core/config/db';
 import { globalErrorHandler } from '@/core/middlewares/error.middleware';
 import { openApiSpec } from '@/core/http/openapi.spec';
 import apiRouter from '@/features';
+import { ReconcilePaymentsCommandHandler } from '@/features/checkout/commands/reconcile-payments.command';
 
 const app = express();
 
@@ -69,6 +70,20 @@ cron.schedule('* * * * *', async () => {
     console.error('Error al limpiar reservas vencidas:', err);
   }
 });
+
+const reconcilePayments = new ReconcilePaymentsCommandHandler();
+let conciliando = false;
+setInterval(async () => {
+  if (conciliando) return;
+  conciliando = true;
+  try {
+    await reconcilePayments.handle();
+  } catch (err) {
+    console.error('Error al conciliar pagos:', err);
+  } finally {
+    conciliando = false;
+  }
+}, 60_000).unref();
 
 app.listen(Number(env.PORT), () => {
   console.log(`Servidor en http://localhost:${env.PORT}`);

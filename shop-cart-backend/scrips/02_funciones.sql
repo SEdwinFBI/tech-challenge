@@ -70,3 +70,37 @@ RETURN (
     FROM CalculoBase
 );
 GO
+
+CREATE OR ALTER FUNCTION FU_Pedidos_CalcularTotal (@IDUsuario INT, @IDCarrito INT, @IDDireccion INT)
+RETURNS TABLE AS
+RETURN (
+    SELECT
+        x.Subtotal,
+        x.Descuento,
+        x.CostoEnvioBase,
+        CAST(CASE WHEN x.CostoEnvioBase IS NULL THEN NULL
+                  WHEN (x.Subtotal - x.Descuento) >= x.MinimoGratis THEN 0.00
+                  ELSE x.CostoEnvioBase END AS DECIMAL(12,2)) AS CostoEnvio,
+        CAST((x.Subtotal - x.Descuento) + CASE WHEN x.CostoEnvioBase IS NULL THEN 0
+                  WHEN (x.Subtotal - x.Descuento) >= x.MinimoGratis THEN 0.00
+                  ELSE x.CostoEnvioBase END AS DECIMAL(12,2)) AS Total
+    FROM (
+        SELECT
+            CAST(d.SubtotalCarrito AS DECIMAL(12,2)) AS Subtotal,
+            CAST(d.DescuentoCalculado AS DECIMAL(12,2)) AS Descuento,
+            e.CostoEnvio AS CostoEnvioBase,
+            e.MontoMinimoGratis AS MinimoGratis
+        FROM Carritos c
+        CROSS APPLY dbo.FU_Cupones_CalculoDescuento(c.IDCarrito, c.IDUsuario) d
+        OUTER APPLY (
+            SELECT t.CostoEnvio, t.MontoMinimoGratis
+            FROM Direcciones dir
+            INNER JOIN Municipios m ON dir.IDMunicipio = m.IDMunicipio
+            INNER JOIN Departamentos dep ON m.IDDepartamento = dep.IDDepartamento
+            INNER JOIN TarifasEnvio t ON dep.IDDepartamento = t.IDDepartamento
+            WHERE dir.IDDireccion = @IDDireccion AND dir.IDUsuario = @IDUsuario AND dir.Activo = 1
+        ) e
+        WHERE c.IDCarrito = @IDCarrito AND c.IDUsuario = @IDUsuario
+    ) x
+);
+GO

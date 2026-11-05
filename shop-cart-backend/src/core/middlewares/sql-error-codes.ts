@@ -55,6 +55,8 @@ const CODIGOS: Record<number, string> = {
   50098: 'USER_NOT_FOUND',
   50099: 'COUPON_NOT_STARTED',
   50100: 'COUPON_INACTIVE',
+  50110: 'PAYMENT_STATE_INVALID',
+  50111: 'PAYMENT_NOT_FOUND',
 };
 
 export function codigoDeNegocio(numero: number, mensaje = ''): string {

@@ -1,6 +1,8 @@
 import { z } from 'zod';
+import { DireccionSchema } from '@/core/domain/sort';
 
 export * from './checkout.model';
+export * from './payments.model';
 
 export const CreateAddressSchema = z
   .object({
@@ -41,6 +43,7 @@ export const ConfirmOrderSchema = z.object({
   idDireccion: z.number().int().positive(),
   claveIdempotencia: z.string().min(8).max(100),
   simularFalloPago: z.boolean().default(false),
+  simulacionPago: z.enum(['APROBADO', 'RECHAZADO', 'ERROR_TRAS_COBRO', 'TIMEOUT']).optional(),
 });
 
 export type ConfirmOrderDTO = z.infer<typeof ConfirmOrderSchema>;
@@ -66,6 +69,15 @@ export type ReserveStockCommand = ReserveStockDTO & {
 export type ConfirmOrderCommand = ConfirmOrderDTO & {
   idUsuario: number;
 };
+
+export const ListPaymentsSchema = z.object({
+  estado: z.enum(['AUTORIZADO', 'CAPTURADO', 'RECHAZADO', 'ANULADO', 'PENDIENTE_CONCILIACION']).optional(),
+  direccion: DireccionSchema,
+  pagina: z.coerce.number().int().min(1).default(1),
+  tamanoPagina: z.coerce.number().int().min(1).max(100).default(15),
+});
+
+export type ListPaymentsQuery = z.infer<typeof ListPaymentsSchema>;
 
 export interface GetAddressesQuery {
   idUsuario: number;

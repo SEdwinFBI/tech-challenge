@@ -32,6 +32,7 @@ import { OrderAggregate } from '@/features/pedidos/models/pedidos.model';
 import { ConfirmOrderCommandHandler } from '@/features/checkout/commands/confirm-order.command';
 import { ICheckoutRepository } from '@/features/checkout/abstracts/checkout.repository.interface';
 import { ConfirmOrderResult } from '@/features/checkout/models/checkout.model';
+import { FakeGateway, FakePaymentsRepo, FakePublisher } from './fakes';
 import { GetDashboardSummaryQueryHandler } from '@/features/dashboard/queries/get-dashboard-summary.query';
 import { IDashboardRepository } from '@/features/dashboard/abstracts/dashboard.repository.interface';
 
@@ -691,7 +692,7 @@ describe('Handlers CQRS con repositorios mock', () => {
         processLineReturn: async () => {},
       };
 
-      const handler = new UpdateOrderStatusCommandHandler(repoMock);
+      const handler = new UpdateOrderStatusCommandHandler(repoMock, new FakePublisher());
       const clienteEjecutor: AuthUser = { idUsuario: 123, correo: 'cliente@shopcart.gt', rol: 'CLIENTE' };
 
       await assert.rejects(
@@ -722,7 +723,7 @@ describe('Handlers CQRS con repositorios mock', () => {
         processLineReturn: async () => {},
       };
 
-      const handler = new UpdateOrderStatusCommandHandler(repoMock);
+      const handler = new UpdateOrderStatusCommandHandler(repoMock, new FakePublisher());
       const operador: AuthUser = { idUsuario: 5, correo: 'operador@shopcart.gt', rol: 'OPERADOR' };
 
       const res = await handler.handle({
@@ -831,7 +832,7 @@ describe('Handlers CQRS con repositorios mock', () => {
         },
       };
 
-      const handler = new ConfirmOrderCommandHandler(repoMock);
+      const handler = new ConfirmOrderCommandHandler(repoMock, new FakePaymentsRepo(), new FakeGateway(), new FakePublisher());
       const resultado: ConfirmOrderResult = await handler.handle({
         idCarrito: 12,
         idDireccion: 3,
@@ -860,7 +861,7 @@ describe('Handlers CQRS con repositorios mock', () => {
         }),
       };
 
-      const handler = new ConfirmOrderCommandHandler(repoMock);
+      const handler = new ConfirmOrderCommandHandler(repoMock, new FakePaymentsRepo(), new FakeGateway(), new FakePublisher());
       const resultado: ConfirmOrderResult = await handler.handle({
         idCarrito: 12,
         idDireccion: 3,

@@ -1221,7 +1221,8 @@ export const openApiSpec = {
                   idCarrito: { type: 'integer', example: 3 },
                   idDireccion: { type: 'integer', example: 1 },
                   claveIdempotencia: { type: 'string', minLength: 8, example: 'pay-req-f47ac10b-58cc-4372-a567-0e02b2c3d479' },
-                  simularFalloPago: { type: 'boolean', default: false, description: 'Simula rechazo del procesador bancario manteniendo la reserva activa' },
+                  simularFalloPago: { type: 'boolean', default: false, description: 'Compatibilidad: equivale a simulacionPago RECHAZADO' },
+                  simulacionPago: { type: 'string', enum: ['APROBADO', 'RECHAZADO', 'ERROR_TRAS_COBRO', 'TIMEOUT'], default: 'APROBADO', description: 'Simula el resultado de la pasarela. En producción se ignora y siempre se aprueba.' },
                 },
               },
             },
@@ -1245,8 +1246,44 @@ export const openApiSpec = {
             },
           },
           200: { description: 'Solicitud repetida: devuelve el pedido existente sin cobrar de nuevo' },
-          400: { description: 'Carrito vacío (CART_EMPTY), dirección inválida (ADDRESS_INVALID), cupón vencido, no vigente o sin cumplir condiciones, o pago rechazado (PAYMENT_REJECTED). Un pago rechazado no crea el pedido.' },
+          400: { description: 'Carrito vacío (CART_EMPTY), dirección inválida (ADDRESS_INVALID), cupón vencido, no vigente o sin cumplir condiciones.' },
+          402: { description: 'Pago rechazado (PAGO_RECHAZADO). No se crea el pedido y la reserva sigue activa.' },
           409: { description: 'Otro cliente tomó la última unidad (LAST_UNIT_TAKEN) o el cupón se agotó (COUPON_EXHAUSTED)' },
+          502: { description: 'El pedido no pudo crearse tras autorizar el cobro y el pago fue anulado (PAGO_REVERTIDO).' },
+          503: { description: 'Pago autorizado sin pedido confirmado, en conciliación automática (PAGO_EN_CONCILIACION). No reintentar el cobro.' },
+        },
+      },
+    },
+    '/checkout/pagos': {
+      get: {
+        tags: ['Checkout'],
+        summary: 'Listar intentos de pago (Admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'estado', in: 'query', schema: { type: 'string', enum: ['AUTORIZADO', 'CAPTURADO', 'RECHAZADO', 'ANULADO', 'PENDIENTE_CONCILIACION'] } },
+          { name: 'direccion', in: 'query', description: 'Orden por fecha; por defecto desc.', schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' } },
+          { name: 'pagina', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'tamanoPagina', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 15 } },
+        ],
+        responses: {
+          200: {
+            description: 'Página de intentos de pago',
+            content: { 'application/json': { schema: {
+              type: 'object',
+              properties: {
+                ok: { type: 'boolean', example: true },
+                datos: { type: 'array', items: { type: 'object', properties: {
+                  IDIntentoPago: { type: 'integer' }, IDUsuario: { type: 'integer' }, Correo: { type: 'string' },
+                  ClaveIdempotencia: { type: 'string' }, Monto: { type: 'number' }, Estado: { type: 'string' },
+                  ReferenciaPasarela: { type: 'string', nullable: true }, Detalle: { type: 'string', nullable: true },
+                  IDPedido: { type: 'integer', nullable: true }, FechaCreacion: { type: 'string', format: 'date-time' },
+                  FechaActualizacion: { type: 'string', format: 'date-time' },
+                } } },
+                total: { type: 'integer' }, pagina: { type: 'integer' }, tamanoPagina: { type: 'integer' },
+              },
+            } } },
+          },
+          403: { description: 'Solo administradores' },
         },
       },
     },
@@ -1528,6 +1565,38 @@ export const openApiSpec = {
           properties: { url: { type: 'string', format: 'uri', example: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800' } },
         } } } },
         responses: { 201: { description: 'Imagen agregada' }, 409: { description: 'Límite de imágenes alcanzado' } },
+      },
+    },
+    '/catalogo/productos/{id}/imagenes/firma': {
+      post: {
+        tags: ['Catalogo'],
+        summary: 'Obtener URL firmada para subir una imagen (Admin)',
+        description: 'Devuelve una URL de S3 válida 5 minutos. El cliente debe hacer PUT del archivo con las cabeceras indicadas y luego registrar urlPublica con POST /catalogo/productos/{id}/imagenes.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: {
+          type: 'object', required: ['contentType', 'tamanoBytes'],
+          properties: {
+            contentType: { type: 'string', enum: ['image/webp', 'image/jpeg', 'image/png'] },
+            tamanoBytes: { type: 'integer', minimum: 1, maximum: 2097152 },
+          },
+        } } } },
+        responses: {
+          200: { description: 'URL de subida', content: { 'application/json': { schema: {
+            type: 'object',
+            properties: {
+              ok: { type: 'boolean', example: true },
+              datos: { type: 'object', properties: {
+                urlSubida: { type: 'string' }, urlPublica: { type: 'string' }, clave: { type: 'string' },
+                expiraEn: { type: 'string', format: 'date-time' },
+                cabeceras: { type: 'object', additionalProperties: { type: 'string' } },
+              } },
+            },
+          } } } },
+          400: { description: 'Tipo o tamaño inválido' },
+          404: { description: 'Producto inexistente (PRODUCT_NOT_FOUND)' },
+          503: { description: 'Almacenamiento no configurado (ALMACENAMIENTO_NO_CONFIGURADO)' },
+        },
       },
     },
     '/catalogo/imagenes/{id}': {
