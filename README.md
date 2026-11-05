@@ -198,6 +198,23 @@ El seed crea estas cuentas en una instalación nueva:
 El administrador gestiona catálogo, usuarios, cupones y reportes. El operador trabaja con inventario, preparación de pedidos y devoluciones. El cliente accede a sus propios carritos, direcciones, favoritos y pedidos.
 
 
+## Cumplimiento del reto
+
+| Requisito | Cómo se resuelve | Dónde se prueba |
+| --- | --- | --- |
+| RF-01 Acceso | Hash bcrypt, access token de 15 min y refresh token con rotación. Cada SP valida que el carrito, la dirección o el pedido sean del usuario; si no, responde 403 o 404. | `audit-regression.test.ts` (IDOR, usuario desactivado) |
+| RF-02 Catálogo | Variantes con SKU único. El detalle del pedido guarda `PrecioUnitarioCongelado`, así que cambiar el precio no toca pedidos viejos. Un producto con ventas se desactiva, no se borra. | `domain.test.ts`, `extensiones.test.ts` |
+| RF-03 Inventario | Todo cambio pasa por el kardex con usuario, motivo y saldo. Un ajuste sin motivo o que deja la existencia en negativo se rechaza (50030, 50033). | `concurrencia-extra.test.cjs` compara existencia contra la suma del kardex |
+| RF-04 Carrito | No deja agregar más de lo disponible (50040). Los montos son `DECIMAL` y el total se calcula en SQL. | `domain.test.ts` (Money) |
+| RF-05 Cupones | Porcentaje o monto fijo, por carrito o por categoría, un cupón por pedido. Cada rechazo tiene su código: vencido, agotado, inactivo, mínimo o límite por cliente. El total nunca baja de cero. | `real-concurrency.test.cjs` (último uso), `concurrencia-extra.test.cjs` (3 usos, 10 clientes) |
+| RF-06 Checkout | Reserva de 15 min. `SP_Pedidos_CrearPedido` bloquea con `UPDLOCK, HOLDLOCK` y guarda pedido, detalle, kardex y cupón en una transacción. La clave de idempotencia evita pedidos y cobros dobles. | `real-concurrency.test.cjs` (última unidad, 5 confirmaciones iguales, rollback), `pagos.test.ts` |
+| RF-07 Pedidos | Transiciones en `TransicionesEstadoPedido` y en `order-state.machine.ts`. Cancelar o devolver repone por kardex. No se devuelve más de lo vendido (50082). La reserva vencida se libera sola cada minuto y ya no se puede pagar (50112). | `domain.test.ts`, `concurrencia-extra.test.cjs` |
+| RF-08 Reportes | Ventas por día, semana y mes, por categoría y top 10. Solo cuentan pedidos entregados y se restan devoluciones. Listados paginados y filtrados en el servidor. | `extensiones.test.ts`, `audit-regression.test.ts` (caché) |
+| RF-09 Bitácora | Se escribe dentro de cada SP. El trigger `TR_Bitacora_Inmutable` (`INSTEAD OF UPDATE, DELETE`) impide cambiarla. | Revisión del script 01 |
+| Sin SQL en el backend | Solo se llaman procedimientos `SP_Modulo_Proceso`. Las únicas excepciones son el seed y el inicializador. | `sin-sql.test.ts` revisa todo `src/` y la nomenclatura de los scripts |
+
+Extras del reto: dashboard en vivo con SSE, exportación a Excel, caché del resumen con invalidación y límite de intentos en autenticación.
+
 ## Decisiones 
 
  Esto es lo que se decidió.
@@ -209,6 +226,7 @@ El administrador gestiona catálogo, usuarios, cupones y reportes. El operador t
 - Un pedido ajeno responde 404, igual que uno inexistente, para no confirmar que existe.
 - El checkout no crea el pedido hasta confirmar el pago, y la reserva de existencias dura 15 minutos.
 - El pago se simula
+- El cobro se autoriza antes de crear el pedido y se captura después. Si el pedido falla, el cobro se anula. Lo que queda a medias lo revisa la conciliación cada minuto.
 - La contraseña exige entre 8 y 72 caracteres. 
 - El dashboard en vivo usa un ticket de un solo uso con 30 segundos.
 - Con varias réplicas, Redis comparte los tickets del dashboard, el caché del resumen, el límite de intentos, los eventos en vivo y el candado de las tareas programadas. Si Redis se cae, el catálogo y el checkout siguen funcionando porque SQL Server protege el stock y la idempotencia; los eventos solo llegan a los clientes de la misma réplica, el límite de intentos no se aplica y el ticket del dashboard no se puede emitir.
@@ -227,7 +245,7 @@ npm run typecheck
 npm test
 ```
 
-`typecheck` comprueba los tipos. `npm test` ejecuta las pruebas de dominio, esquemas y extensiones con el ejecutor de pruebas de Node.js.
+`typecheck` comprueba los tipos. `npm test` ejecuta las pruebas de dominio, esquemas y extensiones con el ejecutor de pruebas de Node.js. También corre `sin-sql.test.ts`, que falla si aparece SQL fuera de los procedimientos.
 
 Las pruebas de integración y concurrencia HTTP necesitan una API local conectada a una base de pruebas cuyo nombre comience por `ShopCartAudit_`. Crean registros de prueba y los conservan para inspección.
 
@@ -242,5 +260,29 @@ npm run test:concurrency:http
 ```
 
 `AUDIT_DB_NAME` debe coincidir con el `DB_NAME` de la API de pruebas. Estas suites modifican datos y deben ejecutarse en la base aislada.
+
+`test:concurrency:http` cubre la última unidad, confirmaciones repetidas, el último uso de un cupón, un cupón de 3 usos contra 10 clientes, la reserva vencida, la misma clave usada por otro cliente y el cuadre de existencia contra kardex.
+
+### Rendimiento
+
+`npm run test:rendimiento` mide cada listado 20 veces, después de 3 de calentamiento, contra la API de pruebas. Resultado con los datos de ejemplo, en un i7-1165G7 con 16 GB:
+
+| Endpoint | p50 (ms) | p95 (ms) |
+| --- | --- | --- |
+| Catálogo | 17.7 | 29.1 |
+| Catálogo con filtros y orden | 24.3 | 33.2 |
+| Detalle de producto | 14.3 | 25.5 |
+| Carrito | 17.7 | 38.5 |
+| Mis pedidos | 26.4 | 37.4 |
+| Pedidos (admin) con filtros | 23.8 | 34.8 |
+| Kardex | 30.4 | 43.0 |
+| Existencias bajas | 27.8 | 38.6 |
+| Cupones | 23.1 | 33.7 |
+| Usuarios | 26.4 | 39.0 |
+| Bitácora | 27.3 | 36.0 |
+| Resumen del dashboard | 20.2 | 33.7 |
+| Exportación a Excel | 43.4 | 69.7 |
+
+Todo queda por debajo de 1 segundo. Son pocos datos (12 productos, 11 pedidos), así que sirve para ver que no hay consultas pesadas, no como prueba de carga.
 
 `npm run test:concurrency` ejecuta una demostración adicional de concurrencia. Su implementación está en [`tests/concurrency-demo.ts`](shop-cart-backend/tests/concurrency-demo.ts).
