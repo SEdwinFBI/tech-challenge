@@ -4,6 +4,20 @@
 
 API de comercio electrónico para gestionar catálogo, inventario, carritos, pedidos y usuarios. Está desarrollada con TypeScript, Express y SQL Server. El pago se simula; no hay integración con una pasarela de cobros.
 
+## Tecnologías
+
+| Parte | Tecnologías |
+| --- | --- |
+| Base de datos | SQL Server 2022+, procedimientos almacenados, funciones, vistas y triggers |
+| Backend | Node.js 24, TypeScript, Express 5, Zod, `mssql`, JWT, bcrypt, Helmet, express-rate-limit, ExcelJS, node-cron |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, TanStack Query, React Hook Form, Zustand, Recharts, PWA con `vite-plugin-pwa` |
+| Imágenes | AWS S3 con URL firmada y CloudFront; la imagen se comprime en el navegador antes de subirla |
+| Tiempo real | Server-Sent Events con ticket de un solo uso |
+| Escalado | Redis (eventos, caché, tickets, límite de intentos, candados), Nginx y dos réplicas de la API |
+| Observabilidad | Prometheus, Grafana, `prom-client` y `X-Request-Id` |
+| Entorno | Docker Compose, GitHub Actions |
+| Pruebas | Ejecutor de pruebas de Node.js, pruebas HTTP de integración y concurrencia contra SQL Server, Playwright |
+
 ## Arquitectura
 
 Arquitectura Vertical Slice, con DDD y CQRS ligeros.
@@ -286,3 +300,7 @@ npm run test:concurrency:http
 Todo queda por debajo de 1 segundo. Son pocos datos (12 productos, 11 pedidos), así que sirve para ver que no hay consultas pesadas, no como prueba de carga.
 
 `npm run test:concurrency` ejecuta una demostración adicional de concurrencia. Su implementación está en [`tests/concurrency-demo.ts`](shop-cart-backend/tests/concurrency-demo.ts).
+
+## Licencia
+
+MIT. Ver [`LICENSE`](LICENSE). El código es de Edwin Baquiax.
