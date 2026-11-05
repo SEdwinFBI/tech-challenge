@@ -17,6 +17,13 @@ Para apuntar a otro backend sin tocar código: `API_TARGET=http://localhost:3001
 | :--- | :--- |
 | `npm run build` | Verifica tipos (`tsc -b`, modo estricto) y genera el paquete de producción |
 | `npm run lint` | Linter (oxlint) |
+| `npm run test:e2e` | Pruebas de extremo a extremo con Playwright (Chromium, sin ventana) |
+
+Para las pruebas e2e, usa una base recién creada con `npm run db:setup` y el backend con `RATE_LIMIT_AUTH_MAX=500`.
+Levanta el frontend con `npm run dev` (el modo de prueba de pago solo existe en desarrollo).
+La primera vez instala el navegador con `npx playwright install chromium`.
+La dirección de la tienda se cambia con `E2E_BASE_URL` (por defecto `http://localhost:5183`).
+Corren en escritorio y en móvil (390x844). Las capturas de los fallos quedan en `test-results`.
 
 Credenciales de prueba (contraseña `Admin123!` en las tres): `cliente@shopcart.gt`, `operador@shopcart.gt`, `admin@shopcart.gt`.
 En desarrollo, la pantalla de ingreso ofrece botones para rellenarlas; en producción no aparecen.
