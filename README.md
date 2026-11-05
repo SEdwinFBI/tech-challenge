@@ -58,6 +58,9 @@ Completar las credenciales de SQL Server y los secretos de JWT antes de iniciar 
 | `S3_BUCKET`, `S3_REGION` | Bucket y región de AWS S3 donde se suben las imágenes de productos; opcionales. |
 | `CDN_BASE_URL` | URL base de CloudFront desde donde se sirven las imágenes, por ejemplo `https://dxxxx.cloudfront.net`; opcional. |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Credenciales de AWS; si no se definen, se usa la cadena de credenciales por defecto del SDK. |
+| `REDIS_URL` | URL de Redis, por ejemplo `redis://localhost:6379`; opcional. Sin ella, el estado compartido queda en memoria del proceso. |
+| `INSTANCE_ID` | Nombre de la instancia que se devuelve en el encabezado `X-Instancia`; por defecto, el hostname. |
+| `TRUST_PROXY` | `1` cuando la API está detrás de Nginx, para que el límite de intentos use la IP del cliente; opcional. |
 
 ### Base de datos
 
@@ -91,7 +94,19 @@ La API queda disponible en `http://localhost:3000/api/v1`. El puerto depende de 
 - Referencia de la API: [`/api/docs`](http://localhost:3000/api/docs).
 - Especificación OpenAPI: [`/api/openapi.json`](http://localhost:3000/api/openapi.json).
 
-`/health` informa que el proceso responde; no comprueba la conexión a SQL Server.
+`/health` informa que el proceso responde; no comprueba la conexión a SQL Server. [`/health/listo`](http://localhost:3000/health/listo) sí comprueba SQL Server y, si está configurado, Redis.
+
+### Docker completo
+
+El `docker-compose.yml` también levanta Redis, dos réplicas de la API y Nginx con la interfaz. Estos servicios están en el perfil `app`, así que `docker compose up -d mssql-server` sigue levantando solo la base de datos.
+
+Necesita `shop-cart-backend/.env` con las credenciales. Compose cambia `DB_HOST`, `REDIS_URL` y `CORS_ALLOW_ORIGIN` para la red interna.
+
+```sh
+docker compose --profile app up -d --build
+```
+
+La aplicación queda en `http://localhost:8080`. El encabezado `X-Instancia` indica qué réplica respondió. Para apagar todo: `docker compose --profile app down`.
 
 
 
@@ -175,6 +190,7 @@ El administrador gestiona catálogo, usuarios, cupones y reportes. El operador t
 - El pago se simula
 - La contraseña exige entre 8 y 72 caracteres. 
 - El dashboard en vivo usa un ticket de un solo uso con 30 segundos.
+- Con varias réplicas, Redis comparte los tickets del dashboard, el caché del resumen, el límite de intentos, los eventos en vivo y el candado de las tareas programadas. Si Redis se cae, el catálogo y el checkout siguen funcionando porque SQL Server protege el stock y la idempotencia; los eventos solo llegan a los clientes de la misma réplica, el límite de intentos no se aplica y el ticket del dashboard no se puede emitir.
 - El ordenamiento se hace en el servidor .
 - La primera dirección activa de un cliente queda como predeterminada
 - Las Estadisticas cuentan como completados los pedidos entregados y descuentan las devoluciones. 
