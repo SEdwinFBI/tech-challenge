@@ -410,9 +410,15 @@ BEGIN
     ELSE
         UPDATE Productos SET Descripcion = 'Botín 100% cuero vacuno curtido en Pastores, Sacatepéquez. Ojo: la horma viene un poco reducida, si tenés el pie ancho pedí media talla más. La suela es de hule cocida, aguanta buen trote en empedrado.' WHERE Nombre = 'Botín de Cuero Artesanal';
 
-    UPDATE Productos SET ImagenUrl = NULL
+    UPDATE Productos SET ImagenUrl = 'https://images.unsplash.com/photo-1520639888713-7851133b1ed0?w=800'
     WHERE Nombre = 'Botín de Cuero Artesanal'
-      AND ImagenUrl = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800';
+      AND (ImagenUrl IS NULL OR ImagenUrl = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800');
+
+    DECLARE @ImagenBlusaAnterior NVARCHAR(500) = 'https://images.unsplash.com/photo-1564257631407-4deb129f044b?w=800';
+    DECLARE @ImagenBlusaNueva NVARCHAR(500) = 'https://images.unsplash.com/photo-1564257631407-4deb1f99d992?w=800';
+    UPDATE Productos SET ImagenUrl = @ImagenBlusaNueva WHERE ImagenUrl = @ImagenBlusaAnterior;
+    UPDATE ProductoImagenes SET Url = @ImagenBlusaNueva WHERE Url = @ImagenBlusaAnterior;
+    UPDATE Categorias SET ImagenUrl = @ImagenBlusaNueva WHERE ImagenUrl = @ImagenBlusaAnterior;
 
     DELETE i FROM ProductoImagenes i
     INNER JOIN Productos p ON p.IDProducto = i.IDProducto
@@ -430,7 +436,7 @@ BEGIN
 
     IF NOT EXISTS (SELECT 1 FROM Productos WHERE Nombre = 'Blusa Típica con Bordado de Cantel')
         INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo)
-        VALUES (@CatCamisas, 'Blusa Típica con Bordado de Cantel', 'Blusa de manta 100% algodón tejida en telar de pedal en Quetzaltenango con cuello bordado a mano. Cada pieza varía un poco en los tonos del hilo. No usar cloro jamás para no desteñir el bordado.', 'https://images.unsplash.com/photo-1564257631407-4deb129f044b?w=800', 1);
+        VALUES (@CatCamisas, 'Blusa Típica con Bordado de Cantel', 'Blusa de manta 100% algodón tejida en telar de pedal en Quetzaltenango con cuello bordado a mano. Cada pieza varía un poco en los tonos del hilo. No usar cloro jamás para no desteñir el bordado.', 'https://images.unsplash.com/photo-1564257631407-4deb1f99d992?w=800', 1);
 
     IF NOT EXISTS (SELECT 1 FROM Productos WHERE Nombre = 'Cinturón Reversible de Cuero Genuino')
         INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo)
@@ -476,6 +482,54 @@ BEGIN
     DECLARE @IDP_Prensa INT = (SELECT IDProducto FROM Productos WHERE Nombre = 'Prensa Francesa de Vidrio Borosilicato 800ml');
     DECLARE @IDP_Mochila INT = (SELECT IDProducto FROM Productos WHERE Nombre = 'Mochila Ejecutiva Antirrobo para Laptop 15.6"');
     DECLARE @IDP_Morral INT = (SELECT IDProducto FROM Productos WHERE Nombre = 'Morral Casual de Lona y Cuero Vintage');
+
+    DECLARE @CatalogoAdicional TABLE (
+        SKU NVARCHAR(50), Nombre NVARCHAR(150), Categoria NVARCHAR(100), Descripcion NVARCHAR(1000),
+        ImagenUrl NVARCHAR(500), Precio DECIMAL(12,2), PrecioReferencia DECIMAL(12,2), Existencia INT,
+        Talla VARCHAR(30), Color VARCHAR(50)
+    );
+    INSERT INTO @CatalogoAdicional VALUES
+        (N'DEMO-EXTRA-01', N'Camisa de cuadros azul y negro', N'Camisas y Blusas', N'Camisa de manga larga con cuadros azules y negros, para vestir casual.', N'https://cdn.dummyjson.com/product-images/mens-shirts/blue-&-black-check-shirt/1.webp', 185, 231.25, 12, N'M', N'Azul y negro'),
+        (N'DEMO-EXTRA-02', N'Camisa casual de manga corta', N'Camisas y Blusas', N'Camisa fresca de manga corta para el uso diario.', N'https://cdn.dummyjson.com/product-images/mens-shirts/man-short-sleeve-shirt/1.webp', 155, NULL, 13, N'M', N'Claro'),
+        (N'DEMO-EXTRA-03', N'Camisa de cuadros clásica', N'Camisas y Blusas', N'Camisa de cuadros con cuello clásico y botones frontales.', N'https://cdn.dummyjson.com/product-images/mens-shirts/men-check-shirt/1.webp', 195, 243.75, 14, N'L', N'Cuadros'),
+        (N'DEMO-EXTRA-04', N'Tenis Nike Air Jordan rojos y negros', N'Calzado', N'Tenis Nike Air Jordan de caña alta en rojo y negro para uso urbano.', N'https://cdn.dummyjson.com/product-images/mens-shoes/nike-air-jordan-1-red-and-black/1.webp', 1190, NULL, 15, N'42', N'Rojo y negro'),
+        (N'DEMO-EXTRA-05', N'Tenis Puma Future Rider', N'Calzado', N'Tenis Puma Future Rider con suela deportiva y diseño casual.', N'https://cdn.dummyjson.com/product-images/mens-shoes/puma-future-rider-trainers/1.webp', 690, 862.5, 16, N'41', N'Multicolor'),
+        (N'DEMO-EXTRA-06', N'Tenis deportivos blancos y rojos', N'Calzado', N'Zapatillas deportivas en blanco y rojo para caminar y uso diario.', N'https://cdn.dummyjson.com/product-images/mens-shoes/sports-sneakers-off-white-&-red/1.webp', 425, NULL, 17, N'40', N'Blanco y rojo'),
+        (N'DEMO-EXTRA-07', N'Lentes de sol negros', N'Accesorios', N'Gafas de sol con montura negra para complementar un estilo casual.', N'https://cdn.dummyjson.com/product-images/sunglasses/black-sun-glasses/1.webp', 125, 156.25, 18, N'Única', N'Negro'),
+        (N'DEMO-EXTRA-08', N'Lentes de sol clásicos', N'Accesorios', N'Gafas de sol de diseño clásico para el uso diario.', N'https://cdn.dummyjson.com/product-images/sunglasses/classic-sun-glasses/1.webp', 145, NULL, 19, N'Única', N'Oscuro'),
+        (N'DEMO-EXTRA-09', N'Reloj con correa de cuero café', N'Accesorios', N'Reloj de pulsera analógico con correa de cuero color café.', N'https://cdn.dummyjson.com/product-images/mens-watches/brown-leather-belt-watch/1.webp', 285, 356.25, 20, N'Ajustable', N'Café'),
+        (N'DEMO-EXTRA-10', N'Audífonos Apple AirPods', N'Tecnología y Audio', N'Auriculares Apple AirPods inalámbricos con estuche de carga.', N'https://cdn.dummyjson.com/product-images/mobile-accessories/apple-airpods/1.webp', 1090, NULL, 21, N'Universal', N'Blanco'),
+        (N'DEMO-EXTRA-11', N'Cargador para iPhone', N'Tecnología y Audio', N'Adaptador de carga de pared para dispositivos iPhone compatibles.', N'https://cdn.dummyjson.com/product-images/mobile-accessories/apple-iphone-charger/1.webp', 185, 231.25, 22, N'Universal', N'Blanco'),
+        (N'DEMO-EXTRA-12', N'Batería externa MagSafe', N'Tecnología y Audio', N'Batería portátil magnética para iPhone compatible con MagSafe.', N'https://cdn.dummyjson.com/product-images/mobile-accessories/apple-magsafe-battery-pack/1.webp', 690, NULL, 23, N'Compacta', N'Blanco'),
+        (N'DEMO-EXTRA-13', N'Audífonos Beats Flex', N'Tecnología y Audio', N'Auriculares inalámbricos Beats Flex con banda flexible para el cuello.', N'https://cdn.dummyjson.com/product-images/mobile-accessories/beats-flex-wireless-earphones/1.webp', 485, 606.25, 24, N'Universal', N'Negro'),
+        (N'DEMO-EXTRA-14', N'Taza de aluminio negra', N'Hogar y Cafetería', N'Taza ligera de aluminio con asa para bebidas y uso cotidiano.', N'https://cdn.dummyjson.com/product-images/kitchen-accessories/black-aluminium-cup/1.webp', 65, NULL, 25, N'Unidad', N'Negro'),
+        (N'DEMO-EXTRA-15', N'Espátula de bambú', N'Hogar y Cafetería', N'Espátula de bambú para cocinar y servir sin rayar recipientes delicados.', N'https://cdn.dummyjson.com/product-images/kitchen-accessories/bamboo-spatula/1.webp', 35, 43.75, 26, N'Unidad', N'Natural'),
+        (N'DEMO-EXTRA-16', N'Tabla para picar de madera', N'Hogar y Cafetería', N'Tabla de madera para preparar frutas, vegetales y otros alimentos.', N'https://cdn.dummyjson.com/product-images/kitchen-accessories/chopping-board/1.webp', 95, NULL, 27, N'Mediana', N'Natural'),
+        (N'DEMO-EXTRA-17', N'Licuadora de cocina', N'Hogar y Cafetería', N'Licuadora de vaso para preparar batidos y bebidas en casa.', N'https://cdn.dummyjson.com/product-images/kitchen-accessories/boxed-blender/1.webp', 385, 481.25, 28, N'Unidad', N'Claro'),
+        (N'DEMO-EXTRA-18', N'Organizador de tazas', N'Hogar y Cafetería', N'Soporte vertical de cocina para mantener las tazas ordenadas.', N'https://cdn.dummyjson.com/product-images/kitchen-accessories/mug-tree-stand/1.webp', 115, NULL, 29, N'Unidad', N'Natural'),
+        (N'DEMO-EXTRA-19', N'Mochila de cuero sintético blanca', N'Mochilas y Viaje', N'Mochila urbana blanca de cuero sintético con compartimentos para objetos personales.', N'https://cdn.dummyjson.com/product-images/womens-bags/white-faux-leather-backpack/1.webp', 295, 368.75, 30, N'Mediana', N'Blanco'),
+        (N'DEMO-EXTRA-20', N'Bolso de cuero marrón', N'Mochilas y Viaje', N'Bolso de cuero con asas y cierre superior para el uso diario.', N'https://cdn.dummyjson.com/product-images/womens-bags/heshe-women%27s-leather-bag/1.webp', 395, NULL, 31, N'Mediano', N'Marrón');
+
+    INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo, Destacado)
+    SELECT c.IDCategoria, d.Nombre, d.Descripcion, d.ImagenUrl, 1, CASE WHEN d.SKU IN ('DEMO-EXTRA-01', 'DEMO-EXTRA-05', 'DEMO-EXTRA-10', 'DEMO-EXTRA-15') THEN 1 ELSE 0 END
+    FROM @CatalogoAdicional d INNER JOIN Categorias c ON c.Nombre = d.Categoria
+    WHERE NOT EXISTS (SELECT 1 FROM Productos p WHERE p.Nombre = d.Nombre);
+
+    DECLARE @VariantesAdicionales TABLE (IDVariante INT, Existencia INT);
+    INSERT INTO Variantes (IDProducto, SKU, Talla, Color, Presentacion, Precio, PrecioReferencia, ExistenciaFisica, Activo)
+    OUTPUT inserted.IDVariante, inserted.ExistenciaFisica INTO @VariantesAdicionales
+    SELECT p.IDProducto, d.SKU, d.Talla, d.Color, N'Unidad', d.Precio, d.PrecioReferencia, d.Existencia, 1
+    FROM @CatalogoAdicional d INNER JOIN Productos p ON p.Nombre = d.Nombre
+    WHERE NOT EXISTS (SELECT 1 FROM Variantes v WHERE v.SKU = d.SKU);
+
+    INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo)
+    SELECT v.IDVariante, @IDUserAdmin, m.IDTipoMovimiento, v.Existencia, v.Existencia, N'Inventario inicial catálogo adicional'
+    FROM @VariantesAdicionales v CROSS JOIN TipoMovimiento m WHERE m.Codigo = 'ENTRADA_COMPRA';
+
+    INSERT INTO ProductoImagenes (IDProducto, Url, Orden)
+    SELECT p.IDProducto, d.ImagenUrl, 1 FROM @CatalogoAdicional d INNER JOIN Productos p ON p.Nombre = d.Nombre
+    WHERE NOT EXISTS (SELECT 1 FROM ProductoImagenes i WHERE i.IDProducto = p.IDProducto);
+
 
     -- Variantes y existencias
     IF NOT EXISTS (SELECT 1 FROM Variantes WHERE SKU = 'BOT-CUE-40-CAF')
@@ -1319,11 +1373,9 @@ BEGIN
 END
 GO
 
-IF NOT EXISTS (SELECT 1 FROM ProductoImagenes)
-BEGIN
-    INSERT INTO ProductoImagenes (IDProducto, Url, Orden)
-    SELECT IDProducto, ImagenUrl, 1 FROM Productos WHERE ImagenUrl IS NOT NULL;
-END
+INSERT INTO ProductoImagenes (IDProducto, Url, Orden)
+SELECT p.IDProducto, p.ImagenUrl, 1 FROM Productos p
+WHERE p.ImagenUrl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ProductoImagenes i WHERE i.IDProducto = p.IDProducto);
 GO
 
 IF NOT EXISTS (SELECT 1 FROM Productos WHERE Destacado = 1)

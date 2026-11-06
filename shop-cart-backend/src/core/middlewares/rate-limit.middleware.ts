@@ -22,23 +22,37 @@ async function esperarConexion(): Promise<void> {
   });
 }
 
-export const authRateLimiter = rateLimit({
-  windowMs: windowMinutes * 60 * 1000,
-  max: maxRequests,
-  standardHeaders: true,
-  legacyHeaders: false,
-  passOnStoreError: true,
-  ...(redis
+function sharedStore(prefix: string) {
+  return redis
     ? {
         store: new RedisStore({
-          prefix: 'shopcart:rl:',
+          prefix,
           sendCommand: async (...args: string[]) => {
             if (!conectado && args[0]?.toUpperCase() === 'SCRIPT') await esperarConexion();
             return redis.call(args[0] as string, ...args.slice(1)) as Promise<RedisReply>;
           },
         }),
       }
-    : {}),
+    : {};
+}
+
+export const recommendationRateLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  passOnStoreError: true,
+  ...sharedStore('shopcart:rl:recomendaciones:'),
+  message: { ok: false, codigo: 'TOO_MANY_REQUESTS', mensaje: 'Espera un momento para actualizar tus recomendaciones.' },
+});
+
+export const authRateLimiter = rateLimit({
+  windowMs: windowMinutes * 60 * 1000,
+  max: maxRequests,
+  standardHeaders: true,
+  legacyHeaders: false,
+  passOnStoreError: true,
+  ...sharedStore('shopcart:rl:'),
   message: {
     ok: false,
     codigo: 'TOO_MANY_REQUESTS',
