@@ -53,7 +53,7 @@ export const BackofficeLayout: React.FC = () => {
       {open && <div className="fixed inset-0 z-40 bg-slate-900/50 lg:hidden" onClick={() => setOpen(false)} aria-hidden="true" />}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-slate-900 text-slate-300 transition-transform duration-200 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-gradient-to-b from-brand-deep to-indigo-900 text-white/75 shadow-xl shadow-black/10 transition-transform duration-200 lg:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
         aria-label="Navegación del panel"
@@ -62,19 +62,19 @@ export const BackofficeLayout: React.FC = () => {
           <Link to={isAdmin ? '/admin/dashboard' : '/admin/pedidos'} aria-label="Inicio del panel">
             <BrandMark />
           </Link>
-          <button type="button" onClick={() => setOpen(false)} className="p-1 text-slate-400 hover:text-white lg:hidden" aria-label="Cerrar menú">
+          <button type="button" onClick={() => setOpen(false)} className="rounded-lg p-1.5 text-white/70 transition hover:bg-white/10 hover:text-white lg:hidden" aria-label="Cerrar menú">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         <div className="border-b border-white/10 px-4 py-4">
-          <div className="flex items-center gap-3 rounded-xl bg-white/5 p-3">
+          <div className="flex items-center gap-3 rounded-xl bg-white/10 p-3 ring-1 ring-white/10">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cta text-sm font-extrabold text-cta-fg">
               {user?.nombreCompleto.charAt(0).toUpperCase()}
             </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-bold text-white">{user?.nombreCompleto}</p>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-soft/70">{ROLE_LABEL[user?.rol ?? ''] ?? user?.rol}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">{ROLE_LABEL[user?.rol ?? ''] ?? user?.rol}</p>
             </div>
           </div>
         </div>
@@ -82,7 +82,7 @@ export const BackofficeLayout: React.FC = () => {
         <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
           {groups.map(g => (
             <div key={g.title}>
-              <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-widest text-slate-500">{g.title}</p>
+              <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-widest text-white/65">{g.title}</p>
               <ul className="space-y-1">
                 {g.items.map(item => (
                   <li key={item.to}>
@@ -90,13 +90,17 @@ export const BackofficeLayout: React.FC = () => {
                       to={item.to}
                       onClick={() => setOpen(false)}
                       className={({ isActive }) =>
-                        `flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition ${
-                          isActive ? 'bg-brand text-white shadow-sm' : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                        `relative flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition ${
+                          isActive ? 'bg-white/15 text-white shadow-sm ring-1 ring-white/10 before:absolute before:-left-3 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full before:bg-cta' : 'text-white/75 hover:bg-white/10 hover:text-white'
                         }`
                       }
                     >
-                      {item.icon}
-                      {item.label}
+                      {({ isActive }) => (
+                        <>
+                          <span className={isActive ? 'text-cta' : ''}>{item.icon}</span>
+                          {item.label}
+                        </>
+                      )}
                     </NavLink>
                   </li>
                 ))}
@@ -106,13 +110,13 @@ export const BackofficeLayout: React.FC = () => {
         </nav>
 
         <div className="space-y-1 border-t border-white/10 p-4">
-          <Link to="/" className="flex items-center gap-3 rounded-xl px-3.5 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white">
+          <Link to="/" className="flex items-center gap-3 rounded-xl px-3.5 py-2 text-sm font-semibold text-white/75 transition hover:bg-white/10 hover:text-white">
             <Store className="h-[18px] w-[18px] text-cta" /> Ver la tienda
           </Link>
           <button
             type="button"
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2 text-sm font-semibold text-rose-300 transition hover:bg-rose-500/10"
+            className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2 text-sm font-semibold text-rose-200 transition hover:bg-rose-950/40 hover:text-white"
           >
             <LogOut className="h-[18px] w-[18px]" /> Cerrar sesión
           </button>
@@ -120,12 +124,12 @@ export const BackofficeLayout: React.FC = () => {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6 lg:hidden">
-          <button type="button" onClick={() => setOpen(true)} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100" aria-label="Abrir menú">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-black/10 bg-gradient-to-r from-brand-deep to-indigo-900 px-4 text-white sm:px-6 lg:hidden">
+          <button type="button" onClick={() => setOpen(true)} className="rounded-lg p-2 text-white/85 transition hover:bg-white/10 hover:text-white" aria-label="Abrir menú">
             <Menu className="h-6 w-6" />
           </button>
-          <span className="font-extrabold text-slate-900">Panel ShopCart</span>
-          <Link to="/" className="text-xs font-bold text-brand hover:underline">Tienda</Link>
+          <span className="font-extrabold">Panel ShopCart</span>
+          <Link to="/" className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-white/20">Tienda</Link>
         </header>
 
         <main className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">
