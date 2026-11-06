@@ -108,9 +108,6 @@ async function runDbSetup() {
     const seedRes = await executeSqlFileInBatches(appPool, path.join(scriptsDir, '05_seed_datos_demo.sql'));
     console.log('Seed aplicado:', seedRes?.recordset?.[0] ?? 'ok');
 
-    await executeSqlFileInBatches(appPool, path.join(scriptsDir, '06_recomendaciones.sql'));
-    await executeSqlFileInBatches(appPool, path.join(scriptsDir, '07_revision_catalogo.sql'));
-    await executeSqlFileInBatches(appPool, path.join(scriptsDir, '08_busqueda_recomendada.sql'));
     console.log('Base de datos lista');
   } catch (err: any) {
     console.error('Error:', err.message);

@@ -131,6 +131,16 @@ CREATE TABLE Favoritos (
 );
 GO
 
+CREATE TABLE RecomendacionVistas (
+    IDRecomendacionVista BIGINT IDENTITY(1,1) CONSTRAINT PK_RecomendacionVistas PRIMARY KEY,
+    Propietario VARCHAR(70) NOT NULL,
+    IDProducto INT NOT NULL CONSTRAINT FK_RecomendacionVistas_Productos FOREIGN KEY REFERENCES Productos(IDProducto) ON DELETE CASCADE,
+    Visitas INT NOT NULL CONSTRAINT CK_RecomendacionVistas_Visitas CHECK (Visitas BETWEEN 1 AND 3),
+    UltimaVista DATETIME2 NOT NULL CONSTRAINT DF_RecomendacionVistas_UltimaVista DEFAULT SYSDATETIME(),
+    CONSTRAINT UQ_RecomendacionVistas_PropietarioProducto UNIQUE (Propietario, IDProducto)
+);
+GO
+
 CREATE TABLE Variantes (
     IDVariante INT IDENTITY(1,1) CONSTRAINT PK_Variantes PRIMARY KEY,
     IDProducto INT NOT NULL CONSTRAINT FK_Variantes_Productos FOREIGN KEY REFERENCES Productos(IDProducto),

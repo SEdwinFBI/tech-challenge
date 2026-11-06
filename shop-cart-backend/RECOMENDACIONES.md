@@ -2,7 +2,7 @@ El detalle del producto y el carrito muestran hasta diez recomendaciones disponi
 
 Los favoritos y el carrito se consultan en SQL en cada solicitud. Quitarlos elimina su contribucion; modificar cantidades no multiplica el peso. El producto abierto y los presentes en el carrito se excluyen del resultado. Los visitantes tienen un perfil separado mediante un hash de su token; las cuentas usan su identificador autenticado. El historial de invitado no se transfiere al iniciar sesion.
 
-Ejecutar `npm run db:setup` aplica `scrips/06_recomendaciones.sql` de forma repetible. Configurar `TYPESAFE_API_KEY` solamente en `shop-cart-backend/.env`. `JEV_MODEL` selecciona el modelo y `JEV_TIMEOUT_MS` limita la espera (2000 ms por defecto). Docker carga este archivo en las dos replicas mediante la configuracion existente.
+Ejecutar `npm run db:setup` crea la tabla de recomendaciones (`scrips/01_tablas_y_semilla_base.sql`) y sus procedimientos (`scrips/04_stored_procedures.sql`). Configurar `TYPESAFE_API_KEY` solamente en `shop-cart-backend/.env`. `JEV_MODEL` selecciona el modelo y `JEV_TIMEOUT_MS` limita la espera (2000 ms por defecto). Docker carga este archivo en las dos replicas mediante la configuracion existente.
 
 Jev recibe nombres, categorias, precios de candidatos y señales ponderadas, sin identificadores de usuario, tokens ni datos de pago. La respuesta se valida antes de ordenar. Sin preferencias, sin clave o con un fallo del proveedor se usa el orden local por afinidad y destacados. Un fallo pausa las llamadas durante treinta segundos. Las recomendaciones se guardan durante 180 segundos en la cache compartida; el respaldo dura treinta. La clave depende del perfil y los candidatos actuales para detectar cambios de favoritos, carrito o stock.
 
