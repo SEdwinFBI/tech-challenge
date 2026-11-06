@@ -48,7 +48,7 @@ export const AuthShell: React.FC<AuthShellProps> = ({ title, subtitle, children,
         </ul>
       </div>
 
-      <p className="relative text-center text-xs text-white/70">© 2026 ShopCart · Don Arturo · Grupo Pentandra</p>
+      <p className="relative text-center text-xs text-white/70">© 2026 ShopCart por Santos Edwin Baquiax</p>
     </aside>
 
     <main className="flex items-center justify-center px-5 py-10 sm:px-10">

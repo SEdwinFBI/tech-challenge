@@ -168,7 +168,7 @@ export const StoreLayout: React.FC = () => {
           </div>
         </div>
         <div className="border-t border-white/10 py-4 text-center text-xs text-white/55">
-          © 2026 ShopCart · Don Arturo · Grupo Pentandra
+          © 2026 ShopCart por Santos Edwin Baquiax
         </div>
       </footer>
 
