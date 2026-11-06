@@ -41,13 +41,13 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.50, sum by(le)(rate(http_request_duration_seconds_bucket[5m])))",
+          "expr": "histogram_quantile(0.50, sum by(le, instance)(rate(http_request_duration_seconds_bucket[5m])))",
           "legendFormat": "p50"
         },
         {
           "refId": "B",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.95, sum by(le)(rate(http_request_duration_seconds_bucket[5m])))",
+          "expr": "histogram_quantile(0.95, sum by(le, instance)(rate(http_request_duration_seconds_bucket[5m])))",
           "legendFormat": "p95"
         }
       ]
@@ -64,7 +64,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "100 * sum by(instance)(rate(http_request_duration_seconds_count{status_code=~\"5..\"}[5m])) / sum by(instance)(rate(http_request_duration_seconds_count[5m]))",
+          "expr": "(100 * sum by(instance)(rate(http_request_duration_seconds_count{status_code=~\"5..\"}[5m])) / sum by(instance)(rate(http_request_duration_seconds_count[5m]))) or vector(0)",
           "legendFormat": "{{instance}}"
         }
       ]
@@ -175,7 +175,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "process_resident_memory_bytes",
+          "expr": "process_resident_memory_bytes{job=\"shopcart-api\"}",
           "legendFormat": "{{instance}}"
         }
       ]
@@ -192,7 +192,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "nodejs_eventloop_lag_seconds",
+          "expr": "nodejs_eventloop_lag_seconds{job=\"shopcart-api\"}",
           "legendFormat": "{{instance}}"
         }
       ]
