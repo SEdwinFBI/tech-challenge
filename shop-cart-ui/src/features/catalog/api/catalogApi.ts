@@ -108,8 +108,9 @@ export const catalogApi = {
     await apiClient.put(`/catalogo/categorias/${id}`, data);
   },
 
-  createProduct: async (data: CreateProductPayload): Promise<void> => {
-    await apiClient.post('/catalogo/productos', data);
+  createProduct: async (data: CreateProductPayload): Promise<{ IDProducto?: number }> => {
+    const res = await apiClient.post<{ IDProducto?: number }>('/catalogo/productos', data);
+    return res.data;
   },
 
   updateProduct: async (id: number, data: {

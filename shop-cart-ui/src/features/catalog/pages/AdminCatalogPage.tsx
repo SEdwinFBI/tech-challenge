@@ -6,6 +6,9 @@ import { catalogApi, type GetProductsParams } from '../api/catalogApi';
 import { useCategories } from '../hooks/useCatalog';
 import { ProductEditorDrawer, EDIT_DRAFT } from '../components/ProductEditorDrawer';
 import { CatalogReviewPanel } from '../components/CatalogReviewPanel';
+import { PendingCoverField } from '../components/ImageUploadField';
+import { uploadCompressed } from '../hooks/useImageUpload';
+import type { CompressedImage } from '@/shared/lib/compress-image';
 import { formatMoney } from '@/shared/lib/formatters';
 import { useSort } from '@/shared/hooks/useSort';
 import { useColumnFilters } from '@/shared/hooks/useColumnFilters';
@@ -103,6 +106,8 @@ export const AdminCatalogPage: React.FC = () => {
 
   const closeNewProduct = () => {
     clearDraft(NEW_DRAFT);
+    setCover(null);
+    setCoverProgress(null);
     setNewProductOpen(false);
   };
 
@@ -111,8 +116,11 @@ export const AdminCatalogPage: React.FC = () => {
     setEditingProductId(null);
   };
   const [creatingProduct, setCreatingProduct] = useState(false);
+  const [cover, setCover] = useState<CompressedImage | null>(null);
+  const [coverProgress, setCoverProgress] = useState<number | null>(null);
 
   const openNewProduct = () => {
+    setCover(null);
     setNp({ ...emptyProduct, idCategoria: categories.find(c => c.Activo)?.IDCategoria ?? 0 });
     setNewProductOpen(true);
   };
@@ -127,11 +135,11 @@ export const AdminCatalogPage: React.FC = () => {
     if (np.imagenUrl.trim() && !/^https?:\/\//i.test(np.imagenUrl.trim())) return toast.error('La URL debe empezar con http:// o https://');
     setCreatingProduct(true);
     try {
-      await catalogApi.createProduct({
+      const created = await catalogApi.createProduct({
         idCategoria: np.idCategoria,
         nombre: np.nombre.trim(),
         descripcion: np.descripcion.trim() || undefined,
-        imagenUrl: np.imagenUrl.trim() || undefined,
+        imagenUrl: cover ? undefined : np.imagenUrl.trim() || undefined,
         sku: np.sku.trim().toUpperCase(),
         talla: np.talla.trim() || undefined,
         color: np.color.trim() || undefined,
@@ -139,7 +147,18 @@ export const AdminCatalogPage: React.FC = () => {
         precio,
         existenciaInicial: Math.max(0, Math.floor(Number(np.existencia) || 0)),
       });
-      toast.success('Producto creado');
+      if (cover && created.IDProducto) {
+        setCoverProgress(0);
+        try {
+          const url = await uploadCompressed(created.IDProducto, cover, setCoverProgress);
+          await catalogApi.updateProduct(created.IDProducto, { imagenUrl: url });
+          toast.success('Producto creado');
+        } catch (err) {
+          toast.warning('Producto creado sin imagen principal', apiMessage(err, 'Súbela desde Editar.'));
+        }
+      } else {
+        toast.success('Producto creado');
+      }
       closeNewProduct();
       queryClient.invalidateQueries({ queryKey: ['admin-catalog-products'] });
       queryClient.invalidateQueries({ queryKey: ['categories'] });
@@ -349,7 +368,12 @@ export const AdminCatalogPage: React.FC = () => {
           />
           <Input label="Descripción" value={np.descripcion} onChange={e => setNp(s => ({ ...s, descripcion: e.target.value }))}  />
           <CatalogReviewPanel nombre={np.nombre} descripcion={np.descripcion} onCategory={idCategoria => setNp(s => ({ ...s, idCategoria }))} />
-          <Input label="URL de la imagen principal" value={np.imagenUrl} onChange={e => setNp(s => ({ ...s, imagenUrl: e.target.value }))} placeholder="https://…" />
+          <div>
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-700">Imagen principal</span>
+            <PendingCoverField value={cover} onChange={setCover} progress={coverProgress} uploading={coverProgress !== null} disabled={creatingProduct}>
+              <Input label="URL de la imagen" value={np.imagenUrl} onChange={e => setNp(s => ({ ...s, imagenUrl: e.target.value }))} placeholder="https://…" />
+            </PendingCoverField>
+          </div>
           <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Variante inicial</p>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3">

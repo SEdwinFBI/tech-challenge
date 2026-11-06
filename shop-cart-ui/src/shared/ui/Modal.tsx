@@ -59,7 +59,7 @@ export const Modal: React.FC<ModalProps> = ({
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
         aria-describedby={description ? 'modal-desc' : undefined}
-        className={`relative w-full ${maxWidthMap[maxWidth]} bg-white rounded-2xl shadow-2xl border border-slate-200 z-10 overflow-hidden transform transition-all animate-in fade-in-0 zoom-in-95 duration-200`}
+        className={`relative w-full ${maxWidthMap[maxWidth]} bg-white rounded-2xl shadow-2xl border border-slate-200 z-10 flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden transform transition-all animate-in fade-in-0 zoom-in-95 duration-200`}
       >
         {(title || description) && (
           <div className="px-6 py-5 border-b border-slate-100 flex items-start justify-between gap-4">
@@ -84,7 +84,7 @@ export const Modal: React.FC<ModalProps> = ({
             </button>
           </div>
         )}
-        <div className="p-6">{children}</div>
+        <div className="overflow-y-auto p-6">{children}</div>
       </div>
     </div>
   );

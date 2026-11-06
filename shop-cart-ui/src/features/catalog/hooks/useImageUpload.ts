@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { catalogApi } from '../api/catalogApi';
 import { compressImage, CompressImageError, type CompressedImage } from '@/shared/lib/compress-image';
 import { apiErrorMessage, errorCode } from '@/shared/lib/apiErrors';
@@ -28,12 +28,58 @@ function putBlob(url: string, blob: Blob, headers: Record<string, string>, onPro
   });
 }
 
+export async function uploadCompressed(productId: number, img: CompressedImage, onProgress: (pct: number) => void): Promise<string> {
+  const firma = await catalogApi.requestImageUpload(productId, img.type, img.size);
+  await putBlob(firma.urlSubida, img.blob, firma.cabeceras ?? { 'Content-Type': img.type }, onProgress);
+  return firma.urlPublica;
+}
+
+type StorageState = 'unknown' | 'ready' | 'off';
+
+let storageState: StorageState = 'unknown';
+let probing = false;
+const storageListeners = new Set<() => void>();
+
+function setStorageState(next: StorageState) {
+  if (storageState === next) return;
+  storageState = next;
+  storageListeners.forEach((fn) => fn());
+}
+
+function subscribeStorage(fn: () => void) {
+  storageListeners.add(fn);
+  return () => {
+    storageListeners.delete(fn);
+  };
+}
+
+const isStorageOff = (err: unknown) => errorCode(err) === 'ALMACENAMIENTO_NO_CONFIGURADO';
+
+export function useStorageAvailable(probeProductId?: number | null): boolean {
+  const state = useSyncExternalStore(subscribeStorage, () => storageState);
+  useEffect(() => {
+    if (probeProductId == null || storageState !== 'unknown' || probing) return;
+    probing = true;
+    catalogApi
+      .requestImageUpload(probeProductId, 'image/jpeg', 100 * 1024)
+      .then(() => setStorageState('ready'))
+      .catch((err) => {
+        if (isStorageOff(err)) setStorageState('off');
+      })
+      .finally(() => {
+        probing = false;
+      });
+  }, [probeProductId, state]);
+  return state !== 'off';
+}
+
 export function useImageUpload(productId: number | null) {
   const [phase, setPhase] = useState<UploadPhase>('idle');
   const [progress, setProgress] = useState(0);
   const [preview, setPreview] = useState<UploadPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [available, setAvailable] = useState(true);
+  const [lastResult, setLastResult] = useState<{ originalSize: number; size: number } | null>(null);
+  const available = useStorageAvailable(productId);
 
   const compressed = useRef<CompressedImage | null>(null);
   const publicUrl = useRef<string | null>(null);
@@ -58,36 +104,38 @@ export function useImageUpload(productId: number | null) {
     setError(null);
   }, [dropPreview]);
 
-  const send = useCallback(async () => {
+  const send = useCallback(async (): Promise<boolean> => {
     const img = compressed.current;
-    if (!img || productId === null) return;
+    if (!img || productId === null) return false;
     setError(null);
     setProgress(0);
     try {
       if (!navigator.onLine) throw new TypeError('offline');
       if (!publicUrl.current) {
         setPhase('uploading');
-        const firma = await catalogApi.requestImageUpload(productId, img.type, img.size);
-        await putBlob(firma.urlSubida, img.blob, firma.cabeceras ?? { 'Content-Type': img.type }, setProgress);
-        publicUrl.current = firma.urlPublica;
+        publicUrl.current = await uploadCompressed(productId, img, setProgress);
       }
       setPhase('saving');
       await onUploaded.current?.(publicUrl.current);
+      setLastResult({ originalSize: img.originalSize, size: img.size });
       reset();
+      return true;
     } catch (err) {
-      if (errorCode(err) === 'ALMACENAMIENTO_NO_CONFIGURADO') {
-        setAvailable(false);
+      if (isStorageOff(err)) {
+        setStorageState('off');
         reset();
-        return;
+        return false;
       }
       setError(err instanceof PutError ? 'No se pudo subir la imagen' : apiErrorMessage(err, 'No se pudo subir la imagen'));
       setPhase('error');
+      return false;
     }
   }, [productId, reset]);
 
   const start = useCallback(
-    async (file: File, done: (url: string) => Promise<void>) => {
+    async (file: File, done: (url: string) => Promise<void>): Promise<boolean> => {
       reset();
+      setLastResult(null);
       onUploaded.current = done;
       setPhase('compressing');
       try {
@@ -98,9 +146,9 @@ export function useImageUpload(productId: number | null) {
       } catch (err) {
         setError(err instanceof CompressImageError ? err.message : 'No se pudo procesar la imagen.');
         setPhase('error');
-        return;
+        return false;
       }
-      await send();
+      return send();
     },
     [reset, send],
   );
@@ -111,6 +159,7 @@ export function useImageUpload(productId: number | null) {
     preview,
     error,
     available,
+    lastResult,
     busy: phase === 'compressing' || phase === 'uploading' || phase === 'saving',
     start,
     retry: send,

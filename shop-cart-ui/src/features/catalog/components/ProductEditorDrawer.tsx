@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ImageOff, Loader2, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { catalogApi } from '../api/catalogApi';
 import { Badge, ConfirmDialog, Drawer, ErrorState, Input, Select } from '@/shared/ui';
 import { SafeImage } from '@/shared/ui/SafeImage';
@@ -11,7 +11,8 @@ import type { Category, Variant } from '@/shared/types/domain';
 import { readDraft, saveDraft, clearDraft } from '@/shared/lib/draft';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
-import { ImageUploadField } from './ImageUploadField';
+import { CoverUploadField, ExternalUrlOption, GalleryAddTile } from './ImageUploadField';
+import { useStorageAvailable } from '../hooks/useImageUpload';
 import { CatalogReviewPanel } from './CatalogReviewPanel';
 
 type Tab = 'datos' | 'imagenes' | 'variantes';
@@ -166,6 +167,7 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
     setSaving(false);
   };
 
+  const storageAvailable = useStorageAvailable(producto?.IDProducto);
   const [newImage, setNewImage] = useState('');
   const [imageToDelete, setImageToDelete] = useState<number | null>(null);
 
@@ -298,23 +300,22 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
                   className="w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
                 />
               </label>
-              <div className="flex items-end gap-4">
-                <div className="flex-1">
-                  <Input label="URL de la portada" value={imagenUrl} onChange={e => setImagenUrl(e.target.value)} placeholder="https://…" />
-                </div>
-                <SafeImage src={imagenUrl || undefined} alt="Portada" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
+              <div>
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-700">Imagen principal</span>
+                <CoverUploadField
+                  key={producto.IDProducto}
+                  productId={producto.IDProducto}
+                  imageUrl={imagenUrl}
+                  onUploaded={async url => {
+                    await catalogApi.updateProduct(producto.IDProducto, { imagenUrl: url });
+                    setImagenUrl(url);
+                    toast.success('Imagen principal actualizada');
+                    refreshAll();
+                  }}
+                >
+                  <Input label="URL de la imagen" value={imagenUrl} onChange={e => setImagenUrl(e.target.value)} placeholder="https://…" />
+                </CoverUploadField>
               </div>
-              <ImageUploadField
-                key={producto.IDProducto}
-                productId={producto.IDProducto}
-                label="Subir portada"
-                onUploaded={async url => {
-                  await catalogApi.updateProduct(producto.IDProducto, { imagenUrl: url });
-                  setImagenUrl(url);
-                  toast.success('Portada actualizada');
-                  refreshAll();
-                }}
-              />
               <div className="flex justify-end border-t border-slate-100 pt-4">
                 <button
                   type="submit"
@@ -330,57 +331,54 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
 
           {tab === 'imagenes' && (
             <div className="space-y-5">
-              <p className="text-sm text-slate-500">
-                Galería: {imagenes.length} de {MAX_IMAGES}.
-              </p>
-              {imagenes.length === 0 ? (
-                <div className="flex flex-col items-center rounded-2xl border-2 border-dashed border-slate-300 p-8 text-center text-slate-400">
-                  <ImageOff className="h-8 w-8" />
-                  <p className="mt-2 text-sm font-semibold">Sin imágenes. Se usa la portada.</p>
-                </div>
-              ) : (
-                <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                  {imagenes.map(img => (
-                    <li key={img.IDProductoImagen} className="group relative overflow-hidden rounded-xl bg-canvas">
-                      <SafeImage src={img.Url} alt={`Imagen ${img.Orden}`} className="aspect-square w-full object-cover" loading="lazy" />
-                      <span className="absolute left-2 top-2 rounded-md bg-slate-900/80 px-1.5 py-0.5 text-[11px] font-bold text-white">{img.Orden}</span>
-                      <button
-                        type="button"
-                        onClick={() => setImageToDelete(img.IDProductoImagen)}
-                        aria-label={`Eliminar imagen ${img.Orden}`}
-                        className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-rose-600 shadow-sm opacity-100 transition hover:bg-rose-50 sm:opacity-0 sm:group-hover:opacity-100"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <ImageUploadField
-                key={producto.IDProducto}
-                productId={producto.IDProducto}
-                label="Subir imagen"
-                disabled={imagenes.length >= MAX_IMAGES}
-                onUploaded={async url => {
-                  await catalogApi.addProductImage(producto.IDProducto, url);
-                  toast.success('Imagen agregada');
-                  refreshAll();
-                }}
-              />
-              <div className="flex items-end gap-3 rounded-2xl bg-canvas p-4">
-                <div className="flex-1">
-                  <Input label="URL de imagen" value={newImage} onChange={e => setNewImage(e.target.value)} placeholder="https://…" disabled={imagenes.length >= MAX_IMAGES} />
-                </div>
-                <button
-                  type="button"
-                  onClick={addImage}
-                  disabled={imagenes.length >= MAX_IMAGES || !newImage.trim() || !online}
-                  title={offlineTitle}
-                  className="inline-flex h-10 items-center gap-1.5 rounded-full bg-brand px-5 text-sm font-bold text-white hover:bg-brand-hover disabled:opacity-50"
-                >
-                  <Plus className="h-4 w-4" /> Agregar
-                </button>
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="text-sm font-extrabold text-slate-900">Galería</h3>
+                <p className="text-xs font-semibold tabular text-slate-500">{imagenes.length} de {MAX_IMAGES}</p>
               </div>
+              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {imagenes.map(img => (
+                  <li key={img.IDProductoImagen} className="group relative overflow-hidden rounded-xl bg-canvas">
+                    <SafeImage src={img.Url} alt={`Imagen ${img.Orden}`} className="aspect-square w-full object-cover" loading="lazy" />
+                    <span className="absolute left-2 top-2 rounded-md bg-slate-900/80 px-1.5 py-0.5 text-[11px] font-bold text-white">{img.Orden}</span>
+                    <button
+                      type="button"
+                      onClick={() => setImageToDelete(img.IDProductoImagen)}
+                      aria-label={`Eliminar imagen ${img.Orden}`}
+                      className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-rose-600 shadow-sm opacity-100 transition hover:bg-rose-50 sm:opacity-0 sm:group-hover:opacity-100"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </li>
+                ))}
+                <GalleryAddTile
+                  key={producto.IDProducto}
+                  productId={producto.IDProducto}
+                  remaining={MAX_IMAGES - imagenes.length}
+                  onUploaded={async url => {
+                    await catalogApi.addProductImage(producto.IDProducto, url);
+                    refreshAll();
+                  }}
+                  onFinished={n => toast.success(n === 1 ? 'Imagen agregada' : `${n} imágenes agregadas`)}
+                />
+              </ul>
+              {imagenes.length === 0 && <p className="text-xs text-slate-500">Sin imágenes en la galería. Se usa la imagen principal.</p>}
+              <p className="text-xs text-slate-500">JPG, PNG o WebP. Se optimizan antes de subirlas (máx. 1600 px).</p>
+              <ExternalUrlOption forceOpen={!storageAvailable}>
+                <div className="flex items-end gap-3 rounded-2xl bg-canvas p-4">
+                  <div className="flex-1">
+                    <Input label="URL de la imagen" value={newImage} onChange={e => setNewImage(e.target.value)} placeholder="https://…" disabled={imagenes.length >= MAX_IMAGES} />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addImage}
+                    disabled={imagenes.length >= MAX_IMAGES || !newImage.trim() || !online}
+                    title={offlineTitle}
+                    className="inline-flex h-10 items-center gap-1.5 rounded-full bg-brand px-5 text-sm font-bold text-white hover:bg-brand-hover disabled:opacity-50"
+                  >
+                    <Plus className="h-4 w-4" /> Agregar
+                  </button>
+                </div>
+              </ExternalUrlOption>
             </div>
           )}
 
