@@ -37,7 +37,8 @@ export const AddressFormModal: React.FC<AddressFormModalProps> = ({ isOpen, onCl
   const { data: municipalities = [], isLoading } = useQuery({
     queryKey: ['municipalities'],
     queryFn: checkoutApi.getMunicipalities,
-    staleTime: 10 * 60_000,
+    staleTime: 30 * 60_000,
+    gcTime: 30 * 60_000,
   });
 
   const [etiqueta, setEtiqueta] = useState('Casa');

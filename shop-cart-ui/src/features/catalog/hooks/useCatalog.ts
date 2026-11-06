@@ -7,7 +7,8 @@ export function useCategories() {
   return useQuery({
     queryKey: ['categories'],
     queryFn: () => catalogApi.getCategories(),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 30 * 60_000,
+    gcTime: 30 * 60_000,
   });
 }
 
