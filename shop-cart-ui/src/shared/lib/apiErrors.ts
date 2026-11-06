@@ -34,7 +34,8 @@ const MENSAJES: Record<string, string> = {
   GALLERY_LIMIT_REACHED: 'La galería ya llegó a su límite de imágenes.',
   SKU_DUPLICATED: 'Ya existe una variante con ese SKU.',
   PRICE_INVALID: 'El precio no es válido.',
-  REFERENCE_PRICE_INVALID: 'El precio de referencia debe ser mayor a cero.',
+  REFERENCE_PRICE_INVALID: 'El precio antes debe ser mayor al precio actual.',
+  INVALID_REFERENCE_PRICE: 'El precio antes debe ser mayor a cero.',
   NAME_TOO_SHORT: 'El nombre es demasiado corto.',
   // inventario
   INSUFFICIENT_STOCK: 'No hay existencia suficiente.',

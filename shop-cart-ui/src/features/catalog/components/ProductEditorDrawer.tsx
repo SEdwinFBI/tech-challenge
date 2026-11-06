@@ -14,6 +14,8 @@ import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { CoverUploadField, ExternalUrlOption, GalleryAddTile } from './ImageUploadField';
 import { useStorageAvailable } from '../hooks/useImageUpload';
 import { CatalogReviewPanel } from './CatalogReviewPanel';
+import { OfferSection, Switch } from './OfferSection';
+import { OfferDraft, EMPTY_OFFER, offerError, offerFromReference, referenceFor } from '../lib/offer';
 
 type Tab = 'datos' | 'imagenes' | 'variantes';
 const MAX_IMAGES = 10;
@@ -30,26 +32,6 @@ interface EditDraft {
 }
 
 const apiMessage = apiErrorMessage;
-
-const Switch: React.FC<{ checked: boolean; onChange: (v: boolean) => void; label: string; hint?: string; disabled?: boolean }> = ({
-  checked,
-  onChange,
-  label,
-  hint,
-  disabled,
-}) => (
-  <label className={`flex items-start justify-between gap-4 rounded-xl border border-slate-200 p-4 ${disabled ? 'opacity-60' : 'cursor-pointer'}`}>
-    <span>
-      <span className="block text-sm font-bold text-slate-900">{label}</span>
-      {hint && <span className="mt-0.5 block text-xs text-slate-500">{hint}</span>}
-    </span>
-    <span className="relative inline-flex shrink-0">
-      <input type="checkbox" role="switch" checked={checked} disabled={disabled} onChange={e => onChange(e.target.checked)} className="peer sr-only" />
-      <span className="h-6 w-11 rounded-full bg-slate-200 transition peer-checked:bg-brand peer-focus-visible:ring-2 peer-focus-visible:ring-brand peer-focus-visible:ring-offset-2" />
-      <span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
-    </span>
-  </label>
-);
 
 export interface ProductEditorDrawerProps {
   productId: number | null;
@@ -183,7 +165,9 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
   };
 
   const [priceDraft, setPriceDraft] = useState<Record<number, string>>({});
-  const [refDraft, setRefDraft] = useState<Record<number, string>>({});
+  const [offer, setOffer] = useState<OfferDraft>(EMPTY_OFFER);
+  const [offerTouched, setOfferTouched] = useState(false);
+  const [savingOffer, setSavingOffer] = useState(false);
   const [priceConfirm, setPriceConfirm] = useState<{ variant: Variant; next: number } | null>(null);
   const [confirmingPrice, setConfirmingPrice] = useState(false);
   const [newVariant, setNewVariant] = useState({ sku: '', talla: '', color: '', presentacion: '', precio: '', existencia: '0' });
@@ -197,17 +181,59 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
       return;
     }
     if (next === Number(v.Precio)) return;
+    if (v.PrecioReferencia != null && next >= Number(v.PrecioReferencia)) return;
     setPriceConfirm({ variant: v, next });
   };
 
-  const saveReference = async (v: Variant) => {
-    const raw = (refDraft[v.IDVariante] ?? '').trim();
-    const next = raw === '' ? null : Number(raw);
-    if (next !== null && (!Number.isFinite(next) || next <= Number(v.Precio))) {
-      toast.error('Debe ser mayor al precio de venta');
-      return;
-    }
-    await run(() => catalogApi.setReferencePrice(v.IDVariante, next), next === null ? 'Precio de referencia quitado' : 'Precio de referencia guardado', 'No se pudo guardar el precio de referencia');
+  const priced = useMemo(() => {
+    const active = variantes.filter(v => v.Activo);
+    return active.length > 0 ? active : variantes;
+  }, [variantes]);
+  const basePrice = priced.length > 0 ? Math.min(...priced.map(v => Number(v.Precio))) : 0;
+  const multiPrice = new Set(priced.map(v => Number(v.Precio))).size > 1;
+  const staleOffers = variantes.filter(v => v.PrecioReferencia != null && Number(v.PrecioReferencia) <= Number(v.Precio));
+
+  const initialOffer = useMemo<OfferDraft>(() => {
+    const withOffer = priced.filter(v => v.PrecioReferencia != null && Number(v.PrecioReferencia) > Number(v.Precio));
+    if (withOffer.length === 0) return EMPTY_OFFER;
+    const v = withOffer.reduce((lo, x) => (Number(x.Precio) < Number(lo.Precio) ? x : lo));
+    const antes = Math.round(((Number(v.PrecioReferencia) * basePrice) / Number(v.Precio)) * 100) / 100;
+    return offerFromReference(antes, basePrice);
+  }, [priced, basePrice]);
+
+  const offerKey = variantes.map(v => `${v.IDVariante}:${v.Precio}:${v.PrecioReferencia ?? ''}`).join('|');
+  const [offerSyncKey, setOfferSyncKey] = useState('');
+  if (offerKey !== offerSyncKey) {
+    setOfferSyncKey(offerKey);
+    setOffer(initialOffer);
+    setOfferTouched(false);
+  }
+
+  const offerDirty = offer.on !== initialOffer.on || offer.antes !== initialOffer.antes || offer.pct !== initialOffer.pct;
+  const offerValid = offerError(offer, basePrice, true) === null;
+  const offerChanges = !offer.on
+    ? variantes.filter(v => v.PrecioReferencia != null).map(v => ({ v, next: null as number | null }))
+    : offerValid
+      ? variantes
+          .map(v => ({ v, next: referenceFor(Number(v.Precio), basePrice, Number(offer.antes)) as number | null }))
+          .filter(c => c.v.PrecioReferencia == null || Number(c.v.PrecioReferencia) !== c.next)
+      : [];
+  const showOfferSave = offer.on ? offerDirty || offerChanges.length > 0 : offerChanges.length > 0;
+
+  const applyOffer = async (clear: boolean) => {
+    setOfferTouched(true);
+    const changes = clear ? variantes.filter(v => v.PrecioReferencia != null).map(v => ({ v, next: null as number | null })) : offerChanges;
+    if (!clear && offer.on && !offerValid) return;
+    setSavingOffer(true);
+    const ok = await run(
+      async () => {
+        for (const c of changes) await catalogApi.setReferencePrice(c.v.IDVariante, c.next);
+      },
+      clear || !offer.on ? 'Oferta quitada' : 'Oferta guardada',
+      'No se pudo guardar la oferta',
+    );
+    if (ok && clear) setOffer(EMPTY_OFFER);
+    setSavingOffer(false);
   };
 
   const createVariant = async (e: React.FormEvent) => {
@@ -361,7 +387,7 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
                   onFinished={n => toast.success(n === 1 ? 'Imagen agregada' : `${n} imágenes agregadas`)}
                 />
               </ul>
-              {imagenes.length === 0 && <p className="text-xs text-slate-500">Sin imágenes en la galería. Se usa la imagen principal.</p>}
+              {imagenes.length === 0 && <p className="text-xs text-slate-500">Sin imágenes en la galería. La tienda muestra solo la imagen principal; si agregas fotos, la principal siempre va primero.</p>}
               <p className="text-xs text-slate-500">JPG, PNG o WebP. Se optimizan antes de subirlas (máx. 1600 px).</p>
               <ExternalUrlOption forceOpen={!storageAvailable}>
                 <div className="flex items-end gap-3 rounded-2xl bg-canvas p-4">
@@ -384,13 +410,37 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
 
           {tab === 'variantes' && (
             <div className="space-y-6">
+              <section className="space-y-3 rounded-2xl bg-canvas p-4" aria-label="Oferta">
+                <div>
+                  <p className="text-sm font-extrabold text-slate-900">Oferta</p>
+                  <p className="text-xs text-slate-500">El precio que paga el cliente se cambia en la tabla. Aquí solo defines el precio antes.</p>
+                </div>
+                {staleOffers.length > 0 && (
+                  <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                    <span>El precio antes de {staleOffers.map(v => v.SKU).join(', ')} ya no es mayor al precio actual, por eso no se muestra la oferta.</span>
+                    <button type="button" onClick={() => applyOffer(true)} disabled={!online || savingOffer} className="h-8 rounded-full bg-amber-600 px-3 font-bold text-white hover:bg-amber-700 disabled:opacity-60">Quitar oferta</button>
+                  </div>
+                )}
+                <OfferSection draft={offer} onChange={setOffer} price={basePrice} multiPrice={multiPrice} showEmptyError={offerTouched} disabled={savingOffer} />
+                {showOfferSave && staleOffers.length === 0 && (
+                  <div className="flex justify-end">
+                    <button type="button" onClick={() => applyOffer(false)} disabled={!online || savingOffer} title={offlineTitle} className="inline-flex h-10 items-center gap-2 rounded-full bg-brand px-5 text-sm font-bold text-white hover:bg-brand-hover disabled:opacity-60">
+                      {savingOffer && <Loader2 className="h-4 w-4 animate-spin" />} {offer.on ? 'Guardar oferta' : 'Quitar oferta'}
+                    </button>
+                  </div>
+                )}
+                {showOfferSave && staleOffers.length > 0 && offer.on && (
+                  <div className="flex justify-end">
+                    <button type="button" onClick={() => applyOffer(false)} disabled={!online || savingOffer} className="inline-flex h-10 items-center gap-2 rounded-full bg-brand px-5 text-sm font-bold text-white hover:bg-brand-hover disabled:opacity-60">Guardar oferta</button>
+                  </div>
+                )}
+              </section>
               <div className="overflow-x-auto rounded-2xl border border-slate-200">
                 <table className="w-full min-w-[46rem] text-left text-sm">
                   <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
                     <tr>
                       <th className="px-4 py-3">SKU / Atributos</th>
-                      <th className="px-4 py-3">Precio de venta</th>
-                      <th className="px-4 py-3">Precio de referencia</th>
+                      <th className="px-4 py-3">Precio</th>
                       <th className="px-4 py-3">Existencia</th>
                       <th className="px-4 py-3 text-right">Estado</th>
                     </tr>
@@ -399,7 +449,9 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
                     {variantes.map(v => {
                       const pct = discountPercent(v.PrecioReferencia, Number(v.Precio));
                       const priceVal = priceDraft[v.IDVariante] ?? String(v.Precio);
-                      const refVal = refDraft[v.IDVariante] ?? (v.PrecioReferencia != null ? String(v.PrecioReferencia) : '');
+                      const refNow = v.PrecioReferencia != null ? Number(v.PrecioReferencia) : null;
+                      const priceChanged = priceVal !== String(v.Precio);
+                      const priceBlocked = priceChanged && refNow !== null && priceVal !== '' && Number(priceVal) >= refNow;
                       return (
                         <tr key={v.IDVariante} className={v.Activo ? '' : 'bg-slate-50/70 text-slate-400'}>
                           <td className="px-4 py-3 align-top">
@@ -416,27 +468,16 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
                                 onChange={e => setPriceDraft(d => ({ ...d, [v.IDVariante]: e.target.value.replace(/[^0-9.]/g, '') }))}
                                 className="h-9 w-24 rounded-lg border border-slate-300 px-2 text-sm font-bold tabular outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
                               />
-                              {priceVal !== String(v.Precio) && (
-                                <button type="button" onClick={() => savePrice(v)} disabled={!online} title={offlineTitle} className="h-9 rounded-lg bg-brand px-3 text-xs font-bold text-white disabled:opacity-50 hover:bg-brand-hover">Guardar</button>
+                              {priceChanged && (
+                                <button type="button" onClick={() => savePrice(v)} disabled={!online || priceBlocked} title={offlineTitle} className="h-9 rounded-lg bg-brand px-3 text-xs font-bold text-white disabled:opacity-50 hover:bg-brand-hover">Guardar</button>
                               )}
                             </div>
-                          </td>
-                          <td className="px-4 py-3 align-top">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs text-slate-400">Q</span>
-                              <input
-                                inputMode="decimal"
-                                aria-label={`Precio de referencia de ${v.SKU}`}
-                                placeholder="Sin oferta"
-                                value={refVal}
-                                onChange={e => setRefDraft(d => ({ ...d, [v.IDVariante]: e.target.value.replace(/[^0-9.]/g, '') }))}
-                                className="h-9 w-24 rounded-lg border border-slate-300 px-2 text-sm tabular outline-none placeholder:text-xs focus:border-brand focus:ring-2 focus:ring-brand/20"
-                              />
-                              {refVal !== (v.PrecioReferencia != null ? String(v.PrecioReferencia) : '') && (
-                                <button type="button" onClick={() => saveReference(v)} disabled={!online} title={offlineTitle} className="h-9 rounded-lg bg-slate-800 px-3 text-xs font-bold text-white disabled:opacity-50 hover:bg-slate-700">Guardar</button>
-                              )}
-                            </div>
-                            {pct > 0 && <p className="mt-1 text-[11px] font-bold text-sale">-{pct}%</p>}
+                            {priceBlocked && (
+                              <p role="alert" className="mt-1 max-w-[16rem] text-[11px] font-medium text-rose-600">
+                                Debe ser menor al precio antes ({formatMoney(refNow)}). Cambia o quita la oferta primero.
+                              </p>
+                            )}
+                            {pct > 0 && !priceChanged && <p className="mt-1 text-[11px] font-bold text-sale">Oferta -{pct}% · antes {formatMoney(refNow)}</p>}
                           </td>
                           <td className="px-4 py-3 align-top text-xs tabular">
                             <p><strong className="text-slate-900">{v.ExistenciaDisponible}</strong> disponibles</p>

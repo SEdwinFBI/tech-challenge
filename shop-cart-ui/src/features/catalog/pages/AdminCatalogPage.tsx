@@ -40,6 +40,8 @@ import { toast } from '@/shared/ui/toastStore';
 import type { Category } from '@/shared/types/domain';
 import { clearDraft, readDraft, saveDraft } from '@/shared/lib/draft';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
+import { OfferSection } from '../components/OfferSection';
+import { EMPTY_OFFER, offerError, withPct } from '../lib/offer';
 
 const apiMessage = apiErrorMessage;
 
@@ -95,10 +97,11 @@ export const AdminCatalogPage: React.FC = () => {
   });
   const products = productsQuery.data?.items ?? [];
 
-  const emptyProduct = { nombre: '', descripcion: '', idCategoria: 0, imagenUrl: '', sku: '', color: '', talla: '', presentacion: '', precio: '', existencia: '0' };
+  const emptyProduct = { nombre: '', descripcion: '', idCategoria: 0, imagenUrl: '', sku: '', color: '', talla: '', presentacion: '', precio: '', existencia: '0', oferta: EMPTY_OFFER };
   const [newProductDraft] = useState(() => readDraft<typeof emptyProduct>(NEW_DRAFT));
   const [newProductOpen, setNewProductOpen] = useState(newProductDraft !== null);
-  const [np, setNp] = useState(newProductDraft ?? emptyProduct);
+  const [np, setNp] = useState({ ...emptyProduct, ...newProductDraft });
+  const [offerTouched, setOfferTouched] = useState(false);
 
   useEffect(() => {
     if (newProductOpen) saveDraft(NEW_DRAFT, np);
@@ -108,6 +111,7 @@ export const AdminCatalogPage: React.FC = () => {
     clearDraft(NEW_DRAFT);
     setCover(null);
     setCoverProgress(null);
+    setOfferTouched(false);
     setNewProductOpen(false);
   };
 
@@ -121,6 +125,7 @@ export const AdminCatalogPage: React.FC = () => {
 
   const openNewProduct = () => {
     setCover(null);
+    setOfferTouched(false);
     setNp({ ...emptyProduct, idCategoria: categories.find(c => c.Activo)?.IDCategoria ?? 0 });
     setNewProductOpen(true);
   };
@@ -133,6 +138,8 @@ export const AdminCatalogPage: React.FC = () => {
     if (np.sku.trim().length < 3) return toast.error('Mínimo 3 caracteres');
     if (!Number.isFinite(precio) || precio <= 0) return toast.error('Precio no válido');
     if (np.imagenUrl.trim() && !/^https?:\/\//i.test(np.imagenUrl.trim())) return toast.error('La URL debe empezar con http:// o https://');
+    setOfferTouched(true);
+    if (offerError(np.oferta, precio, true)) return;
     setCreatingProduct(true);
     try {
       const created = await catalogApi.createProduct({
@@ -145,6 +152,7 @@ export const AdminCatalogPage: React.FC = () => {
         color: np.color.trim() || undefined,
         presentacion: np.presentacion.trim() || undefined,
         precio,
+        precioReferencia: np.oferta.on ? Number(np.oferta.antes) : undefined,
         existenciaInicial: Math.max(0, Math.floor(Number(np.existencia) || 0)),
       });
       if (cover && created.IDProducto) {
@@ -381,9 +389,19 @@ export const AdminCatalogPage: React.FC = () => {
               <Input label="Talla" value={np.talla} onChange={e => setNp(s => ({ ...s, talla: e.target.value }))} placeholder="Única" />
               <Input label="Color" value={np.color} onChange={e => setNp(s => ({ ...s, color: e.target.value }))} placeholder="Negro" />
               <Input label="Presentación" value={np.presentacion} onChange={e => setNp(s => ({ ...s, presentacion: e.target.value }))} />
-              <Input label="Precio (Q) *" inputMode="decimal" value={np.precio} onChange={e => setNp(s => ({ ...s, precio: e.target.value.replace(/[^0-9.]/g, '') }))} />
+              <Input label="Precio (Q) *" inputMode="decimal" value={np.precio} onChange={e => {
+                const precio = e.target.value.replace(/[^0-9.]/g, '');
+                setNp(s => ({ ...s, precio, oferta: s.oferta.on && s.oferta.pct ? withPct(s.oferta, s.oferta.pct, Number(precio)) : s.oferta }));
+              }} />
               <Input label="Existencia inicial" inputMode="numeric" value={np.existencia} onChange={e => setNp(s => ({ ...s, existencia: e.target.value.replace(/\D/g, '') }))} />
             </div>
+            <OfferSection
+              draft={np.oferta}
+              onChange={oferta => setNp(s => ({ ...s, oferta }))}
+              price={Number(np.precio)}
+              showEmptyError={offerTouched}
+              disabled={creatingProduct}
+            />
           </div>
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
             <Button type="button" variant="outline" onClick={closeNewProduct}>Cancelar</Button>

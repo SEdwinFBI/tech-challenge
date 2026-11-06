@@ -61,6 +61,7 @@ export interface CreateProductPayload {
   color?: string;
   presentacion?: string;
   precio: number;
+  precioReferencia?: number;
   existenciaInicial?: number;
 }
 

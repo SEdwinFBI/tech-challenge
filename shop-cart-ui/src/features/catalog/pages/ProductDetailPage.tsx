@@ -11,6 +11,7 @@ import { useCart } from '@/features/cart/hooks/useCart';
 import { useAuth } from '@/features/auth';
 import { useFavorites } from '@/features/wishlist/hooks/useFavorites';
 import { ProductGallery } from '../components/ProductGallery';
+import { galleryImages } from '../lib/gallery';
 import { ProductRail } from '@/shared/ui/ProductRail';
 import { useRecommendations, useRecordProductView } from '@/features/recommendations/hooks/useRecommendations';
 import { StickyBuyBar } from '../components/StickyBuyBar';
@@ -158,7 +159,7 @@ export const ProductDetailPage: React.FC = () => {
   const soldOut = availableForMe <= 0;
   const noMore = !soldOut && remaining === 0;
   const pct = discountPercent(variant.PrecioReferencia, variant.Precio);
-  const images = (data.imagenes && data.imagenes.length > 0 ? data.imagenes.map(i => i.Url) : producto.ImagenUrl ? [producto.ImagenUrl] : []).filter(Boolean);
+  const images = galleryImages(producto.ImagenUrl, data.imagenes);
   const address = addresses.data?.[0];
   const ship = address ? quoteShipping(Number(variant.Precio) * quantity, address) : null;
 
