@@ -88,10 +88,11 @@ export const ordersApi = {
       Subtotal: d.SubtotalLinea ?? d.Subtotal ?? 0,
       CantidadDevuelta: d.CantidadDevuelta ?? 0,
     }));
+    const toCode = (v: string) => (v ? v.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toUpperCase().replace(/s+/g, '_') : '');
     const historial: OrderHistoryEntry[] = (raw.historial || []).map((h: any) => ({
       IDHistorial: h.IDPedidoHistorial ?? h.IDHistorial ?? 0,
-      EstadoAnterior: h.EstadoAnterior || '',
-      EstadoNuevo: h.EstadoNuevo || '',
+      EstadoAnterior: toCode(h.EstadoAnterior || ''),
+      EstadoNuevo: toCode(h.EstadoNuevo || ''),
       FechaCambio: h.FechaCambio || '',
       UsuarioResponsable: h.Usuario || h.UsuarioResponsable || '',
       Motivo: h.Comentario ?? h.Motivo ?? '',
@@ -107,7 +108,7 @@ export const ordersApi = {
   updateOrderStatus: async (id: number, nuevoEstado: OrderStatus, motivo?: string): Promise<{ ok: boolean; idPedido: number; estado: OrderStatus }> => {
     const res = await apiClient.patch<{ ok: boolean; idPedido: number; estado: OrderStatus }>(`/pedidos/${id}/estado`, {
       nuevoEstado,
-      comentario: motivo || `Transición a ${nuevoEstado}`,
+      comentario: motivo || undefined,
     });
     return res.data;
   },

@@ -11,7 +11,7 @@ export const ORDER_STATUS_META: Record<string, OrderStatusMeta> = {
   EN_PREPARACION: { label: 'En preparación', hint: 'Preparando tu pedido.', tone: 'purple' },
   DESPACHADO: { label: 'Despachado', hint: 'Salió con la mensajería.', tone: 'warning' },
   ENTREGADO: { label: 'Entregado', hint: 'Pedido entregado.', tone: 'success' },
-  CANCELADO: { label: 'Cancelado', hint: 'Las unidades volvieron al stock.', tone: 'error' },
+  CANCELADO: { label: 'Cancelado', hint: 'Las unidades volvieron al inventario.', tone: 'error' },
   DEVUELTO_PARCIAL: { label: 'Devolución parcial', hint: 'Se devolvieron algunas unidades.', tone: 'warning' },
   DEVUELTO_TOTAL: { label: 'Devuelto', hint: 'Se devolvió todo el pedido.', tone: 'error' },
 };

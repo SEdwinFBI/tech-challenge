@@ -160,7 +160,7 @@ export const OrderDetailPage: React.FC = () => {
         onConfirm={() => cancel.mutate()}
         loading={cancel.isPending}
         title="Cancelar pedido"
-        consequence="Las unidades vuelven a la bodega."
+        consequence="Las unidades vuelven al inventario."
         confirmText="Sí, cancelar"
         cancelText="No"
       >

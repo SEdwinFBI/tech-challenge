@@ -11,13 +11,11 @@ import {
   Button,
   Modal,
   ConfirmDialog,
-  Select,
-  Input,
   Skeleton,
   ErrorState,
   PageHeader,
 } from '@/shared/ui';
-import { ArrowLeft, MapPin, RefreshCcw, ShieldCheck, AlertTriangle, RotateCcw } from 'lucide-react';
+import { ArrowLeft, MapPin, RotateCcw } from 'lucide-react';
 import { toast } from '@/shared/ui/toastStore';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
 
@@ -39,6 +37,7 @@ export const AdminOrderDetailPage: React.FC = () => {
 
   const [targetStatus, setTargetStatus] = useState<OrderStatus | ''>('');
   const [statusReason, setStatusReason] = useState('');
+  const [reasonError, setReasonError] = useState('');
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
 
   const [selectedLineForReturn, setSelectedLineForReturn] = useState<OrderItem | null>(null);
@@ -58,8 +57,8 @@ export const AdminOrderDetailPage: React.FC = () => {
   const nextAllowedStates = pedido ? ALLOWED_TRANSITIONS[pedido.Estado] || [] : [];
 
   const changeStatusMutation = useMutation({
-    mutationFn: () => ordersApi.updateOrderStatus(orderId, targetStatus as OrderStatus, statusReason),
-    onSuccess: (res) => {
+    mutationFn: () => ordersApi.updateOrderStatus(orderId, targetStatus as OrderStatus, statusReason.trim() || undefined),
+    onSuccess: () => {
       toast.success('Estado actualizado');
       setIsStatusDialogOpen(false);
       setStatusReason('');
@@ -96,6 +95,28 @@ export const AdminOrderDetailPage: React.FC = () => {
       toast.error('Error al procesar devolución', msg);
     },
   });
+
+  const openStatusDialog = (st: OrderStatus) => {
+    setTargetStatus(st);
+    setStatusReason('');
+    setReasonError('');
+    setIsStatusDialogOpen(true);
+  };
+
+  const confirmStatusChange = () => {
+    if (targetStatus === 'CANCELADO') {
+      const len = statusReason.trim().length;
+      if (len < 5) {
+        setReasonError('El motivo debe tener al menos 5 caracteres.');
+        return;
+      }
+      if (len > 300) {
+        setReasonError('El motivo no puede superar los 300 caracteres.');
+        return;
+      }
+    }
+    changeStatusMutation.mutate();
+  };
 
   const openReturnModal = (line: OrderItem) => {
     setSelectedLineForReturn(line);
@@ -149,7 +170,7 @@ export const AdminOrderDetailPage: React.FC = () => {
           Cambiar estado
         </h2>
         {nextAllowedStates.length === 0 ? (
-          <p className="text-xs text-slate-400 italic">Estado final: {pedido.Estado}.</p>
+          <p className="text-xs text-slate-400 italic">Estado final: {orderStatusMeta(pedido.Estado).label}.</p>
         ) : (
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-xs text-slate-600 font-medium">Cambiar a:</span>
@@ -158,10 +179,7 @@ export const AdminOrderDetailPage: React.FC = () => {
                 key={st}
                 size="sm"
                 variant={st === 'CANCELADO' ? 'destructive' : 'primary'}
-                onClick={() => {
-                  setTargetStatus(st);
-                  setIsStatusDialogOpen(true);
-                }}
+                onClick={() => openStatusDialog(st)}
               >
                 {orderStatusMeta(st).label}
               </Button>
@@ -216,7 +234,7 @@ export const AdminOrderDetailPage: React.FC = () => {
                       onClick={() => openReturnModal(line)}
                       leftIcon={<RotateCcw className="w-3.5 h-3.5 mr-1 text-amber-600" />}
                     >
-                      Devolución ({maxReturnable} disp.)
+                      Devolución ({maxReturnable} por devolver)
                     </Button>
                   )}
                 </div>
@@ -247,22 +265,34 @@ export const AdminOrderDetailPage: React.FC = () => {
       <ConfirmDialog
         isOpen={isStatusDialogOpen}
         onClose={() => setIsStatusDialogOpen(false)}
-        onConfirm={changeStatusMutation.mutate}
+        onConfirm={confirmStatusChange}
         loading={changeStatusMutation.isPending}
         title={`Cambiar a ${targetStatus ? orderStatusMeta(targetStatus).label : ''}`}
-        consequence={`${pedido.Estado} → ${targetStatus}`}
+        consequence={`${orderStatusMeta(pedido.Estado).label} → ${targetStatus ? orderStatusMeta(targetStatus).label : ''}`}
         confirmText="Confirmar"
       >
-        {targetStatus === 'CANCELADO' && (
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-700">
+            {targetStatus === 'CANCELADO' ? 'Motivo de la cancelación' : 'Nota (opcional)'}
+          </span>
           <textarea
             value={statusReason}
-            onChange={(e) => setStatusReason(e.target.value)}
-            rows={2}
-            placeholder="Motivo de la cancelación (opcional)"
-            aria-label="Motivo de la cancelación"
-            className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+            onChange={(e) => {
+              setStatusReason(e.target.value);
+              setReasonError('');
+            }}
+            rows={3}
+            maxLength={300}
+            required={targetStatus === 'CANCELADO'}
+            aria-invalid={Boolean(reasonError)}
+            aria-describedby={reasonError ? 'status-reason-error' : undefined}
+            className={`w-full px-3.5 py-2 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 ${reasonError ? 'border-rose-400' : 'border-slate-300'}`}
           />
-        )}
+          <span className="mt-1 flex justify-between text-xs">
+            <span id="status-reason-error" role="alert" className="font-semibold text-rose-600">{reasonError}</span>
+            <span className="text-slate-400">{statusReason.length}/300</span>
+          </span>
+        </label>
       </ConfirmDialog>
 
       {selectedLineForReturn && (

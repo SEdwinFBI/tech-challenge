@@ -458,6 +458,17 @@ describe('Validación de Esquemas Zod', () => {
       });
       assert.equal(valido.success, true);
 
+      const sinMotivo = UpdateOrderStatusSchema.safeParse({ idPedido: 42, nuevoEstado: 'CANCELADO' });
+      assert.equal(sinMotivo.success, false);
+      const motivoCorto = UpdateOrderStatusSchema.safeParse({ idPedido: 42, nuevoEstado: 'CANCELADO', comentario: ' abc ' });
+      assert.equal(motivoCorto.success, false);
+      const motivoLargo = UpdateOrderStatusSchema.safeParse({ idPedido: 42, nuevoEstado: 'CANCELADO', comentario: 'x'.repeat(301) });
+      assert.equal(motivoLargo.success, false);
+      const motivoValido = UpdateOrderStatusSchema.safeParse({ idPedido: 42, nuevoEstado: 'CANCELADO', comentario: 'Cliente sin stock' });
+      assert.equal(motivoValido.success, true);
+      const sinMotivoOtroEstado = UpdateOrderStatusSchema.safeParse({ idPedido: 42, nuevoEstado: 'DESPACHADO' });
+      assert.equal(sinMotivoOtroEstado.success, true);
+
       const estadoInvalido = UpdateOrderStatusSchema.safeParse({
         idPedido: 42,
         nuevoEstado: 'EN_RUTA_A_DESTINO',

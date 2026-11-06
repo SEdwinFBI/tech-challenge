@@ -36,11 +36,16 @@ export const GetOrdersSchema = z
 
 export type GetOrdersDTO = z.infer<typeof GetOrdersSchema>;
 
-export const UpdateOrderStatusSchema = z.object({
-  idPedido: z.coerce.number().int().positive(),
-  nuevoEstado: z.enum(['EN_PREPARACION', 'DESPACHADO', 'ENTREGADO', 'CANCELADO']),
-  comentario: z.string().max(300).optional(),
-});
+export const UpdateOrderStatusSchema = z
+  .object({
+    idPedido: z.coerce.number().int().positive(),
+    nuevoEstado: z.enum(['EN_PREPARACION', 'DESPACHADO', 'ENTREGADO', 'CANCELADO']),
+    comentario: z.string().trim().max(300, 'El motivo no puede superar los 300 caracteres.').optional(),
+  })
+  .refine((d) => d.nuevoEstado !== 'CANCELADO' || (d.comentario?.length ?? 0) >= 5, {
+    path: ['comentario'],
+    message: 'El motivo de la cancelación debe tener entre 5 y 300 caracteres.',
+  });
 
 export type UpdateOrderStatusDTO = z.infer<typeof UpdateOrderStatusSchema>;
 
