@@ -1,4 +1,7 @@
 import { Router } from 'express';
+import { ReviewCatalogProductSchema } from './models/catalog-review.schema';
+import { reviewCatalog } from './catalog-review.dependencies';
+import { recommendationRateLimiter } from '@/core/middlewares/rate-limit.middleware';
 import { optionalAuthLenient, requireAuth, requireRoles } from '@/core/middlewares/auth.middleware';
 import { requireNumericId } from '@/core/middlewares/validate-param.middleware';
 import { GetCategoriesQueryHandler } from './queries/get-categories.query';
@@ -36,6 +39,14 @@ import {
 } from './models/catalogo.schema';
 
 export const catalogoRouter = Router();
+
+catalogoRouter.post('/revision', requireAuth, requireRoles('ADMINISTRADOR'), recommendationRateLimiter, async (req, res, next) => {
+  try {
+    const result = await reviewCatalog.handle(ReviewCatalogProductSchema.parse(req.body));
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json({ ok: true, ...result });
+  } catch (err) { next(err); }
+});
 
 const getCategoriesQueryHandler = new GetCategoriesQueryHandler();
 const getProductsQueryHandler = new GetProductsQueryHandler();

@@ -285,6 +285,61 @@ export const openApiSpec = {
     },
   },
   paths: {
+    '/recomendaciones': {
+      get: {
+        tags: ['Recomendaciones'],
+        summary: 'Top 10 segun vistas, favoritos, carrito y compras',
+        security: [{ bearerAuth: [] }, {}],
+        parameters: [
+          { name: 'contexto', in: 'query', schema: { type: 'string', enum: ['producto', 'carrito', 'inicio', 'favoritos', 'ofertas'], default: 'producto' } },
+          { name: 'idProducto', in: 'query', schema: { type: 'integer', minimum: 1 } },
+          { name: 'idCategoria', in: 'query', schema: { type: 'integer', minimum: 1 } },
+          { name: 'precioMin', in: 'query', schema: { type: 'number', minimum: 0 } },
+          { name: 'precioMax', in: 'query', schema: { type: 'number', minimum: 0 } },
+          { name: 'q', in: 'query', schema: { type: 'string', maxLength: 150 } },
+          { name: 'X-Guest-Token', in: 'header', schema: { type: 'string' }, description: 'Requerido para invitados' },
+        ],
+        responses: { 200: { description: 'items (hasta 10 productos) y origen (jev o preferencias)' }, 400: { description: 'Sesion o parametros invalidos' }, 429: { description: 'Limite de solicitudes' } },
+      },
+    },
+    '/recomendaciones/busqueda': {
+      get: {
+        tags: ['Recomendaciones'],
+        summary: 'Un producto recomendado por IA distinto de los resultados normales',
+        description: 'SQL selecciona hasta 20 candidatos por palabras clave y sinonimos, excluye coincidencias de la busqueda normal y Jev elige como maximo uno con suficiente relevancia. Devuelve item: null sin candidatos o ante fallos del proveedor.',
+        parameters: [
+          { name: 'q', in: 'query', required: true, schema: { type: 'string', minLength: 2, maxLength: 150 } },
+          { name: 'idCategoria', in: 'query', schema: { type: 'integer', minimum: 1 } },
+          { name: 'precioMin', in: 'query', schema: { type: 'number', minimum: 0 } },
+          { name: 'precioMax', in: 'query', schema: { type: 'number', minimum: 0 } },
+          { name: 'soloOfertas', in: 'query', schema: { type: 'string', enum: ['true', 'false'] } },
+        ],
+        responses: { 200: { description: 'item: producto o null' }, 400: { description: 'Parametros invalidos' }, 429: { description: 'Limite de solicitudes' } },
+      },
+    },
+    '/catalogo/revision': {
+      post: {
+        tags: ['Catalogo'], summary: 'Sugerir categoria y detectar posibles duplicados para revision administrativa',
+        security: [{ bearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: {
+          type: 'object', required: ['nombre'], properties: {
+            nombre: { type: 'string', minLength: 3, maxLength: 150 }, descripcion: { type: 'string', maxLength: 1000 }, idProducto: { type: 'integer', minimum: 1 },
+          },
+        } } } },
+        responses: { 200: { description: 'categoriaSugerida, posiblesDuplicados y evaluacionDisponible; no escribe cambios' },
+          400: { description: 'Entrada invalida' }, 401: { description: 'Autenticacion requerida' }, 403: { description: 'Solo administradores' }, 429: { description: 'Limite de solicitudes' } },
+      },
+    },
+    '/recomendaciones/vistas': {
+      post: {
+        tags: ['Recomendaciones'],
+        summary: 'Registrar una vista con deduplicacion de un minuto',
+        security: [{ bearerAuth: [] }, {}],
+        parameters: [{ name: 'X-Guest-Token', in: 'header', schema: { type: 'string' }, description: 'Requerido para invitados' }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['idProducto'], properties: { idProducto: { type: 'integer', minimum: 1 } } } } } },
+        responses: { 204: { description: 'Vista procesada' }, 400: { description: 'Sesion o parametros invalidos' }, 429: { description: 'Limite de solicitudes' } },
+      },
+    },
     '/auth/register': {
       post: {
         tags: ['Auth'],
