@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
-import { catalogApi } from '../api/catalogApi';
+import { catalogApi, type ProductDetailResponse } from '../api/catalogApi';
 import { Badge, ConfirmDialog, Drawer, ErrorState, Input, Select } from '@/shared/ui';
 import { SafeImage } from '@/shared/ui/SafeImage';
 import { toast } from '@/shared/ui/toastStore';
@@ -15,7 +15,7 @@ import { CoverUploadField, ExternalUrlOption, GalleryAddTile } from './ImageUplo
 import { useStorageAvailable } from '../hooks/useImageUpload';
 import { CatalogReviewPanel } from './CatalogReviewPanel';
 import { OfferSection, Switch } from './OfferSection';
-import { OfferDraft, EMPTY_OFFER, offerError, offerFromReference, referenceFor } from '../lib/offer';
+import { OfferDraft, EMPTY_OFFER, formatPct, isOfferComplete, nowFor, offerError, pctFromBefore, pctOf, referenceFor } from '../lib/offer';
 
 type Tab = 'datos' | 'imagenes' | 'variantes';
 const MAX_IMAGES = 10;
@@ -27,11 +27,12 @@ interface EditDraft {
   descripcion: string;
   idCategoria: number;
   imagenUrl: string;
-  activo: boolean;
-  destacado: boolean;
 }
 
 const apiMessage = apiErrorMessage;
+
+const beforeOf = (v: Variant): number =>
+  v.PrecioReferencia != null && Number(v.PrecioReferencia) > Number(v.Precio) ? Number(v.PrecioReferencia) : Number(v.Precio);
 
 export interface ProductEditorDrawerProps {
   productId: number | null;
@@ -59,26 +60,29 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
   const [descripcion, setDescripcion] = useState('');
   const [idCategoria, setIdCategoria] = useState<number>(0);
   const [imagenUrl, setImagenUrl] = useState('');
-  const [activo, setActivo] = useState(true);
-  const [destacado, setDestacado] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [toggling, setToggling] = useState<'activo' | 'destacado' | null>(null);
 
   // Producto ya cargado en el form; antes no se guarda borrador
   const [hydratedId, setHydratedId] = useState<number | null>(null);
 
+  const loadedId = producto?.IDProducto;
+  const loadedNombre = producto?.Nombre;
+  const loadedDescripcion = producto?.Descripcion;
+  const loadedCategoria = producto?.IDCategoria;
+  const loadedImagen = producto?.ImagenUrl;
+
   useEffect(() => {
-    if (producto) {
-      const d = readDraft<EditDraft>(EDIT_DRAFT);
-      const saved = d?.id === producto.IDProducto ? d : null;
-      setNombre(saved?.nombre ?? producto.Nombre);
-      setDescripcion(saved?.descripcion ?? producto.Descripcion ?? '');
-      setIdCategoria(saved?.idCategoria ?? producto.IDCategoria);
-      setImagenUrl(saved?.imagenUrl ?? producto.ImagenUrl ?? '');
-      setActivo(saved?.activo ?? producto.Activo);
-      setDestacado(saved?.destacado ?? Boolean(producto.Destacado));
-      setHydratedId(producto.IDProducto);
-    }
-  }, [producto]);
+    if (loadedId === undefined) return;
+    const d = readDraft<EditDraft>(EDIT_DRAFT);
+    const saved = d?.id === loadedId ? d : null;
+    setNombre(saved?.nombre ?? loadedNombre ?? '');
+    setDescripcion(saved?.descripcion ?? loadedDescripcion ?? '');
+    setIdCategoria(saved?.idCategoria ?? loadedCategoria ?? 0);
+    setImagenUrl(saved?.imagenUrl ?? loadedImagen ?? '');
+    setHydratedId(loadedId);
+  }, [loadedId, loadedNombre, loadedDescripcion, loadedCategoria, loadedImagen]);
 
   useEffect(() => {
     if (productId !== null) setTab('datos');
@@ -110,15 +114,39 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
     (nombre.trim() !== producto.Nombre ||
       descripcion !== (producto.Descripcion ?? '') ||
       idCategoria !== producto.IDCategoria ||
-      imagenUrl.trim() !== (producto.ImagenUrl ?? '') ||
-        activo !== producto.Activo ||
-        destacado !== Boolean(producto.Destacado));
+      imagenUrl.trim() !== (producto.ImagenUrl ?? ''));
 
   useEffect(() => {
     if (!producto || hydratedId !== producto.IDProducto) return;
-    if (dirty) saveDraft(EDIT_DRAFT, { id: producto.IDProducto, nombre, descripcion, idCategoria, imagenUrl, activo, destacado } satisfies EditDraft);
+    if (dirty) saveDraft(EDIT_DRAFT, { id: producto.IDProducto, nombre, descripcion, idCategoria, imagenUrl } satisfies EditDraft);
     else clearDraft(EDIT_DRAFT);
-  }, [producto, hydratedId, dirty, nombre, descripcion, idCategoria, imagenUrl, activo, destacado]);
+  }, [producto, hydratedId, dirty, nombre, descripcion, idCategoria, imagenUrl]);
+
+  const requestClose = () => {
+    if (confirmClose) return;
+    if (dirty) setConfirmClose(true);
+    else onClose();
+  };
+
+  const toggleFlag = async (flag: 'activo' | 'destacado', next: boolean) => {
+    if (!producto || toggling) return;
+    const key = ['admin-product', productId];
+    const field = flag === 'activo' ? 'Activo' : 'Destacado';
+    const previous = queryClient.getQueryData<ProductDetailResponse>(key);
+    queryClient.setQueryData<ProductDetailResponse>(key, old => (old ? { ...old, producto: { ...old.producto, [field]: next } } : old));
+    setToggling(flag);
+    try {
+      if (flag === 'activo') await catalogApi.updateProduct(producto.IDProducto, { activo: next });
+      else await catalogApi.setFeatured(producto.IDProducto, next);
+      toast.success(flag === 'activo' ? (next ? 'Producto visible en la tienda' : 'Producto oculto de la tienda') : next ? 'Producto destacado' : 'Producto sin destacar');
+      refreshAll();
+    } catch (err) {
+      queryClient.setQueryData(key, previous);
+      toast.error('No se pudo guardar el cambio', apiMessage(err, 'Intenta de nuevo.'));
+    } finally {
+      setToggling(null);
+    }
+  };
 
   const saveData = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,10 +166,8 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
           nombre: nombre.trim(),
           descripcion,
           idCategoria,
-          activo,
           ...(imagenUrl.trim() ? { imagenUrl: imagenUrl.trim() } : {}),
         });
-        if (destacado !== Boolean(producto.Destacado)) await catalogApi.setFeatured(producto.IDProducto, destacado);
       },
       'Producto actualizado',
       'No se pudo guardar el producto',
@@ -190,18 +216,26 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
     return active.length > 0 ? active : variantes;
   }, [variantes]);
   const basePrice = priced.length > 0 ? Math.min(...priced.map(v => Number(v.Precio))) : 0;
+  const minBefore = priced.length > 0 ? Math.min(...priced.map(beforeOf)) : 0;
+  const [rememberedAhora, setRememberedAhora] = useState<number | null>(null);
+  const ahoraRemembered = rememberedAhora === productId;
   const multiPrice = new Set(priced.map(v => Number(v.Precio))).size > 1;
   const staleOffers = variantes.filter(v => v.PrecioReferencia != null && Number(v.PrecioReferencia) <= Number(v.Precio));
 
   const initialOffer = useMemo<OfferDraft>(() => {
     const withOffer = priced.filter(v => v.PrecioReferencia != null && Number(v.PrecioReferencia) > Number(v.Precio));
     if (withOffer.length === 0) return EMPTY_OFFER;
+    if (ahoraRemembered) {
+      const lowest = priced.reduce((lo, x) => (beforeOf(x) < beforeOf(lo) ? x : lo));
+      const ahora = Number(lowest.Precio);
+      return { mode: 'ahora', antes: '', ahora: String(ahora), pct: formatPct(pctOf(beforeOf(lowest), ahora)) };
+    }
     const v = withOffer.reduce((lo, x) => (Number(x.Precio) < Number(lo.Precio) ? x : lo));
     const antes = Math.round(((Number(v.PrecioReferencia) * basePrice) / Number(v.Precio)) * 100) / 100;
-    return offerFromReference(antes, basePrice);
-  }, [priced, basePrice]);
+    return { mode: 'antes', antes: String(antes), ahora: '', pct: String(pctFromBefore(antes, basePrice)) };
+  }, [priced, basePrice, ahoraRemembered]);
 
-  const offerKey = variantes.map(v => `${v.IDVariante}:${v.Precio}:${v.PrecioReferencia ?? ''}`).join('|');
+  const offerKey = `${productId}:${ahoraRemembered}:` + variantes.map(v => `${v.IDVariante}:${v.Precio}:${v.PrecioReferencia ?? ''}`).join('|');
   const [offerSyncKey, setOfferSyncKey] = useState('');
   if (offerKey !== offerSyncKey) {
     setOfferSyncKey(offerKey);
@@ -209,30 +243,59 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
     setOfferTouched(false);
   }
 
-  const offerDirty = offer.on !== initialOffer.on || offer.antes !== initialOffer.antes || offer.pct !== initialOffer.pct;
-  const offerValid = offerError(offer, basePrice, true) === null;
-  const offerChanges = !offer.on
-    ? variantes.filter(v => v.PrecioReferencia != null).map(v => ({ v, next: null as number | null }))
-    : offerValid
+  const offerDirty = offer.mode !== initialOffer.mode || offer.antes !== initialOffer.antes || offer.ahora !== initialOffer.ahora || offer.pct !== initialOffer.pct;
+  const offerReference = offer.mode === 'ahora' ? minBefore : basePrice;
+  const offerValid = isOfferComplete(offer) && offerError(offer, offerReference, true) === null;
+  const antesChanges =
+    offer.mode === 'antes' && offerValid
       ? variantes
-          .map(v => ({ v, next: referenceFor(Number(v.Precio), basePrice, Number(offer.antes)) as number | null }))
+          .map(v => ({ v, next: referenceFor(Number(v.Precio), basePrice, Number(offer.antes)) }))
           .filter(c => c.v.PrecioReferencia == null || Number(c.v.PrecioReferencia) !== c.next)
       : [];
-  const showOfferSave = offer.on ? offerDirty || offerChanges.length > 0 : offerChanges.length > 0;
+  const showOfferSave = offer.mode === 'off' ? initialOffer.mode !== 'off' : offerDirty || antesChanges.length > 0;
 
-  const applyOffer = async (clear: boolean) => {
-    setOfferTouched(true);
-    const changes = clear ? variantes.filter(v => v.PrecioReferencia != null).map(v => ({ v, next: null as number | null })) : offerChanges;
-    if (!clear && offer.on && !offerValid) return;
+  const clearReferences = () => Promise.all(variantes.filter(v => v.PrecioReferencia != null).map(v => catalogApi.setReferencePrice(v.IDVariante, null)));
+
+  const clearStaleOffers = async () => {
     setSavingOffer(true);
-    const ok = await run(
-      async () => {
-        for (const c of changes) await catalogApi.setReferencePrice(c.v.IDVariante, c.next);
-      },
-      clear || !offer.on ? 'Oferta quitada' : 'Oferta guardada',
-      'No se pudo guardar la oferta',
-    );
-    if (ok && clear) setOffer(EMPTY_OFFER);
+    await run(clearReferences, 'Oferta quitada', 'No se pudo quitar la oferta');
+    setSavingOffer(false);
+  };
+
+  const saveOffer = async () => {
+    if (!producto) return;
+    setOfferTouched(true);
+    if (offer.mode !== 'off' && !offerValid) return;
+    setSavingOffer(true);
+    let ok: boolean;
+    if (offer.mode === 'off') {
+      ok = await run(
+        () => (initialOffer.mode === 'ahora' ? catalogApi.removeOffer(producto.IDProducto) : clearReferences()),
+        'Oferta quitada',
+        'No se pudo quitar la oferta',
+      );
+      if (ok) setRememberedAhora(null);
+    } else if (offer.mode === 'ahora') {
+      ok = await run(
+        () =>
+          catalogApi.applyOffer(
+            producto.IDProducto,
+            variantes.map(v => ({ idVariante: v.IDVariante, precioAhora: nowFor(beforeOf(v), minBefore, Number(offer.ahora)) })),
+          ),
+        'Oferta guardada',
+        'No se pudo guardar la oferta',
+      );
+      if (ok) setRememberedAhora(producto.IDProducto);
+    } else {
+      ok = await run(
+        async () => {
+          for (const c of antesChanges) await catalogApi.setReferencePrice(c.v.IDVariante, c.next);
+        },
+        'Oferta guardada',
+        'No se pudo guardar la oferta',
+      );
+      if (ok) setRememberedAhora(null);
+    }
     setSavingOffer(false);
   };
 
@@ -269,7 +332,7 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
   return (
     <Drawer
       isOpen={productId !== null}
-      onClose={onClose}
+      onClose={requestClose}
       title={producto ? producto.Nombre : 'Producto'}
       description={producto ? `${producto.Categoria} · ID ${producto.IDProducto}` : undefined}
       width="xl"
@@ -303,11 +366,17 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
               <div className="grid gap-3 sm:grid-cols-2">
                 <Switch
                   label="Producto activo"
-                  hint={activo ? 'Aparece en la tienda.' : 'No aparece en la tienda.'}
-                  checked={activo}
-                  onChange={setActivo}
+                  hint={producto.Activo ? 'Aparece en la tienda.' : 'No aparece en la tienda.'}
+                  checked={producto.Activo}
+                  disabled={toggling !== null}
+                  onChange={next => void toggleFlag('activo', next)}
                 />
-                <Switch label="Destacado" checked={destacado} onChange={setDestacado} />
+                <Switch
+                  label="Destacado"
+                  checked={Boolean(producto.Destacado)}
+                  disabled={toggling !== null}
+                  onChange={next => void toggleFlag('destacado', next)}
+                />
               </div>
               <Input label="Nombre" value={nombre} onChange={e => setNombre(e.target.value)} />
               <CatalogReviewPanel nombre={nombre} descripcion={descripcion} idProducto={producto.IDProducto} onCategory={setIdCategoria} />
@@ -342,7 +411,8 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
                   <Input label="URL de la imagen" value={imagenUrl} onChange={e => setImagenUrl(e.target.value)} placeholder="https://…" />
                 </CoverUploadField>
               </div>
-              <div className="flex justify-end border-t border-slate-100 pt-4">
+              <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
+                {dirty && <span className="text-xs font-semibold text-amber-700" role="status">Cambios sin guardar</span>}
                 <button
                   type="submit"
                   disabled={!dirty || saving || !online}
@@ -411,27 +481,19 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
           {tab === 'variantes' && (
             <div className="space-y-6">
               <section className="space-y-3 rounded-2xl bg-canvas p-4" aria-label="Oferta">
-                <div>
-                  <p className="text-sm font-extrabold text-slate-900">Oferta</p>
-                  <p className="text-xs text-slate-500">El precio que paga el cliente se cambia en la tabla. Aquí solo defines el precio antes.</p>
-                </div>
+                <p className="text-sm font-extrabold text-slate-900">Oferta</p>
                 {staleOffers.length > 0 && (
                   <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
                     <span>El precio antes de {staleOffers.map(v => v.SKU).join(', ')} ya no es mayor al precio actual, por eso no se muestra la oferta.</span>
-                    <button type="button" onClick={() => applyOffer(true)} disabled={!online || savingOffer} className="h-8 rounded-full bg-amber-600 px-3 font-bold text-white hover:bg-amber-700 disabled:opacity-60">Quitar oferta</button>
+                    <button type="button" onClick={clearStaleOffers} disabled={!online || savingOffer} className="h-8 rounded-full bg-amber-600 px-3 font-bold text-white hover:bg-amber-700 disabled:opacity-60">Quitar oferta</button>
                   </div>
                 )}
-                <OfferSection draft={offer} onChange={setOffer} price={basePrice} multiPrice={multiPrice} showEmptyError={offerTouched} disabled={savingOffer} />
-                {showOfferSave && staleOffers.length === 0 && (
+                <OfferSection draft={offer} onChange={setOffer} price={basePrice} base={minBefore} multiPrice={multiPrice} showEmptyError={offerTouched} disabled={savingOffer} />
+                {showOfferSave && (offer.mode !== 'off' || staleOffers.length === 0) && (
                   <div className="flex justify-end">
-                    <button type="button" onClick={() => applyOffer(false)} disabled={!online || savingOffer} title={offlineTitle} className="inline-flex h-10 items-center gap-2 rounded-full bg-brand px-5 text-sm font-bold text-white hover:bg-brand-hover disabled:opacity-60">
-                      {savingOffer && <Loader2 className="h-4 w-4 animate-spin" />} {offer.on ? 'Guardar oferta' : 'Quitar oferta'}
+                    <button type="button" onClick={saveOffer} disabled={!online || savingOffer} title={offlineTitle} className="inline-flex h-10 items-center gap-2 rounded-full bg-brand px-5 text-sm font-bold text-white hover:bg-brand-hover disabled:opacity-60">
+                      {savingOffer && <Loader2 className="h-4 w-4 animate-spin" />} {offer.mode !== 'off' ? 'Guardar oferta' : 'Quitar oferta'}
                     </button>
-                  </div>
-                )}
-                {showOfferSave && staleOffers.length > 0 && offer.on && (
-                  <div className="flex justify-end">
-                    <button type="button" onClick={() => applyOffer(false)} disabled={!online || savingOffer} className="inline-flex h-10 items-center gap-2 rounded-full bg-brand px-5 text-sm font-bold text-white hover:bg-brand-hover disabled:opacity-60">Guardar oferta</button>
                   </div>
                 )}
               </section>
@@ -481,7 +543,7 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
                           </td>
                           <td className="px-4 py-3 align-top text-xs tabular">
                             <p><strong className="text-slate-900">{v.ExistenciaDisponible}</strong> disponibles</p>
-                            <p className="text-slate-500">{v.ExistenciaFisica} físicas · {v.UnidadesReservadas} apartadas</p>
+                            <p className="text-slate-500">Existencia {v.ExistenciaFisica} · {v.UnidadesReservadas} apartadas</p>
                           </td>
                           <td className="px-4 py-3 text-right align-top">
                             <button
@@ -521,6 +583,20 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
         </div>
       )}
 
+      <ConfirmDialog
+        isOpen={confirmClose}
+        onClose={() => setConfirmClose(false)}
+        onConfirm={() => {
+          setConfirmClose(false);
+          clearDraft(EDIT_DRAFT);
+          onClose();
+        }}
+        variant="primary"
+        title="Tienes cambios sin guardar"
+        consequence="Si sales, se pierden."
+        confirmText="Descartar"
+        cancelText="Seguir editando"
+      />
       <ConfirmDialog
         isOpen={imageToDelete !== null}
         onClose={() => setImageToDelete(null)}

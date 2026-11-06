@@ -65,6 +65,8 @@ export interface CreateProductPayload {
   existenciaInicial?: number;
 }
 
+export type ImageKind = 'productos' | 'categorias';
+
 export interface ImageUploadSignature {
   urlSubida: string;
   urlPublica: string;
@@ -74,11 +76,9 @@ export interface ImageUploadSignature {
 }
 
 export const catalogApi = {
-  requestImageUpload: async (idProducto: number, contentType: string, tamanoBytes: number): Promise<ImageUploadSignature> => {
-    const res = await apiClient.post<{ ok: boolean; datos?: ImageUploadSignature } & Partial<ImageUploadSignature>>(
-      `/catalogo/productos/${idProducto}/imagenes/firma`,
-      { contentType, tamanoBytes },
-    );
+  requestImageUpload: async (id: number, contentType: string, tamanoBytes: number, kind: ImageKind = 'productos'): Promise<ImageUploadSignature> => {
+    const path = kind === 'productos' ? `/catalogo/productos/${id}/imagenes/firma` : `/catalogo/categorias/${id}/imagen/firma`;
+    const res = await apiClient.post<{ ok: boolean; datos?: ImageUploadSignature } & Partial<ImageUploadSignature>>(path, { contentType, tamanoBytes });
     return (res.data.datos ?? res.data) as ImageUploadSignature;
   },
 
@@ -101,8 +101,9 @@ export const catalogApi = {
     return res.data;
   },
 
-  saveCategory: async (data: { nombre: string; descripcion?: string; activa?: boolean }): Promise<void> => {
-    await apiClient.post('/catalogo/categorias', data);
+  saveCategory: async (data: { nombre: string; descripcion?: string; activa?: boolean }): Promise<{ IDCategoria: number }> => {
+    const res = await apiClient.post<{ IDCategoria: number }>('/catalogo/categorias', data);
+    return res.data;
   },
 
   updateCategory: async (id: number, data: { nombre: string; descripcion?: string; activa?: boolean }): Promise<void> => {
@@ -171,8 +172,16 @@ export const catalogApi = {
     await apiClient.patch(`/catalogo/productos/${idProducto}/destacado`, { destacado });
   },
 
-  setCategoryImage: async (idCategoria: number, imagenUrl: string | null): Promise<void> => {
-    await apiClient.patch(`/catalogo/categorias/${idCategoria}/imagen`, { imagenUrl });
+  setCategoryImage: async (idCategoria: number, source: { clave: string } | { url: string | null }): Promise<void> => {
+    await apiClient.patch(`/catalogo/categorias/${idCategoria}/imagen`, source);
+  },
+
+  applyOffer: async (idProducto: number, variantes: Array<{ idVariante: number; precioAhora: number }>): Promise<void> => {
+    await apiClient.post(`/catalogo/productos/${idProducto}/oferta`, { variantes });
+  },
+
+  removeOffer: async (idProducto: number): Promise<void> => {
+    await apiClient.delete(`/catalogo/productos/${idProducto}/oferta`);
   },
 
   review: async (body: ReviewInput): Promise<ReviewResult> => {

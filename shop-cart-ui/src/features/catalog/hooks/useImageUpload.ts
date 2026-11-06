@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { catalogApi } from '../api/catalogApi';
+import { catalogApi, type ImageKind } from '../api/catalogApi';
 import { compressImage, CompressImageError, type CompressedImage } from '@/shared/lib/compress-image';
 import { apiErrorMessage, errorCode } from '@/shared/lib/apiErrors';
 
@@ -33,8 +33,8 @@ export interface UploadedImage {
   urlPublica: string;
 }
 
-export async function uploadCompressed(productId: number, img: CompressedImage, onProgress: (pct: number) => void): Promise<UploadedImage> {
-  const firma = await catalogApi.requestImageUpload(productId, img.type, img.size);
+export async function uploadCompressed(id: number, img: CompressedImage, onProgress: (pct: number) => void, kind: ImageKind = 'productos'): Promise<UploadedImage> {
+  const firma = await catalogApi.requestImageUpload(id, img.type, img.size, kind);
   await putBlob(firma.urlSubida, img.blob, firma.cabeceras ?? { 'Content-Type': img.type }, onProgress);
   return { clave: firma.clave, urlPublica: firma.urlPublica };
 }
@@ -60,13 +60,13 @@ function subscribeStorage(fn: () => void) {
 
 const isStorageOff = (err: unknown) => errorCode(err) === 'ALMACENAMIENTO_NO_CONFIGURADO';
 
-export function useStorageAvailable(probeProductId?: number | null): boolean {
+export function useStorageAvailable(probeProductId?: number | null, kind: ImageKind = 'productos'): boolean {
   const state = useSyncExternalStore(subscribeStorage, () => storageState);
   useEffect(() => {
     if (probeProductId == null || storageState !== 'unknown' || probing) return;
     probing = true;
     catalogApi
-      .requestImageUpload(probeProductId, 'image/jpeg', 100 * 1024)
+      .requestImageUpload(probeProductId, 'image/jpeg', 100 * 1024, kind)
       .then(() => setStorageState('ready'))
       .catch((err) => {
         if (isStorageOff(err)) setStorageState('off');
@@ -74,17 +74,17 @@ export function useStorageAvailable(probeProductId?: number | null): boolean {
       .finally(() => {
         probing = false;
       });
-  }, [probeProductId, state]);
+  }, [probeProductId, state, kind]);
   return state !== 'off';
 }
 
-export function useImageUpload(productId: number | null) {
+export function useImageUpload(productId: number | null, kind: ImageKind = 'productos') {
   const [phase, setPhase] = useState<UploadPhase>('idle');
   const [progress, setProgress] = useState(0);
   const [preview, setPreview] = useState<UploadPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<{ originalSize: number; size: number } | null>(null);
-  const available = useStorageAvailable(productId);
+  const available = useStorageAvailable(productId, kind);
 
   const compressed = useRef<CompressedImage | null>(null);
   const uploaded = useRef<UploadedImage | null>(null);
@@ -118,7 +118,7 @@ export function useImageUpload(productId: number | null) {
       if (!navigator.onLine) throw new TypeError('offline');
       if (!uploaded.current) {
         setPhase('uploading');
-        uploaded.current = await uploadCompressed(productId, img, setProgress);
+        uploaded.current = await uploadCompressed(productId, img, setProgress, kind);
       }
       setPhase('saving');
       await onUploaded.current?.(uploaded.current);
@@ -135,7 +135,7 @@ export function useImageUpload(productId: number | null) {
       setPhase('error');
       return false;
     }
-  }, [productId, reset]);
+  }, [productId, kind, reset]);
 
   const start = useCallback(
     async (file: File, done: (image: UploadedImage) => Promise<void>): Promise<boolean> => {

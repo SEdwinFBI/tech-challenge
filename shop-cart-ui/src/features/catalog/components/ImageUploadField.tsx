@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Copy, ImagePlus, Loader2, RotateCcw, X } from 'lucide-react';
 import { useImageUpload, useStorageAvailable, type UploadedImage } from '../hooks/useImageUpload';
+import type { ImageKind } from '../api/catalogApi';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { compressImage, CompressImageError, formatBytes, type CompressedImage } from '@/shared/lib/compress-image';
 import { SafeImage } from '@/shared/ui/SafeImage';
@@ -179,14 +180,16 @@ const CoverPicker: React.FC<CoverPickerProps> = ({
 
 export interface CoverUploadFieldProps {
   productId: number;
+  kind?: ImageKind;
+  alt?: string;
   imageUrl: string;
   disabled?: boolean;
   onUploaded: (image: UploadedImage) => Promise<void>;
   children: React.ReactNode;
 }
 
-export const CoverUploadField: React.FC<CoverUploadFieldProps> = ({ productId, imageUrl, disabled, onUploaded, children }) => {
-  const upload = useImageUpload(productId);
+export const CoverUploadField: React.FC<CoverUploadFieldProps> = ({ productId, kind = 'productos', alt = 'Imagen principal', imageUrl, disabled, onUploaded, children }) => {
+  const upload = useImageUpload(productId, kind);
   const online = useOnlineStatus();
 
   const busyLabel =
@@ -197,7 +200,7 @@ export const CoverUploadField: React.FC<CoverUploadFieldProps> = ({ productId, i
     <div className="space-y-3">
       <CoverPicker
         src={upload.preview?.url ?? (imageUrl || undefined)}
-        alt="Imagen principal"
+        alt={alt}
         hasImage={Boolean(imageUrl)}
         canUpload={upload.available}
         blocked={Boolean(disabled) || upload.busy}
@@ -217,6 +220,8 @@ export const CoverUploadField: React.FC<CoverUploadFieldProps> = ({ productId, i
 };
 
 export interface PendingCoverFieldProps {
+  alt?: string;
+  pendingNote?: string;
   value: CompressedImage | null;
   onChange: (img: CompressedImage | null) => void;
   progress: number | null;
@@ -225,7 +230,7 @@ export interface PendingCoverFieldProps {
   children: React.ReactNode;
 }
 
-export const PendingCoverField: React.FC<PendingCoverFieldProps> = ({ value, onChange, progress, uploading, disabled, children }) => {
+export const PendingCoverField: React.FC<PendingCoverFieldProps> = ({ alt = 'Imagen principal', pendingNote = 'se sube al crear el producto', value, onChange, progress, uploading, disabled, children }) => {
   const online = useOnlineStatus();
   const available = useStorageAvailable();
   const [compressing, setCompressing] = useState(false);
@@ -254,14 +259,14 @@ export const PendingCoverField: React.FC<PendingCoverFieldProps> = ({ value, onC
     <div className="space-y-3">
       <CoverPicker
         src={url}
-        alt="Imagen principal"
+        alt={alt}
         hasImage={Boolean(value)}
         canUpload={available}
         blocked={Boolean(disabled) || compressing || uploading}
         offline={false}
         busyLabel={busyLabel}
         progress={uploading ? progress : null}
-        sizeLabel={value ? `${sizeText(value)} · se sube al crear el producto` : null}
+        sizeLabel={value ? `${sizeText(value)} · ${pendingNote}` : null}
         error={error}
         onPick={file => void pick(file)}
         onDiscard={() => {

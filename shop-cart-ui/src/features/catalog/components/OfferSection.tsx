@@ -1,8 +1,7 @@
 import React from 'react';
 import { Input } from '@/shared/ui';
 import { PriceTag, DiscountBadge } from '@/shared/ui/PriceTag';
-import { formatMoney } from '@/shared/lib/formatters';
-import { OfferDraft, offerError, pctFromBefore, withBefore, withPct } from '../lib/offer';
+import { EMPTY_OFFER, OfferDraft, OfferMode, isOfferComplete, offerError, pctFromBefore, pctOf, withBefore, withNow, withPct, withPctNow } from '../lib/offer';
 
 export const Switch: React.FC<{ checked: boolean; onChange: (v: boolean) => void; label: string; hint?: string; disabled?: boolean }> = ({
   checked,
@@ -28,64 +27,79 @@ export interface OfferSectionProps {
   draft: OfferDraft;
   onChange: (next: OfferDraft) => void;
   price: number;
+  base?: number;
   multiPrice?: boolean;
   showEmptyError?: boolean;
   disabled?: boolean;
 }
 
-export const OfferSection: React.FC<OfferSectionProps> = ({ draft, onChange, price, multiPrice = false, showEmptyError = false, disabled }) => {
-  const priceOk = Number.isFinite(price) && price > 0;
-  const error = priceOk ? offerError(draft, price, showEmptyError) : draft.on ? 'Escribe primero el precio.' : null;
-  const antes = Number(draft.antes);
-  const pct = priceOk && antes > price ? pctFromBefore(antes, price) : 0;
-  const valid = draft.on && priceOk && !error && draft.antes !== '';
+export const OfferSection: React.FC<OfferSectionProps> = ({ draft, onChange, price, base, multiPrice = false, showEmptyError = false, disabled }) => {
+  const reference = draft.mode === 'ahora' ? (base ?? price) : price;
+  const referenceOk = Number.isFinite(reference) && reference > 0;
+  const error = referenceOk ? offerError(draft, reference, showEmptyError) : draft.mode !== 'off' ? 'Escribe primero el precio.' : null;
+  const valid = referenceOk && !error && isOfferComplete(draft);
+  const toggle = (mode: OfferMode) => (on: boolean) => onChange(on ? { ...EMPTY_OFFER, mode } : EMPTY_OFFER);
+
+  const shownNow = draft.mode === 'ahora' ? Number(draft.ahora) : price;
+  const shownBefore = draft.mode === 'ahora' ? reference : Number(draft.antes);
+  const pct = draft.mode === 'ahora' ? Math.round(pctOf(reference, shownNow)) : pctFromBefore(shownBefore, price);
 
   return (
     <div className="space-y-3">
       <Switch
-        checked={draft.on}
+        checked={draft.mode === 'ahora'}
         disabled={disabled}
-        onChange={on => onChange(on ? { ...draft, on } : { on: false, antes: '', pct: '' })}
-        label="Mostrar como oferta"
-        hint="El cliente paga el Precio. El precio antes solo se muestra tachado."
+        onChange={toggle('ahora')}
+        label="Poner en oferta"
+        hint="Baja el precio. El precio actual queda como “antes”."
       />
-      {draft.on && (
+      <Switch
+        checked={draft.mode === 'antes'}
+        disabled={disabled}
+        onChange={toggle('antes')}
+        label="Marcar como oferta"
+        hint="El precio no cambia. Se muestra el “antes” tachado."
+      />
+      {draft.mode !== 'off' && (
         <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
           <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Precio antes (Q)"
-              inputMode="decimal"
-              value={draft.antes}
-              disabled={disabled}
-              onChange={e => onChange(withBefore(draft, e.target.value, price))}
-              placeholder="200.00"
-            />
+            {draft.mode === 'ahora' ? (
+              <Input
+                label="Precio ahora (Q)"
+                inputMode="decimal"
+                value={draft.ahora}
+                disabled={disabled}
+                onChange={e => onChange(withNow(draft, e.target.value, reference))}
+                placeholder="190.00"
+              />
+            ) : (
+              <Input
+                label="Precio antes (Q)"
+                inputMode="decimal"
+                value={draft.antes}
+                disabled={disabled}
+                onChange={e => onChange(withBefore(draft, e.target.value, price))}
+                placeholder="200.00"
+              />
+            )}
             <Input
               label="% de descuento"
               inputMode="decimal"
               value={draft.pct}
               disabled={disabled}
-              onChange={e => onChange(withPct(draft, e.target.value, price))}
+              onChange={e => onChange(draft.mode === 'ahora' ? withPctNow(draft, e.target.value, reference) : withPct(draft, e.target.value, price))}
               placeholder="20"
             />
           </div>
-          <p className="text-xs text-slate-500">Escribe uno de los dos; el otro se calcula solo.</p>
           {error && (
             <p role="alert" className="text-xs font-medium text-rose-600">
               {error}
             </p>
           )}
           {valid && (
-            <div className="rounded-xl bg-canvas p-3" aria-live="polite">
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Así lo verá el cliente</p>
-              <div className="flex flex-wrap items-center gap-2">
-                <PriceTag amount={price} compareAt={antes} tone="sale" size="lg" from={multiPrice} />
-                <DiscountBadge percent={pct} />
-              </div>
-              <p className="mt-1 text-xs text-slate-600" data-testid="offer-preview-text">
-                {multiPrice && 'Desde '}Antes {formatMoney(antes)} → Ahora {formatMoney(price)} · -{pct}%
-              </p>
-              {multiPrice && <p className="mt-1 text-xs text-slate-500">Hay variantes con precios distintos: se usa el menor y el mismo descuento se aplica a las demás.</p>}
+            <div className="flex flex-wrap items-center gap-2 rounded-xl bg-canvas p-3" aria-live="polite" data-testid="offer-preview">
+              <PriceTag amount={shownNow} compareAt={shownBefore} tone="sale" size="lg" from={multiPrice} />
+              <DiscountBadge percent={pct} />
             </div>
           )}
         </div>

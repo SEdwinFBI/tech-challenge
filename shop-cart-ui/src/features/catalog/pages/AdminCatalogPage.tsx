@@ -6,7 +6,7 @@ import { catalogApi, type GetProductsParams } from '../api/catalogApi';
 import { useCategories } from '../hooks/useCatalog';
 import { ProductEditorDrawer, EDIT_DRAFT } from '../components/ProductEditorDrawer';
 import { CatalogReviewPanel } from '../components/CatalogReviewPanel';
-import { PendingCoverField } from '../components/ImageUploadField';
+import { CoverUploadField, PendingCoverField } from '../components/ImageUploadField';
 import { uploadCompressed } from '../hooks/useImageUpload';
 import type { CompressedImage } from '@/shared/lib/compress-image';
 import { formatMoney } from '@/shared/lib/formatters';
@@ -16,6 +16,7 @@ import type { FilterDef } from '@/shared/lib/columnFilters';
 import {
   Badge,
   Button,
+  ConfirmDialog,
   EmptyState,
   ErrorState,
   Input,
@@ -41,7 +42,7 @@ import type { Category } from '@/shared/types/domain';
 import { clearDraft, readDraft, saveDraft } from '@/shared/lib/draft';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
 import { OfferSection } from '../components/OfferSection';
-import { EMPTY_OFFER, offerError, withPct } from '../lib/offer';
+import { EMPTY_OFFER, isOfferComplete, offerError, rebase } from '../lib/offer';
 
 const apiMessage = apiErrorMessage;
 
@@ -100,7 +101,7 @@ export const AdminCatalogPage: React.FC = () => {
   const emptyProduct = { nombre: '', descripcion: '', idCategoria: 0, imagenUrl: '', sku: '', color: '', talla: '', presentacion: '', precio: '', existencia: '0', oferta: EMPTY_OFFER };
   const [newProductDraft] = useState(() => readDraft<typeof emptyProduct>(NEW_DRAFT));
   const [newProductOpen, setNewProductOpen] = useState(newProductDraft !== null);
-  const [np, setNp] = useState({ ...emptyProduct, ...newProductDraft });
+  const [np, setNp] = useState(() => ({ ...emptyProduct, ...newProductDraft, oferta: newProductDraft?.oferta?.mode ? newProductDraft.oferta : EMPTY_OFFER }));
   const [offerTouched, setOfferTouched] = useState(false);
 
   useEffect(() => {
@@ -139,7 +140,8 @@ export const AdminCatalogPage: React.FC = () => {
     if (!Number.isFinite(precio) || precio <= 0) return toast.error('Precio no válido');
     if (np.imagenUrl.trim() && !/^https?:\/\//i.test(np.imagenUrl.trim())) return toast.error('La URL debe empezar con http:// o https://');
     setOfferTouched(true);
-    if (offerError(np.oferta, precio, true)) return;
+    if (np.oferta.mode !== 'off' && (!isOfferComplete(np.oferta) || offerError(np.oferta, precio, true))) return;
+    const ahora = np.oferta.mode === 'ahora';
     setCreatingProduct(true);
     try {
       const created = await catalogApi.createProduct({
@@ -151,8 +153,8 @@ export const AdminCatalogPage: React.FC = () => {
         talla: np.talla.trim() || undefined,
         color: np.color.trim() || undefined,
         presentacion: np.presentacion.trim() || undefined,
-        precio,
-        precioReferencia: np.oferta.on ? Number(np.oferta.antes) : undefined,
+        precio: ahora ? Number(np.oferta.ahora) : precio,
+        precioReferencia: ahora ? precio : np.oferta.mode === 'antes' ? Number(np.oferta.antes) : undefined,
         existenciaInicial: Math.max(0, Math.floor(Number(np.existencia) || 0)),
       });
       if (cover && created.IDProducto) {
@@ -178,12 +180,41 @@ export const AdminCatalogPage: React.FC = () => {
   };
 
   const [categoryModal, setCategoryModal] = useState<{ open: boolean; editing: Category | null }>({ open: false, editing: null });
-  const [cf, setCf] = useState({ nombre: '', descripcion: '', imagenUrl: '', activa: true });
+  const [cf, setCf] = useState({ nombre: '', descripcion: '', imagenUrl: '' });
+  const [imageBase, setImageBase] = useState('');
+  const [categoryCover, setCategoryCover] = useState<CompressedImage | null>(null);
+  const [categoryProgress, setCategoryProgress] = useState<number | null>(null);
   const [savingCategory, setSavingCategory] = useState(false);
+  const [categoryToDeactivate, setCategoryToDeactivate] = useState<Category | null>(null);
+  const [togglingCategory, setTogglingCategory] = useState(false);
 
   const openCategory = (c: Category | null) => {
-    setCf({ nombre: c?.Nombre ?? '', descripcion: c?.Descripcion ?? '', imagenUrl: c?.ImagenUrl ?? '', activa: c?.Activo ?? true });
+    setCf({ nombre: c?.Nombre ?? '', descripcion: c?.Descripcion ?? '', imagenUrl: c?.ImagenUrl ?? '' });
+    setImageBase(c?.ImagenUrl ?? '');
+    setCategoryCover(null);
+    setCategoryProgress(null);
     setCategoryModal({ open: true, editing: c });
+  };
+
+  const refreshCategories = () => {
+    queryClient.invalidateQueries({ queryKey: ['categories'] });
+    queryClient.invalidateQueries({ queryKey: ['home'] });
+    queryClient.invalidateQueries({ queryKey: ['products'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-catalog-products'] });
+  };
+
+  const setCategoryActive = async (c: Category, activa: boolean) => {
+    setTogglingCategory(true);
+    try {
+      await catalogApi.updateCategory(c.IDCategoria, { nombre: c.Nombre, descripcion: c.Descripcion || undefined, activa });
+      toast.success(activa ? 'Categoría activada' : 'Categoría desactivada');
+      refreshCategories();
+    } catch (err) {
+      toast.error('No se pudo cambiar la categoría', apiMessage(err, 'Intenta de nuevo.'));
+    } finally {
+      setTogglingCategory(false);
+      setCategoryToDeactivate(null);
+    }
   };
 
   const saveCategory = async (e: React.FormEvent) => {
@@ -193,29 +224,35 @@ export const AdminCatalogPage: React.FC = () => {
     setSavingCategory(true);
     try {
       const editing = categoryModal.editing;
-      const body = { nombre: cf.nombre.trim(), descripcion: cf.descripcion.trim() || undefined, activa: cf.activa };
+      const url = cf.imagenUrl.trim();
+      const body = { nombre: cf.nombre.trim(), descripcion: cf.descripcion.trim() || undefined, activa: editing?.Activo ?? true };
       if (editing) {
         await catalogApi.updateCategory(editing.IDCategoria, body);
-        if ((cf.imagenUrl.trim() || null) !== (editing.ImagenUrl ?? null)) {
-          await catalogApi.setCategoryImage(editing.IDCategoria, cf.imagenUrl.trim() || null);
-        }
+        if (url !== imageBase) await catalogApi.setCategoryImage(editing.IDCategoria, { url: url || null });
+        toast.success('Categoría guardada');
       } else {
-        await catalogApi.saveCategory(body);
-        if (cf.imagenUrl.trim()) {
-          // El alta no acepta imagen
-          const fresh = await catalogApi.getCategories();
-          const created = fresh.find(c => c.Nombre === body.nombre);
-          if (created) await catalogApi.setCategoryImage(created.IDCategoria, cf.imagenUrl.trim());
+        const created = await catalogApi.saveCategory(body);
+        if (categoryCover) {
+          setCategoryProgress(0);
+          try {
+            const { clave } = await uploadCompressed(created.IDCategoria, categoryCover, setCategoryProgress, 'categorias');
+            await catalogApi.setCategoryImage(created.IDCategoria, { clave });
+            toast.success('Categoría guardada');
+          } catch (err) {
+            toast.warning('Categoría creada sin imagen', apiMessage(err, 'Súbela desde Editar.'));
+          }
+        } else {
+          if (url) await catalogApi.setCategoryImage(created.IDCategoria, { url });
+          toast.success('Categoría guardada');
         }
       }
-      toast.success('Categoría guardada');
       setCategoryModal({ open: false, editing: null });
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-      queryClient.invalidateQueries({ queryKey: ['home'] });
+      refreshCategories();
     } catch (err) {
       toast.error('No se pudo guardar la categoría', apiMessage(err, 'El nombre podría estar repetido.'));
     } finally {
       setSavingCategory(false);
+      setCategoryProgress(null);
     }
   };
 
@@ -305,7 +342,7 @@ export const AdminCatalogPage: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         {p.StockTotalDisponible > 0 ? (
-                          <Badge variant={p.StockTotalDisponible <= 5 ? 'warning' : 'success'} size="sm">{p.StockTotalDisponible} disp.</Badge>
+                          <Badge variant={p.StockTotalDisponible <= 5 ? 'warning' : 'success'} size="sm">{p.StockTotalDisponible} disponibles</Badge>
                         ) : (
                           <Badge variant="error" size="sm">Agotado</Badge>
                         )}
@@ -355,7 +392,17 @@ export const AdminCatalogPage: React.FC = () => {
                 <TableCell className="tabular text-sm">{c.TotalProductos ?? 0}</TableCell>
                 <TableCell><Badge variant={c.Activo ? 'success' : 'neutral'} size="sm">{c.Activo ? 'Activa' : 'Inactiva'}</Badge></TableCell>
                 <TableCell className="text-right">
-                  <Button variant="outline" size="sm" leftIcon={<Edit3 className="mr-1 h-3.5 w-3.5" />} onClick={() => openCategory(c)}>Editar</Button>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!online || togglingCategory}
+                      onClick={() => (c.Activo ? setCategoryToDeactivate(c) : void setCategoryActive(c, true))}
+                    >
+                      {c.Activo ? 'Desactivar' : 'Activar'}
+                    </Button>
+                    <Button variant="outline" size="sm" leftIcon={<Edit3 className="mr-1 h-3.5 w-3.5" />} onClick={() => openCategory(c)}>Editar</Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -391,7 +438,7 @@ export const AdminCatalogPage: React.FC = () => {
               <Input label="Presentación" value={np.presentacion} onChange={e => setNp(s => ({ ...s, presentacion: e.target.value }))} />
               <Input label="Precio (Q) *" inputMode="decimal" value={np.precio} onChange={e => {
                 const precio = e.target.value.replace(/[^0-9.]/g, '');
-                setNp(s => ({ ...s, precio, oferta: s.oferta.on && s.oferta.pct ? withPct(s.oferta, s.oferta.pct, Number(precio)) : s.oferta }));
+                setNp(s => ({ ...s, precio, oferta: rebase(s.oferta, Number(precio)) }));
               }} />
               <Input label="Existencia inicial" inputMode="numeric" value={np.existencia} onChange={e => setNp(s => ({ ...s, existencia: e.target.value.replace(/\D/g, '') }))} />
             </div>
@@ -410,6 +457,16 @@ export const AdminCatalogPage: React.FC = () => {
         </form>
       </Modal>
 
+      <ConfirmDialog
+        isOpen={categoryToDeactivate !== null}
+        onClose={() => setCategoryToDeactivate(null)}
+        onConfirm={() => (categoryToDeactivate ? setCategoryActive(categoryToDeactivate, false) : undefined)}
+        loading={togglingCategory}
+        title={categoryToDeactivate ? `Desactivar ${categoryToDeactivate.Nombre}` : 'Desactivar categoría'}
+        consequence="Los productos de esta categoría dejarán de verse en la tienda ni se podrán comprar. Los pedidos existentes no cambian."
+        confirmText="Desactivar"
+      />
+
       <Modal
         isOpen={categoryModal.open}
         onClose={() => setCategoryModal({ open: false, editing: null })}
@@ -418,14 +475,40 @@ export const AdminCatalogPage: React.FC = () => {
         <form onSubmit={saveCategory} className="space-y-4" noValidate>
           <Input label="Nombre *" value={cf.nombre} onChange={e => setCf(s => ({ ...s, nombre: e.target.value }))} />
           <Input label="Descripción" value={cf.descripcion} onChange={e => setCf(s => ({ ...s, descripcion: e.target.value }))} />
-          <div className="flex items-end gap-3">
-            <div className="flex-1"><Input label="URL de la imagen" value={cf.imagenUrl} onChange={e => setCf(s => ({ ...s, imagenUrl: e.target.value }))} placeholder="https://…" /></div>
-            <SafeImage src={cf.imagenUrl || undefined} alt="Vista previa" className="h-12 w-12 shrink-0 rounded-full object-cover" />
+          <div>
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-700">Imagen</span>
+            {categoryModal.editing ? (
+              <CoverUploadField
+                key={categoryModal.editing.IDCategoria}
+                productId={categoryModal.editing.IDCategoria}
+                kind="categorias"
+                alt="Imagen de la categoría"
+                imageUrl={cf.imagenUrl}
+                disabled={savingCategory}
+                onUploaded={async ({ clave, urlPublica }) => {
+                  await catalogApi.setCategoryImage(categoryModal.editing!.IDCategoria, { clave });
+                  setCf(s => ({ ...s, imagenUrl: urlPublica }));
+                  setImageBase(urlPublica);
+                  toast.success('Imagen actualizada');
+                  refreshCategories();
+                }}
+              >
+                <Input label="URL de la imagen" value={cf.imagenUrl} onChange={e => setCf(s => ({ ...s, imagenUrl: e.target.value }))} placeholder="https://…" />
+              </CoverUploadField>
+            ) : (
+              <PendingCoverField
+                alt="Imagen de la categoría"
+                pendingNote="se sube al crear la categoría"
+                value={categoryCover}
+                onChange={setCategoryCover}
+                progress={categoryProgress}
+                uploading={categoryProgress !== null}
+                disabled={savingCategory}
+              >
+                <Input label="URL de la imagen" value={cf.imagenUrl} onChange={e => setCf(s => ({ ...s, imagenUrl: e.target.value }))} placeholder="https://…" />
+              </PendingCoverField>
+            )}
           </div>
-          <label className="flex items-center gap-2.5 text-sm font-semibold text-slate-700">
-            <input type="checkbox" checked={cf.activa} onChange={e => setCf(s => ({ ...s, activa: e.target.checked }))} className="h-4 w-4 accent-[var(--color-brand)]" />
-            Visible en la tienda
-          </label>
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
             <Button type="button" variant="outline" onClick={() => setCategoryModal({ open: false, editing: null })}>Cancelar</Button>
             <Button type="submit" loading={savingCategory} disabled={!online} title={online ? undefined : 'Sin conexión'}>Guardar</Button>
