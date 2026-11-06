@@ -29,6 +29,7 @@ const SearchCombobox: React.FC<ComboboxProps> = ({ variant, onDone, onClose }) =
   const s = useSearchSuggestions(value, open);
   const ai = useSearchRecommendation({ q: s.term }, { enabled: s.enabled, debounceMs: 0 });
   const recommendation = s.settled && ai.product && !s.items.some(p => p.IDProducto === ai.product!.IDProducto) ? ai.product : null;
+  const closest = Boolean(recommendation) && s.items.length === 0;
   const recommendationLoading = s.active && (!s.settled || ai.isFetching);
 
   const options = useMemo<SearchOption[]>(() => {
@@ -44,7 +45,7 @@ const SearchCombobox: React.FC<ComboboxProps> = ({ variant, onDone, onClose }) =
     return list;
   }, [s.items, recommendation, s.categories, s.input, s.active, recent.items]);
 
-  const noResults = s.active && !s.loading && !s.stale && !s.failed && s.items.length === 0 && !recommendation && s.categories.length === 0;
+  const noResults = s.active && !s.loading && !s.stale && !s.failed && s.items.length === 0 && s.categories.length === 0 && !recommendationLoading;
   const hint = sheet && !s.input && options.length === 0 ? 'Escribe el nombre de un producto o una categoría.' : null;
   const showPanel = open && (sheet || options.length > 0 || noResults);
 
@@ -150,6 +151,8 @@ const SearchCombobox: React.FC<ComboboxProps> = ({ variant, onDone, onClose }) =
       stale={s.stale}
       recommendationLoading={recommendationLoading}
       noResults={noResults}
+      closest={closest}
+      mediumConfidence={ai.confianza === 'media'}
       hint={hint}
       onActivate={setActiveKey}
       onSelect={select}

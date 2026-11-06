@@ -234,7 +234,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({ mode = 'all' }) => {
                 )}
               </div>
               {term.length >= 2 && loaded && (
-                <SearchRecommendation title="Quizá te sirva esto" className="mt-8" normalIds={[]} filters={recommendationFilters} />
+                <SearchRecommendation closest filters={recommendationFilters} />
               )}
             </div>
           ) : (

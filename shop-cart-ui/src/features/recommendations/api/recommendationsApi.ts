@@ -15,6 +15,11 @@ export interface SearchRecommendationFilters extends RecommendationFilters {
   soloOfertas?: string;
 }
 
+export interface SearchSuggestion {
+  product: ProductListItem;
+  confianza: 'alta' | 'media';
+}
+
 export const recommendationsApi = {
   recordView: async (idProducto: number): Promise<void> => {
     await apiClient.post('/recomendaciones/vistas', { idProducto });
@@ -25,8 +30,9 @@ export const recommendationsApi = {
     return res.data.items;
   },
 
-  search: async (filters: SearchRecommendationFilters, signal?: AbortSignal): Promise<ProductListItem | null> => {
-    const res = await apiClient.get<{ item: ProductListItem | null }>('/recomendaciones/busqueda', { params: filters, signal });
-    return res.data.item;
+  search: async (filters: SearchRecommendationFilters, signal?: AbortSignal): Promise<SearchSuggestion | null> => {
+    const q = filters.q.trim().slice(0, 150);
+    const res = await apiClient.get<{ item: ProductListItem | null; confianza?: 'alta' | 'media' }>('/recomendaciones/busqueda', { params: { ...filters, q }, signal });
+    return res.data.item ? { product: res.data.item, confianza: res.data.confianza ?? 'media' } : null;
   },
 };

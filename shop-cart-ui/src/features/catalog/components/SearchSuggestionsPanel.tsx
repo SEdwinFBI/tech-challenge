@@ -27,6 +27,8 @@ interface Props {
   stale: boolean;
   recommendationLoading: boolean;
   noResults: boolean;
+  closest: boolean;
+  mediumConfidence: boolean;
   hint: string | null;
   onActivate: (key: string) => void;
   onSelect: (option: SearchOption) => void;
@@ -49,7 +51,7 @@ const ProductRowSkeleton: React.FC = () => (
 );
 
 export const SearchSuggestionsPanel: React.FC<Props> = ({
-  listId, query, options, activeKey, loading, stale, recommendationLoading, noResults, hint,
+  listId, query, options, activeKey, loading, stale, recommendationLoading, noResults, closest, mediumConfidence, hint,
   onActivate, onSelect, onRemoveRecent,
 }) => {
   const products = options.filter((o): o is ProductOption => o.kind === 'product' || o.kind === 'recommendation');
@@ -102,7 +104,7 @@ export const SearchSuggestionsPanel: React.FC<Props> = ({
       <div role="listbox" id={listId} aria-label="Sugerencias de búsqueda" aria-busy={loading || recommendationLoading}>
         {showProducts && (
           <div role="group" aria-labelledby={`${listId}-h-p`}>
-            <Heading id={`${listId}-h-p`}>Productos</Heading>
+            <Heading id={`${listId}-h-p`}>{closest ? `Lo más parecido a “${query}”` : 'Productos'}</Heading>
             {loading && products.length === 0 ? (
               <><ProductRowSkeleton /><ProductRowSkeleton /><ProductRowSkeleton /></>
             ) : (
@@ -110,6 +112,7 @@ export const SearchSuggestionsPanel: React.FC<Props> = ({
                 {products.map(o => <React.Fragment key={o.key}>{productRow(o)}</React.Fragment>)}
               </div>
             )}
+            {closest && mediumConfidence && <p className="px-4 pb-1 text-xs text-slate-500">No es exacto, pero puede servirte</p>}
             {recommendationLoading && !hasRecommendation && !loading && <ProductRowSkeleton />}
           </div>
         )}

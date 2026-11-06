@@ -55,7 +55,8 @@ export function useSearchRecommendation(filters: SearchRecommendationFilters, { 
     refetchOnWindowFocus: false,
   });
   return {
-    product: active ? query.data : null,
+    product: active ? query.data?.product ?? null : null,
+    confianza: active ? query.data?.confianza ?? null : null,
     isFetching: active && query.isFetching,
     isError: active && query.isError,
   };
