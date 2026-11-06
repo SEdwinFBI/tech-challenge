@@ -1,3 +1,5 @@
+import { ImageOwner } from '../domain/stored-image.policy';
+
 export interface UrlSubidaImagen {
   urlSubida: string;
   urlPublica: string;
@@ -7,7 +9,7 @@ export interface UrlSubidaImagen {
 }
 
 export interface IImageStorage {
-  crearUrlSubida(idProducto: number, contentType: string, tamanoBytes: number): Promise<UrlSubidaImagen>;
+  crearUrlSubida(owner: ImageOwner, contentType: string, tamanoBytes: number): Promise<UrlSubidaImagen>;
   eliminar(valorAlmacenado: string): Promise<void>;
   existe(clave: string): Promise<boolean>;
   disponible(): boolean;

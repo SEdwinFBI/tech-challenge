@@ -918,6 +918,87 @@ BEGIN
 END;
 GO
 
+CREATE OR ALTER PROCEDURE SP_Catalogo_AplicarOferta
+    @IDProducto INT,
+    @Variantes NVARCHAR(MAX),
+    @IDUsuarioAdmin INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        IF ISJSON(@Variantes) <> 1 THROW 50101, 'La oferta no es válida.', 1;
+
+        DECLARE @Items TABLE (IDVariante INT PRIMARY KEY, PrecioAhora DECIMAL(12,2) NOT NULL);
+        INSERT INTO @Items (IDVariante, PrecioAhora)
+        SELECT IDVariante, PrecioAhora
+        FROM OPENJSON(@Variantes) WITH (IDVariante INT '$.idVariante', PrecioAhora DECIMAL(12,2) '$.precioAhora');
+
+        IF NOT EXISTS (SELECT 1 FROM @Items) THROW 50101, 'La oferta no es válida.', 1;
+        IF EXISTS (SELECT 1 FROM @Items i LEFT JOIN Variantes v WITH (UPDLOCK) ON v.IDVariante = i.IDVariante AND v.IDProducto = @IDProducto WHERE v.IDVariante IS NULL)
+            THROW 50093, 'La variante no existe.', 1;
+        IF EXISTS (
+            SELECT 1 FROM @Items i INNER JOIN Variantes v ON v.IDVariante = i.IDVariante
+            WHERE i.PrecioAhora <= 0 OR i.PrecioAhora >= CASE WHEN v.PrecioReferencia > v.Precio THEN v.PrecioReferencia ELSE v.Precio END
+        ) THROW 50101, 'El precio de oferta debe ser mayor a cero y menor al precio actual.', 1;
+
+        INSERT INTO Bitacora (IDUsuario, Modulo, Entidad, IDEntidad, Accion, ValorAnterior, ValorNuevo)
+        SELECT @IDUsuarioAdmin, 'PRECIOS', 'Variantes', v.IDVariante, 'MODIFICACION',
+               CONCAT('{"SKU":"', STRING_ESCAPE(v.SKU, 'json'), '","Precio":', v.Precio, ',"PrecioReferencia":', ISNULL(CONVERT(VARCHAR(20), v.PrecioReferencia), 'null'), '}'),
+               CONCAT('{"SKU":"', STRING_ESCAPE(v.SKU, 'json'), '","Precio":', i.PrecioAhora, ',"PrecioReferencia":',
+                      CONVERT(VARCHAR(20), CASE WHEN v.PrecioReferencia > v.Precio THEN v.PrecioReferencia ELSE v.Precio END), '}')
+        FROM @Items i INNER JOIN Variantes v ON v.IDVariante = i.IDVariante;
+
+        UPDATE v
+        SET PrecioReferencia = CASE WHEN v.PrecioReferencia > v.Precio THEN v.PrecioReferencia ELSE v.Precio END,
+            Precio = i.PrecioAhora
+        FROM Variantes v INNER JOIN @Items i ON i.IDVariante = v.IDVariante;
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Catalogo_QuitarOferta
+    @IDProducto INT,
+    @IDUsuarioAdmin INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        IF NOT EXISTS (SELECT 1 FROM Productos WITH (UPDLOCK) WHERE IDProducto = @IDProducto)
+            THROW 50090, 'El producto no existe.', 1;
+
+        INSERT INTO Bitacora (IDUsuario, Modulo, Entidad, IDEntidad, Accion, ValorAnterior, ValorNuevo)
+        SELECT @IDUsuarioAdmin, 'PRECIOS', 'Variantes', v.IDVariante, 'MODIFICACION',
+               CONCAT('{"SKU":"', STRING_ESCAPE(v.SKU, 'json'), '","Precio":', v.Precio, ',"PrecioReferencia":', CONVERT(VARCHAR(20), v.PrecioReferencia), '}'),
+               CONCAT('{"SKU":"', STRING_ESCAPE(v.SKU, 'json'), '","Precio":', CASE WHEN v.PrecioReferencia > v.Precio THEN v.PrecioReferencia ELSE v.Precio END, ',"PrecioReferencia":null}')
+        FROM Variantes v WITH (UPDLOCK)
+        WHERE v.IDProducto = @IDProducto AND v.PrecioReferencia IS NOT NULL;
+
+        UPDATE Variantes
+        SET Precio = CASE WHEN PrecioReferencia > Precio THEN PrecioReferencia ELSE Precio END,
+            PrecioReferencia = NULL
+        WHERE IDProducto = @IDProducto AND PrecioReferencia IS NOT NULL;
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END;
+GO
+
 CREATE OR ALTER PROCEDURE SP_Catalogo_MarcarDestacado
     @IDProducto INT,
     @Destacado BIT,
@@ -957,8 +1038,8 @@ BEGIN
     SET XACT_ABORT ON;
     BEGIN TRY
         BEGIN TRANSACTION;
-        IF @ImagenUrl IS NOT NULL AND @ImagenUrl NOT LIKE 'http://%' AND @ImagenUrl NOT LIKE 'https://%'
-            THROW 50094, 'La URL de la imagen debe iniciar con http:// o https://.', 1;
+        IF @ImagenUrl IS NOT NULL AND @ImagenUrl NOT LIKE 'http://%' AND @ImagenUrl NOT LIKE 'https://%' AND @ImagenUrl NOT LIKE 'uploads/%'
+            THROW 50094, 'La imagen debe ser una URL http(s) o una clave uploads/.', 1;
 
         DECLARE @Anterior NVARCHAR(500), @Existe BIT = 0;
         SELECT @Anterior = ImagenUrl, @Existe = 1 FROM Categorias WITH (UPDLOCK) WHERE IDCategoria = @IDCategoria;
@@ -971,6 +1052,7 @@ BEGIN
                 CONCAT('{"ImagenUrl":', ISNULL('"' + STRING_ESCAPE(@Anterior, 'json') + '"', 'null'), '}'),
                 CONCAT('{"ImagenUrl":', ISNULL('"' + STRING_ESCAPE(@ImagenUrl, 'json') + '"', 'null'), '}'));
         COMMIT TRANSACTION;
+        SELECT @Anterior AS ImagenAnterior;
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;

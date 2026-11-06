@@ -2,14 +2,14 @@ import { env } from '@/core/config/env';
 import { DomainError } from '@/core/domain/domain.error';
 import { IImageStorage } from '../abstracts/image-storage.interface';
 import { IProductImageService } from '../abstracts/product-image.service.interface';
-import { ImageSource, keyToDelete, prepareProductImage } from '../domain/stored-image.policy';
+import { ImageOwner, ImageSource, keyToDelete, prepareImage } from '../domain/stored-image.policy';
 import { S3ImageStorage } from './s3-image.storage';
 
 export class ProductImageService implements IProductImageService {
   constructor(private readonly storage: IImageStorage = new S3ImageStorage()) {}
 
-  async prepare(source: ImageSource, idProducto: number): Promise<string> {
-    const image = prepareProductImage(source, idProducto, env.CDN_BASE_URL);
+  async prepare(source: ImageSource, owner: ImageOwner): Promise<string> {
+    const image = prepareImage(source, owner, env.CDN_BASE_URL);
     if (image.clave === null) return image.valor;
 
     if (!this.storage.disponible()) {

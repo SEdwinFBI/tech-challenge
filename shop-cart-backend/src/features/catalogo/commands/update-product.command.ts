@@ -17,7 +17,7 @@ export class UpdateProductCommandHandler implements ICommandHandler<UpdateProduc
   async handle(cmd: UpdateProductCommand): Promise<UpdateProductResult> {
     const { imagenClave, imagenUrl, ...resto } = cmd;
     const portada = imagenClave || imagenUrl
-      ? await this.images.prepare({ clave: imagenClave, url: imagenUrl }, cmd.idProducto)
+      ? await this.images.prepare({ clave: imagenClave, url: imagenUrl }, { tipo: 'productos', id: cmd.idProducto })
       : undefined;
     const anterior = portada ? (await this.repo.getProductByIdAdmin(cmd.idProducto)).producto?.ImagenUrl : undefined;
     const data = await this.repo.updateProduct({ ...resto, imagenUrl: portada });

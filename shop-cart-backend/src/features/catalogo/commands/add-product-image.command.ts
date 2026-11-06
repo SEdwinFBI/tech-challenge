@@ -15,7 +15,7 @@ export class AddProductImageCommandHandler implements ICommandHandler<AddProduct
   ) {}
 
   async handle(cmd: AddProductImageCommand): Promise<ProductImageDTO> {
-    const valor = await this.images.prepare({ clave: cmd.clave, url: cmd.url }, cmd.idProducto);
+    const valor = await this.images.prepare({ clave: cmd.clave, url: cmd.url }, { tipo: 'productos', id: cmd.idProducto });
     const imagen = await this.repo.addProductImage(cmd.idProducto, valor, cmd.idAdmin);
     await this.events.publish({
       tipo: 'CATALOGO_ACTUALIZADO',

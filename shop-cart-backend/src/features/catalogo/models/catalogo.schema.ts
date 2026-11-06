@@ -167,19 +167,46 @@ export interface SetFeaturedCommand {
   idAdmin: number;
 }
 
-export const SetCategoryImageSchema = z.object({
-  imagenUrl: z
-    .string()
-    .url()
-    .max(500)
-    .refine(u => /^https?:\/\//i.test(u), { message: 'La URL debe iniciar con http:// o https://' })
-    .nullable(),
-});
+export const SetCategoryImageSchema = z
+  .object({
+    clave: z.string().min(1).max(500).optional(),
+    url: z
+      .string()
+      .url()
+      .max(500)
+      .refine(u => /^https?:\/\//i.test(u), { message: 'La URL debe iniciar con http:// o https://' })
+      .nullable()
+      .optional(),
+  })
+  .refine((d) => Boolean(d.clave) !== (d.url !== undefined), {
+    message: 'Envía exactamente uno de clave o url (null la quita).',
+    path: ['clave'],
+  });
 export type SetCategoryImageDTO = z.infer<typeof SetCategoryImageSchema>;
 
 export interface SetCategoryImageCommand {
   idCategoria: number;
-  imagenUrl: string | null;
+  clave?: string;
+  url?: string | null;
+  idAdmin: number;
+}
+
+export const ApplyOfferSchema = z.object({
+  variantes: z
+    .array(z.object({ idVariante: z.number().int().positive(), precioAhora: z.number().positive() }))
+    .min(1)
+    .max(100),
+});
+export type ApplyOfferDTO = z.infer<typeof ApplyOfferSchema>;
+
+export interface ApplyOfferCommand {
+  idProducto: number;
+  variantes: ApplyOfferDTO['variantes'];
+  idAdmin: number;
+}
+
+export interface RemoveOfferCommand {
+  idProducto: number;
   idAdmin: number;
 }
 
@@ -191,6 +218,10 @@ export type CreateImageUploadUrlDTO = z.infer<typeof CreateImageUploadUrlSchema>
 
 export type CreateImageUploadUrlCommand = CreateImageUploadUrlDTO & {
   idProducto: number;
+};
+
+export type CreateCategoryImageUploadUrlCommand = CreateImageUploadUrlDTO & {
+  idCategoria: number;
 };
 
 export const ReviewCatalogProductSchema = z.object({

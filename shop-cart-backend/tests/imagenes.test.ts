@@ -11,7 +11,13 @@ import { ProductImageService } from '@/features/catalogo/infrastructure/product-
 import { UpdateProductCommandHandler } from '@/features/catalogo/commands/update-product.command';
 import { DeleteProductImageCommandHandler } from '@/features/catalogo/commands/delete-product-image.command';
 import { AddProductImageCommandHandler } from '@/features/catalogo/commands/add-product-image.command';
+import { SetCategoryImageCommandHandler } from '@/features/catalogo/commands/set-category-image.command';
+import { CreateCategoryImageUploadUrlCommandHandler } from '@/features/catalogo/commands/create-category-image-upload-url.command';
+import { ApplyOfferCommandHandler } from '@/features/catalogo/commands/apply-offer.command';
+import { RemoveOfferCommandHandler } from '@/features/catalogo/commands/remove-offer.command';
 import {
+  ImageOwner,
+  isUploadKey,
   keyFromCdnUrl,
   keyToDelete,
   isProductUploadKey,
@@ -20,6 +26,8 @@ import {
 } from '@/features/catalogo/domain/stored-image.policy';
 import {
   AddProductImageSchema,
+  ApplyOfferSchema,
+  SetCategoryImageSchema,
   CreateImageUploadUrlSchema,
   UpdateProductSchema,
 } from '@/features/catalogo/models/catalogo.schema';
@@ -39,8 +47,8 @@ class FakeStorage implements IImageStorage {
   disponible() {
     return this.activo;
   }
-  async crearUrlSubida(id: number, tipo: string, tam: number) {
-    this.firmadas.push([id, tipo, tam]);
+  async crearUrlSubida(owner: ImageOwner, tipo: string, tam: number) {
+    this.firmadas.push([owner.id, tipo, tam]);
     return {
       urlSubida: 'https://bucket.s3/firmada',
       urlPublica: 'https://cdn.example/productos/4/x.webp',
@@ -416,5 +424,120 @@ describe('limpieza de portadas y galería en el almacenamiento', () => {
     );
     await handler.handle({ idProducto: 10, idAdmin: 1 });
     assert.deepEqual(storage.eliminadas, []);
+  });
+});
+
+describe('imágenes de categoría', () => {
+  const base = env.CDN_BASE_URL!.replace(/\/+$/, '');
+  const claveA = `uploads/categorias/3/${UUID}.webp`;
+  const claveB = 'uploads/categorias/3/aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb.webp';
+
+  it('la política distingue categorías de productos', () => {
+    assert.equal(isUploadKey(claveA, { tipo: 'categorias', id: 3 }), true);
+    assert.equal(isUploadKey(claveA, { tipo: 'categorias', id: 4 }), false);
+    assert.equal(isUploadKey(claveA, { tipo: 'productos', id: 3 }), false);
+    assert.equal(keyToDelete(claveA, CDN), claveA);
+    assert.equal(keyToDelete(`${base}/${claveA}`, base), claveA);
+  });
+
+  it('el esquema acepta clave, url o null y rechaza vacío, ambos o esquemas ajenos', () => {
+    assert.equal(SetCategoryImageSchema.safeParse({ clave: claveA }).success, true);
+    assert.equal(SetCategoryImageSchema.safeParse({ url: 'https://cdn.test/c.jpg' }).success, true);
+    assert.equal(SetCategoryImageSchema.safeParse({ url: null }).success, true);
+    assert.equal(SetCategoryImageSchema.safeParse({}).success, false);
+    assert.equal(SetCategoryImageSchema.safeParse({ clave: claveA, url: 'https://cdn.test/c.jpg' }).success, false);
+    assert.equal(SetCategoryImageSchema.safeParse({ url: 'javascript:alert(1)' }).success, false);
+  });
+
+  const actualizar = async (anterior: string | null, cmd: Record<string, unknown>, storage = new FakeStorage(true)) => {
+    const guardados: Array<string | null> = [];
+    const handler = new SetCategoryImageCommandHandler(
+      repoCon({ updateCategoryImage: async (_id, valor) => (guardados.push(valor), anterior) }),
+      new FakePublisher(),
+      new ProductImageService(storage),
+    );
+    await handler.handle({ idCategoria: 3, idAdmin: 1, ...cmd });
+    return { storage, guardados };
+  };
+
+  it('guarda la clave, verifica el objeto y elimina la imagen anterior', async () => {
+    const { storage, guardados } = await actualizar(`${base}/${claveA}`, { clave: claveB });
+    assert.deepEqual(guardados, [claveB]);
+    assert.deepEqual(storage.consultadas, [claveB]);
+    assert.deepEqual(storage.eliminadas, [claveA]);
+  });
+
+  it('al quitar la imagen elimina el objeto anterior sin consultar el almacenamiento', async () => {
+    const { storage, guardados } = await actualizar(claveA, { url: null });
+    assert.deepEqual(guardados, [null]);
+    assert.deepEqual(storage.consultadas, []);
+    assert.deepEqual(storage.eliminadas, [claveA]);
+  });
+
+  it('una URL externa no elimina anteriores externas', async () => {
+    const { storage, guardados } = await actualizar('https://images.unsplash.com/a.jpg', { url: 'https://images.unsplash.com/b.jpg' });
+    assert.deepEqual(guardados, ['https://images.unsplash.com/b.jpg']);
+    assert.deepEqual(storage.eliminadas, []);
+  });
+
+  it('rechaza la clave de otra categoría o de un producto', async () => {
+    for (const clave of ['uploads/categorias/9/aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb.webp', 'uploads/productos/3/aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb.webp']) {
+      await assert.rejects(
+        () => actualizar(null, { clave }),
+        (err: unknown) => err instanceof DomainError && err.code === 'IMAGEN_CLAVE_INVALIDA',
+      );
+    }
+  });
+
+  it('firma con la ruta de categorías y responde 404 si no existe', async () => {
+    const storage = new FakeStorage(true);
+    const existente = repoCon({ getCategories: async () => [{ IDCategoria: 3 }] as never });
+    const res = await new CreateCategoryImageUploadUrlCommandHandler(existente, storage).handle({ idCategoria: 3, contentType: 'image/png', tamanoBytes: 100 });
+    assert.equal(res.urlSubida, 'https://bucket.s3/firmada');
+    assert.deepEqual(storage.firmadas, [[3, 'image/png', 100]]);
+    await assert.rejects(
+      () => new CreateCategoryImageUploadUrlCommandHandler(existente, storage).handle({ idCategoria: 8, contentType: 'image/png', tamanoBytes: 100 }),
+      (err: unknown) => err instanceof DomainError && err.httpStatus === 404 && err.code === 'CATEGORY_NOT_FOUND',
+    );
+    await assert.rejects(
+      () => new CreateCategoryImageUploadUrlCommandHandler(existente, new FakeStorage(false)).handle({ idCategoria: 3, contentType: 'image/png', tamanoBytes: 100 }),
+      (err: unknown) => err instanceof DomainError && err.httpStatus === 503,
+    );
+  });
+});
+
+describe('ofertas del producto', () => {
+  it('el esquema exige al menos una variante con precio positivo', () => {
+    assert.equal(ApplyOfferSchema.safeParse({ variantes: [{ idVariante: 1, precioAhora: 190 }] }).success, true);
+    assert.equal(ApplyOfferSchema.safeParse({ variantes: [] }).success, false);
+    assert.equal(ApplyOfferSchema.safeParse({ variantes: [{ idVariante: 1, precioAhora: 0 }] }).success, false);
+  });
+
+  it('aplica la oferta redondeada a centavos y publica el evento', async () => {
+    const llamadas: unknown[] = [];
+    const events = new FakePublisher();
+    const handler = new ApplyOfferCommandHandler(
+      repoCon({ applyOffer: async (...args) => void llamadas.push(args) }),
+      events,
+    );
+    await handler.handle({ idProducto: 5, idAdmin: 2, variantes: [{ idVariante: 1, precioAhora: 189.999 }] });
+    assert.deepEqual(llamadas, [[5, [{ idVariante: 1, precioAhora: 190 }], 2]]);
+    assert.equal(events.eventos[0]!.tipo, 'CATALOGO_ACTUALIZADO');
+  });
+
+  it('rechaza variantes repetidas sin tocar el repositorio', async () => {
+    const handler = new ApplyOfferCommandHandler(repoCon({}), new FakePublisher());
+    await assert.rejects(
+      () => handler.handle({ idProducto: 5, idAdmin: 2, variantes: [{ idVariante: 1, precioAhora: 10 }, { idVariante: 1, precioAhora: 9 }] }),
+      (err: unknown) => err instanceof DomainError && err.code === 'OFFER_INVALID',
+    );
+  });
+
+  it('quita la oferta y publica el evento', async () => {
+    const llamadas: unknown[] = [];
+    const events = new FakePublisher();
+    await new RemoveOfferCommandHandler(repoCon({ removeOffer: async (...args) => void llamadas.push(args) }), events).handle({ idProducto: 5, idAdmin: 2 });
+    assert.deepEqual(llamadas, [[5, 2]]);
+    assert.equal(events.eventos.length, 1);
   });
 });

@@ -423,9 +423,9 @@ describe('Extensiones de tienda: favoritos (anti-IDOR)', () => {
 
 describe('Extensiones de tienda: imagen de categoría', () => {
   it('acepta URL http(s) o null para quitarla y rechaza esquemas ', () => {
-    assert.equal(SetCategoryImageSchema.safeParse({ imagenUrl: 'https://cdn.test/c.jpg' }).success, true);
-    assert.equal(SetCategoryImageSchema.safeParse({ imagenUrl: null }).success, true);
-    assert.equal(SetCategoryImageSchema.safeParse({ imagenUrl: 'javascript:alert(1)' }).success, false);
+    assert.equal(SetCategoryImageSchema.safeParse({ url: 'https://cdn.test/c.jpg' }).success, true);
+    assert.equal(SetCategoryImageSchema.safeParse({ url: null }).success, true);
+    assert.equal(SetCategoryImageSchema.safeParse({ url: 'javascript:alert(1)' }).success, false);
     assert.equal(SetCategoryImageSchema.safeParse({}).success, false);
   });
 });

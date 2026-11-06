@@ -1,8 +1,15 @@
 import { DomainError } from '@/core/domain/domain.error';
 
-const PREFIJO_SUBIDAS = 'uploads/productos/';
+export type ImageKind = 'productos' | 'categorias';
+
+export interface ImageOwner {
+  tipo: ImageKind;
+  id: number;
+}
+
 const ABSOLUTA = /^https?:\/\//i;
-const CLAVE_SUBIDA = /^uploads\/productos\/\d+\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(webp|jpg|png)$/;
+const PREFIJO_SUBIDAS = /^uploads\/(productos|categorias)\//;
+const CLAVE_SUBIDA = /^uploads\/(productos|categorias)\/\d+\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(webp|jpg|png)$/;
 
 export interface ImageSource {
   clave?: string;
@@ -33,21 +40,30 @@ export const keyFromCdnUrl = (url: string, baseCdn?: string | null): string | nu
   return url.slice(prefijo.length).split(/[?#]/)[0] || null;
 };
 
+export const uploadKeyPrefix = (owner: ImageOwner): string => `uploads/${owner.tipo}/${owner.id}/`;
+
+export const isUploadKey = (clave: string, owner: ImageOwner): boolean =>
+  CLAVE_SUBIDA.test(clave) && clave.startsWith(uploadKeyPrefix(owner));
+
 export const isProductUploadKey = (clave: string, idProducto: number): boolean =>
-  CLAVE_SUBIDA.test(clave) && clave.startsWith(`${PREFIJO_SUBIDAS}${idProducto}/`);
+  isUploadKey(clave, { tipo: 'productos', id: idProducto });
 
 export const keyToDelete = (valor: string | null | undefined, baseCdn?: string | null): string | null => {
   if (!valor) return null;
   const clave = isAbsoluteUrl(valor) ? keyFromCdnUrl(valor, baseCdn) : valor;
-  return clave && clave.startsWith(PREFIJO_SUBIDAS) && !clave.includes('..') ? clave : null;
+  return clave && PREFIJO_SUBIDAS.test(clave) && !clave.includes('..') ? clave : null;
 };
 
-const claveInvalida = () =>
-  new DomainError('La clave de la imagen no corresponde a este producto.', 'IMAGEN_CLAVE_INVALIDA', 400);
+const claveInvalida = (owner: ImageOwner) =>
+  new DomainError(
+    `La clave de la imagen no corresponde a ${owner.tipo === 'productos' ? 'este producto' : 'esta categoría'}.`,
+    'IMAGEN_CLAVE_INVALIDA',
+    400,
+  );
 
-export const prepareProductImage = (
+export const prepareImage = (
   fuente: ImageSource,
-  idProducto: number,
+  owner: ImageOwner,
   baseCdn?: string | null,
 ): StorableImage => {
   if (Boolean(fuente.clave) === Boolean(fuente.url)) {
@@ -56,6 +72,9 @@ export const prepareProductImage = (
 
   const clave = fuente.clave ?? keyFromCdnUrl(fuente.url!, baseCdn);
   if (clave === null) return { valor: fuente.url!, clave: null };
-  if (!isProductUploadKey(clave, idProducto)) throw claveInvalida();
+  if (!isUploadKey(clave, owner)) throw claveInvalida(owner);
   return { valor: clave, clave };
 };
+
+export const prepareProductImage = (fuente: ImageSource, idProducto: number, baseCdn?: string | null): StorableImage =>
+  prepareImage(fuente, { tipo: 'productos', id: idProducto }, baseCdn);

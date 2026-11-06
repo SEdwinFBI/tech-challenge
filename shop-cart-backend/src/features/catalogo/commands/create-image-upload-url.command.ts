@@ -26,6 +26,6 @@ export class CreateImageUploadUrlCommandHandler
       );
     }
 
-    return this.storage.crearUrlSubida(cmd.idProducto, cmd.contentType, cmd.tamanoBytes);
+    return this.storage.crearUrlSubida({ tipo: 'productos', id: cmd.idProducto }, cmd.contentType, cmd.tamanoBytes);
   }
 }

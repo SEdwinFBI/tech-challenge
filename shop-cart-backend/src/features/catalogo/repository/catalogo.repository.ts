@@ -224,14 +224,34 @@ export class CatalogRepository implements ICatalogRepository {
       .execute('SP_Catalogo_MarcarDestacado');
   }
 
-  async updateCategoryImage(idCategoria: number, imagenUrl: string | null, idAdmin: number): Promise<void> {
+  async updateCategoryImage(idCategoria: number, imagen: string | null, idAdmin: number): Promise<string | null> {
+    const pool = await getDbPool();
+    const res = await pool
+      .request()
+      .input('IDCategoria', sql.Int, idCategoria)
+      .input('ImagenUrl', sql.NVarChar(500), imagen)
+      .input('IDUsuarioAdmin', sql.Int, idAdmin)
+      .execute<{ ImagenAnterior: string | null }>('SP_Catalogo_ActualizarImagenCategoria');
+    return res.recordset?.[0]?.ImagenAnterior ?? null;
+  }
+
+  async applyOffer(idProducto: number, variantes: Array<{ idVariante: number; precioAhora: number }>, idAdmin: number): Promise<void> {
     const pool = await getDbPool();
     await pool
       .request()
-      .input('IDCategoria', sql.Int, idCategoria)
-      .input('ImagenUrl', sql.NVarChar(500), imagenUrl)
+      .input('IDProducto', sql.Int, idProducto)
+      .input('Variantes', sql.NVarChar(sql.MAX), JSON.stringify(variantes))
       .input('IDUsuarioAdmin', sql.Int, idAdmin)
-      .execute('SP_Catalogo_ActualizarImagenCategoria');
+      .execute('SP_Catalogo_AplicarOferta');
+  }
+
+  async removeOffer(idProducto: number, idAdmin: number): Promise<void> {
+    const pool = await getDbPool();
+    await pool
+      .request()
+      .input('IDProducto', sql.Int, idProducto)
+      .input('IDUsuarioAdmin', sql.Int, idAdmin)
+      .execute('SP_Catalogo_QuitarOferta');
   }
 
   async getProductByIdAdmin(idProducto: number): Promise<ProductDetailResult> {

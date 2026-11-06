@@ -35,7 +35,9 @@ export interface ICatalogRepository {
   deleteProductImage(idProductoImagen: number, idAdmin: number): Promise<string | null>;
   setReferencePrice(idVariante: number, precioReferencia: number | null, idAdmin: number): Promise<void>;
   setFeatured(idProducto: number, destacado: boolean, idAdmin: number): Promise<void>;
-  updateCategoryImage(idCategoria: number, imagenUrl: string | null, idAdmin: number): Promise<void>;
+  updateCategoryImage(idCategoria: number, imagen: string | null, idAdmin: number): Promise<string | null>;
+  applyOffer(idProducto: number, variantes: Array<{ idVariante: number; precioAhora: number }>, idAdmin: number): Promise<void>;
+  removeOffer(idProducto: number, idAdmin: number): Promise<void>;
   getProductByIdAdmin(idProducto: number): Promise<ProductDetailResult>;
   getReviewContext(query: ReviewCatalogProductQuery): Promise<CatalogReviewContext>;
 }

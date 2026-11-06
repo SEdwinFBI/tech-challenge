@@ -19,6 +19,9 @@ import { SetReferencePriceCommandHandler } from './commands/set-reference-price.
 import { SetFeaturedCommandHandler } from './commands/set-featured.command';
 import { GetProductImagesQueryHandler } from './queries/get-product-images.query';
 import { SetCategoryImageCommandHandler } from './commands/set-category-image.command';
+import { CreateCategoryImageUploadUrlCommandHandler } from './commands/create-category-image-upload-url.command';
+import { ApplyOfferCommandHandler } from './commands/apply-offer.command';
+import { RemoveOfferCommandHandler } from './commands/remove-offer.command';
 import { GetProductAdminQueryHandler } from './queries/get-product-admin.query';
 import { GetProductInventoryQueryHandler } from './queries/get-product-inventory.query';
 import { ReviewCatalogProductQueryHandler } from './queries/review-catalog-product.query';
@@ -35,6 +38,7 @@ import {
   SetFeaturedSchema,
   SetReferencePriceSchema,
   SetCategoryImageSchema,
+  ApplyOfferSchema,
   ReviewCatalogProductSchema,
 } from './models/catalogo.schema';
 
@@ -332,6 +336,9 @@ catalogoRouter.patch(
 );
 
 const setCategoryImageCommandHandler = new SetCategoryImageCommandHandler();
+const createCategoryImageUploadUrlCommandHandler = new CreateCategoryImageUploadUrlCommandHandler();
+const applyOfferCommandHandler = new ApplyOfferCommandHandler();
+const removeOfferCommandHandler = new RemoveOfferCommandHandler();
 
 catalogoRouter.patch(
   '/categorias/:id/imagen',
@@ -340,13 +347,68 @@ catalogoRouter.patch(
   requireNumericId,
   async (req, res, next) => {
     try {
-      const { imagenUrl } = SetCategoryImageSchema.parse(req.body);
+      const { clave, url } = SetCategoryImageSchema.parse(req.body);
       await setCategoryImageCommandHandler.handle({
         idCategoria: Number(req.params.id),
-        imagenUrl,
+        clave,
+        url,
         idAdmin: req.user!.idUsuario,
       });
       res.json({ ok: true, mensaje: 'Imagen de categoría actualizada.' });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+catalogoRouter.post(
+  '/categorias/:id/imagen/firma',
+  requireAuth,
+  requireRoles('ADMINISTRADOR'),
+  requireNumericId,
+  async (req, res, next) => {
+    try {
+      const dto = CreateImageUploadUrlSchema.parse(req.body);
+      const datos = await createCategoryImageUploadUrlCommandHandler.handle({ ...dto, idCategoria: Number(req.params.id) });
+      res.json({ ok: true, datos });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+catalogoRouter.post(
+  '/productos/:id/oferta',
+  requireAuth,
+  requireRoles('ADMINISTRADOR'),
+  requireNumericId,
+  async (req, res, next) => {
+    try {
+      const { variantes } = ApplyOfferSchema.parse(req.body);
+      await applyOfferCommandHandler.handle({
+        idProducto: Number(req.params.id),
+        variantes,
+        idAdmin: req.user!.idUsuario,
+      });
+      res.json({ ok: true, mensaje: 'Oferta aplicada. El precio anterior quedó como precio de referencia.' });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+catalogoRouter.delete(
+  '/productos/:id/oferta',
+  requireAuth,
+  requireRoles('ADMINISTRADOR'),
+  requireNumericId,
+  async (req, res, next) => {
+    try {
+      await removeOfferCommandHandler.handle({
+        idProducto: Number(req.params.id),
+        idAdmin: req.user!.idUsuario,
+      });
+      res.json({ ok: true, mensaje: 'Oferta quitada. Se restauró el precio anterior.' });
     } catch (err) {
       next(err);
     }

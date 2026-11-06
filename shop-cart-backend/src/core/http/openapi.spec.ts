@@ -1443,7 +1443,7 @@ export const openApiSpec = {
                     enum: ['EN_PREPARACION', 'DESPACHADO', 'ENTREGADO', 'CANCELADO'],
                     example: 'EN_PREPARACION',
                   },
-                  comentario: { type: 'string', example: 'Mercadería empacada y rotulada' },
+                  comentario: { type: 'string', maxLength: 300, description: 'Obligatorio (5 a 300 caracteres) al cancelar', example: 'Mercadería empacada y rotulada' },
                 },
               },
             },
@@ -1709,14 +1709,64 @@ export const openApiSpec = {
       patch: {
         tags: ['Catalogo'],
         summary: 'Imagen de categoría (Admin)',
-        description: 'Se usa en el carrusel y el menú. Enviar null la elimina.',
+        description: 'Se usa en el carrusel y el menú. Enviar exactamente uno de clave (objeto subido con /imagen/firma, validada contra uploads/categorias/{id}/{uuid}.webp|jpg|png y verificada en S3) o url (externa https; una url del CDN propio se convierte a su clave). url null la quita. La imagen anterior subida a S3 se elimina. Las lecturas devuelven la URL completa.',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
         requestBody: { required: true, content: { 'application/json': { schema: {
-          type: 'object', required: ['imagenUrl'],
-          properties: { imagenUrl: { type: 'string', format: 'uri', nullable: true, example: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400' } },
+          type: 'object',
+          properties: {
+            clave: { type: 'string', example: 'uploads/categorias/3/3f2b8c1e-9a47-4d6e-b1a2-5c7d8e9f0a1b.webp' },
+            url: { type: 'string', format: 'uri', nullable: true, example: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400' },
+          },
         } } } },
-        responses: { 200: { description: 'Imagen actualizada' }, 404: { description: 'Categoría inexistente' } },
+        responses: { 200: { description: 'Imagen actualizada' }, 400: { description: 'Clave o url inválida' }, 404: { description: 'Categoría inexistente' }, 409: { description: 'El objeto no está en el almacenamiento (IMAGEN_NO_SUBIDA)' } },
+      },
+    },
+    '/catalogo/categorias/{id}/imagen/firma': {
+      post: {
+        tags: ['Catalogo'],
+        summary: 'Obtener URL firmada para subir la imagen de una categoría (Admin)',
+        description: 'Misma mecánica que la de productos. La clave es uploads/categorias/{id}/{uuid}.{ext}; se registra con PATCH /catalogo/categorias/{id}/imagen.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: {
+          type: 'object', required: ['contentType', 'tamanoBytes'],
+          properties: {
+            contentType: { type: 'string', enum: ['image/webp', 'image/jpeg', 'image/png'] },
+            tamanoBytes: { type: 'integer', minimum: 1, maximum: 2097152 },
+          },
+        } } } },
+        responses: {
+          200: { description: 'URL de subida (urlSubida, urlPublica, clave, expiraEn, cabeceras)' },
+          400: { description: 'Tipo o tamaño inválido' },
+          404: { description: 'Categoría inexistente' },
+          503: { description: 'Almacenamiento no configurado (ALMACENAMIENTO_NO_CONFIGURADO)' },
+        },
+      },
+    },
+    '/catalogo/productos/{id}/oferta': {
+      post: {
+        tags: ['Catalogo'],
+        summary: 'Poner en oferta (Admin)',
+        description: 'En una sola transacción, por cada variante: el precio actual pasa a PrecioReferencia y el precio de venta pasa a precioAhora. Si la variante ya estaba en oferta, se conserva su PrecioReferencia. Queda en la Bitácora (PRECIOS).',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: {
+          type: 'object', required: ['variantes'],
+          properties: { variantes: { type: 'array', minItems: 1, items: {
+            type: 'object', required: ['idVariante', 'precioAhora'],
+            properties: { idVariante: { type: 'integer' }, precioAhora: { type: 'number', example: 190 } },
+          } } },
+        } } } },
+        responses: { 200: { description: 'Oferta aplicada' }, 400: { description: 'precioAhora debe ser mayor a cero y menor al precio actual (OFFER_INVALID)' }, 404: { description: 'Variante inexistente' } },
+      },
+      delete: {
+        tags: ['Catalogo'],
+        summary: 'Quitar oferta (Admin)',
+        description: 'Restaura el precio de venta a PrecioReferencia y limpia la referencia en todas las variantes del producto que la tengan. Queda en la Bitácora (PRECIOS).',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+        responses: { 200: { description: 'Oferta quitada' }, 404: { description: 'Producto inexistente' } },
       },
     },
     '/catalogo/productos/{id}/inventario': {

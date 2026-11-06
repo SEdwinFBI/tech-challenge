@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { DeleteObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from '@/core/config/env';
-import { keyToDelete } from '../domain/stored-image.policy';
+import { ImageOwner, keyToDelete, uploadKeyPrefix } from '../domain/stored-image.policy';
 import { IImageStorage, UrlSubidaImagen } from '../abstracts/image-storage.interface';
 
 const EXTENSIONES: Record<string, string> = {
@@ -21,11 +21,11 @@ export class S3ImageStorage implements IImageStorage {
     return Boolean(env.S3_BUCKET && env.S3_REGION && env.CDN_BASE_URL);
   }
 
-  async crearUrlSubida(idProducto: number, contentType: string, tamanoBytes: number): Promise<UrlSubidaImagen> {
+  async crearUrlSubida(owner: ImageOwner, contentType: string, tamanoBytes: number): Promise<UrlSubidaImagen> {
     const extension = EXTENSIONES[contentType];
     if (!extension) throw new Error(`Tipo de contenido no soportado: ${contentType}`);
 
-    const clave = `uploads/productos/${idProducto}/${randomUUID()}.${extension}`;
+    const clave = `${uploadKeyPrefix(owner)}${randomUUID()}.${extension}`;
     const comando = new PutObjectCommand({
       Bucket: env.S3_BUCKET,
       Key: clave,
