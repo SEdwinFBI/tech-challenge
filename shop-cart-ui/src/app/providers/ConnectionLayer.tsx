@@ -1,14 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Download, RefreshCw, Share, WifiOff, X } from 'lucide-react';
+import { Download, Loader2, RefreshCw, Share, WifiOff, X } from 'lucide-react';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { isIosSafari, isStandalone, usePwa } from '@/shared/lib/pwa';
+import { useAuth } from '@/features/auth';
 import { toast } from '@/shared/ui/toastStore';
 
 const IOS_HINT_KEY = 'shopcart:ios-install-hint';
 
 export const ConnectionLayer: React.FC = () => {
   const online = useOnlineStatus();
+  const reconnecting = useAuth((s) => s.reconnecting);
+  const authStatus = useAuth((s) => s.status);
+  const trySilentRefresh = useAuth((s) => s.trySilentRefresh);
   const queryClient = useQueryClient();
   const wasOffline = useRef(!online);
   const updateReady = usePwa((s) => s.updateReady);
@@ -40,6 +44,17 @@ export const ConnectionLayer: React.FC = () => {
         <div role="status" className="pointer-events-auto flex max-w-md items-center gap-2.5 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-lift">
           <WifiOff className="h-4 w-4 shrink-0 text-amber-300" />
           Sin conexión. Algunas acciones no están disponibles.
+        </div>
+      )}
+      {online && reconnecting && (
+        <div role="status" className="pointer-events-auto flex max-w-md items-center gap-2.5 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-lift">
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-amber-300" />
+          No se pudo conectar con el servidor. Reintentando…
+          {authStatus !== 'initializing' && (
+            <button type="button" onClick={() => void trySilentRefresh()} className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold hover:bg-white/25">
+              Reintentar
+            </button>
+          )}
         </div>
       )}
       {updateReady && (

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Download, Heart, LogOut, MapPin, Package, ShieldCheck, User as UserIcon, UserCog } from 'lucide-react';
+import { Download, Heart, Loader2, LogOut, MapPin, Package, ShieldCheck, User as UserIcon, UserCog } from 'lucide-react';
 import { useAuth } from '@/features/auth';
 import { usePwa } from '@/shared/lib/pwa';
 
@@ -11,7 +11,7 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 export const AccountMenu: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, status } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -31,6 +31,14 @@ export const AccountMenu: React.FC = () => {
       window.removeEventListener('keydown', onKey);
     };
   }, [open]);
+
+  if (!user && status === 'unknown') {
+    return (
+      <div role="status" className="ml-1 flex h-10 items-center gap-2 rounded-full px-3 text-xs font-bold text-slate-500">
+        <Loader2 className="h-4 w-4 animate-spin" /> Reconectando…
+      </div>
+    );
+  }
 
   if (!user) {
     return (

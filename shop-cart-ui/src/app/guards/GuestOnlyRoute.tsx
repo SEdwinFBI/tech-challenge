@@ -1,10 +1,12 @@
 import React from 'react';
-import { Navigate } from 'react-router';
+import { Navigate, useLocation } from 'react-router';
 import { useAuth } from '@/features/auth';
 import { Skeleton } from '@/shared/ui';
 
 export const GuestOnlyRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, status } = useAuth();
+  const location = useLocation();
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
 
   if (status === 'initializing') {
     return (
@@ -15,7 +17,11 @@ export const GuestOnlyRoute: React.FC<{ children: React.ReactNode }> = ({ childr
   }
 
   if (status === 'authenticated' && user) {
-    if (user.rol === 'ADMINISTRADOR' || user.rol === 'OPERADOR') {
+    const isStaff = user.rol === 'ADMINISTRADOR' || user.rol === 'OPERADOR';
+    if (from && from.startsWith('/admin') === isStaff) {
+      return <Navigate to={from} replace />;
+    }
+    if (isStaff) {
       return <Navigate to="/admin/pedidos" replace />;
     }
     return <Navigate to="/" replace />;

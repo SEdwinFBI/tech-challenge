@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,7 +16,7 @@ const DEMO = [
 ];
 
 export const LoginPage: React.FC = () => {
-  const { login } = useAuth();
+  const { login, trySilentRefresh, hasSessionHint } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
@@ -28,6 +28,10 @@ export const LoginPage: React.FC = () => {
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({ resolver: zodResolver(loginSchema), mode: 'onBlur', defaultValues: { correo: '', password: '' } });
+
+  useEffect(() => {
+    if (hasSessionHint()) void trySilentRefresh();
+  }, [hasSessionHint, trySilentRefresh]);
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
 

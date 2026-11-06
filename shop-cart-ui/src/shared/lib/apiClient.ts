@@ -1,9 +1,12 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { getGuestToken } from './guestToken';
+import { isAuthUncertain } from './apiErrors';
+import type { User } from '@/shared/types/domain';
 
 let inMemoryAccessToken: string | null = null;
-let refreshPromise: Promise<string | null> | null = null;
+let refreshPromise: Promise<RefreshResult> | null = null;
 let onUnauthorizedCallback: (() => void) | null = null;
+let onUncertainCallback: (() => void) | null = null;
 
 export function setAccessToken(token: string | null): void {
   inMemoryAccessToken = token;
@@ -15,6 +18,10 @@ export function getAccessToken(): string | null {
 
 export function setOnUnauthorizedCallback(cb: () => void): void {
   onUnauthorizedCallback = cb;
+}
+
+export function setOnAuthUncertainCallback(cb: () => void): void {
+  onUncertainCallback = cb;
 }
 
 export const apiClient = axios.create({
@@ -34,6 +41,26 @@ function tokenExpiresSoon(token: string): boolean {
   }
 }
 
+export interface RefreshResult {
+  ok: boolean;
+  accessToken: string;
+  usuario: User;
+}
+
+// Un solo refresh en vuelo: con rotación, reusar el mismo refresh token cierra la sesión
+export function refreshSession(): Promise<RefreshResult> {
+  refreshPromise ??= apiClient
+    .post<RefreshResult>('/auth/refresh', undefined, { timeout: 10_000 })
+    .then((res) => {
+      setAccessToken(res.data.accessToken);
+      return res.data;
+    })
+    .finally(() => {
+      refreshPromise = null;
+    });
+  return refreshPromise;
+}
+
 // Renovar antes de que venza: vencido, hasta las rutas públicas dan 401
 apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   if (
@@ -41,20 +68,23 @@ apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) =>
     tokenExpiresSoon(inMemoryAccessToken) &&
     !config.url?.includes('/auth/')
   ) {
-    refreshPromise ??= axios
-      .post<{ ok: boolean; accessToken: string }>('/api/v1/auth/refresh', {}, { withCredentials: true })
-      .then((res) => {
-        setAccessToken(res.data.accessToken);
-        return res.data.accessToken;
-      })
-      .catch(() => null)
-      .finally(() => {
-        refreshPromise = null;
-      });
-    await refreshPromise;
+    try {
+      await refreshSession();
+    } catch (err) {
+      handleRefreshFailure(err);
+    }
   }
   return config;
 });
+
+function handleRefreshFailure(err: unknown): void {
+  if (isAuthUncertain(err)) {
+    onUncertainCallback?.();
+    return;
+  }
+  setAccessToken(null);
+  onUnauthorizedCallback?.();
+}
 
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (inMemoryAccessToken) {
@@ -85,33 +115,13 @@ apiClient.interceptors.response.use(
 
     originalRequest._retry = true;
 
-    // Un solo refresh compartido para los 401 simultáneos
-    if (!refreshPromise) {
-      refreshPromise = axios
-        .post<{ ok: boolean; accessToken: string }>('/api/v1/auth/refresh', {}, { withCredentials: true })
-        .then((res) => {
-          const newToken = res.data.accessToken;
-          setAccessToken(newToken);
-          return newToken;
-        })
-        .catch((err) => {
-          setAccessToken(null);
-          if (onUnauthorizedCallback) {
-            onUnauthorizedCallback();
-          }
-          return null;
-        })
-        .finally(() => {
-          refreshPromise = null;
-        });
-    }
-
-    const token = await refreshPromise;
-    if (token) {
-      originalRequest.headers.set('Authorization', `Bearer ${token}`);
+    try {
+      const data = await refreshSession();
+      originalRequest.headers.set('Authorization', `Bearer ${data.accessToken}`);
       return apiClient(originalRequest);
+    } catch (refreshErr) {
+      handleRefreshFailure(refreshErr);
+      return Promise.reject(error);
     }
-
-    return Promise.reject(error);
   }
 );

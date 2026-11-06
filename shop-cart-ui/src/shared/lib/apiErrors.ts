@@ -108,6 +108,19 @@ export function isNetworkError(err: unknown): boolean {
   return Boolean(e?.isAxiosError && !e.response && e.code !== 'ERR_CANCELED');
 }
 
+/** Respuesta no concluyente de /auth/refresh: sin respuesta, 5xx, timeout o refresco en curso. */
+export function isAuthUncertain(err: unknown): boolean {
+  if (isNetworkError(err)) return true;
+  const e = err as AxiosError | undefined;
+  if (!e?.isAxiosError) return true;
+  if (e.code === 'ECONNABORTED' || e.code === 'ETIMEDOUT') return true;
+  const status = e.response?.status;
+  if (status === undefined) return true;
+  if (status >= 500 || status === 408 || status === 429) return true;
+  const codigo = (e.response?.data as { codigo?: string } | undefined)?.codigo;
+  return status === 409 && codigo === 'REFRESH_IN_PROGRESS';
+}
+
 export function apiFieldErrors(err: unknown): Array<{ campo: string; mensaje: string }> {
   const detalles = (err as AxiosError<CuerpoError>)?.response?.data?.detalles;
   if (!Array.isArray(detalles)) return [];

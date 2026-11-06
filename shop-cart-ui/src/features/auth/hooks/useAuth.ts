@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { User } from '@/shared/types/domain';
 import { authApi } from '../api/authApi';
-import { setAccessToken, setOnUnauthorizedCallback } from '@/shared/lib/apiClient';
+import { refreshSession, setAccessToken, setOnAuthUncertainCallback, setOnUnauthorizedCallback } from '@/shared/lib/apiClient';
 import { toast } from '@/shared/ui/toastStore';
-import { isNetworkError } from '@/shared/lib/apiErrors';
+import { isAuthUncertain } from '@/shared/lib/apiErrors';
 import { claimDrafts, clearAllDrafts } from '@/shared/lib/draft';
 
 const SESSION_KEY = 'shopcart_session';
@@ -27,52 +27,115 @@ function recordarSesion(activa: boolean): void {
 
 interface AuthState {
   user: User | null;
-  status: 'initializing' | 'authenticated' | 'unauthenticated';
+  status: 'initializing' | 'authenticated' | 'unauthenticated' | 'unknown';
+  reconnecting: boolean;
   initializeAuth: () => Promise<void>;
+  trySilentRefresh: () => Promise<boolean>;
+  hasSessionHint: () => boolean;
   login: (correo: string, pass: string) => Promise<User>;
   register: (correo: string, pass: string, name: string) => Promise<User>;
   logout: () => Promise<void>;
 }
 
-// Una renovación a la vez: en dev, StrictMode ejecuta los efectos dos veces.
-// Con rotación, reusar el mismo refresh token cierra la sesión.
-let initPromise: Promise<void> | null = null;
+const RETRY_DELAYS_MS = [2000, 5000, 10000, 15000];
 
-export const useAuthStore = create<AuthState>()((set) => ({
+let initPromise: Promise<void> | null = null;
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let retryAttempt = 0;
+let listenersAttached = false;
+
+function stopRetries(): void {
+  if (retryTimer) clearTimeout(retryTimer);
+  retryTimer = null;
+  retryAttempt = 0;
+}
+
+function scheduleRetry(): void {
+  if (retryTimer || !haySesionGuardada()) return;
+  const delay = RETRY_DELAYS_MS[Math.min(retryAttempt, RETRY_DELAYS_MS.length - 1)];
+  retryAttempt += 1;
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    void useAuthStore.getState().trySilentRefresh();
+  }, delay);
+}
+
+function retryNow(): void {
+  const { status, reconnecting } = useAuthStore.getState();
+  if (status !== 'unknown' && !reconnecting) return;
+  if (retryTimer) clearTimeout(retryTimer);
+  retryTimer = null;
+  void useAuthStore.getState().trySilentRefresh();
+}
+
+function attachListeners(): void {
+  if (listenersAttached || typeof window === 'undefined') return;
+  listenersAttached = true;
+  window.addEventListener('online', retryNow);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') retryNow();
+  });
+}
+
+function sessionExpired(): void {
+  stopRetries();
+  setAccessToken(null);
+  recordarSesion(false);
+  const teniaSesion = useAuthStore.getState().status !== 'unauthenticated';
+  useAuthStore.setState({ user: null, status: 'unauthenticated', reconnecting: false });
+  if (teniaSesion) toast.warning('Tu sesión caducó', 'Inicia sesión de nuevo para continuar.');
+}
+
+export const useAuthStore = create<AuthState>()((set, get) => ({
   user: null,
   status: 'initializing',
+  reconnecting: false,
 
+  hasSessionHint: haySesionGuardada,
+
+  // Una renovación a la vez: en dev, StrictMode ejecuta los efectos dos veces
   initializeAuth: () => {
     if (!initPromise) {
+      attachListeners();
       initPromise = (async () => {
         if (!haySesionGuardada()) {
           set({ user: null, status: 'unauthenticated' });
           return;
         }
-        try {
-          const data = await authApi.refresh();
-          claimDrafts(data.usuario.idUsuario);
-          set({ user: data.usuario, status: 'authenticated' });
-        } catch (err) {
-          if (isNetworkError(err)) {
-            set({ user: null, status: 'unauthenticated' });
-            return;
-          }
-          setAccessToken(null);
-          recordarSesion(false);
-          set({ user: null, status: 'unauthenticated' });
-          toast.warning('Tu sesión caducó', 'Inicia sesión de nuevo para continuar.');
-        }
+        await get().trySilentRefresh();
       })();
     }
     return initPromise;
+  },
+
+  trySilentRefresh: async () => {
+    if (!haySesionGuardada()) {
+      if (get().status !== 'authenticated') set({ user: null, status: 'unauthenticated', reconnecting: false });
+      return false;
+    }
+    try {
+      const data = await refreshSession();
+      stopRetries();
+      claimDrafts(data.usuario.idUsuario);
+      set({ user: data.usuario, status: 'authenticated', reconnecting: false });
+      return true;
+    } catch (err) {
+      if (isAuthUncertain(err)) {
+        if (get().status === 'authenticated') set({ reconnecting: true });
+        else set({ status: 'unknown', reconnecting: true });
+        scheduleRetry();
+        return false;
+      }
+      sessionExpired();
+      return false;
+    }
   },
 
   login: async (correo, pass) => {
     const data = await authApi.login(correo, pass);
     recordarSesion(true);
     claimDrafts(data.usuario.idUsuario);
-    set({ user: data.usuario, status: 'authenticated' });
+    set({ user: data.usuario, status: 'authenticated', reconnecting: false });
     return data.usuario;
   },
 
@@ -85,18 +148,25 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   logout: async () => {
+    stopRetries();
     recordarSesion(false);
     clearAllDrafts();
-    await authApi.logout();
-    set({ user: null, status: 'unauthenticated' });
+    try {
+      await authApi.logout();
+    } finally {
+      set({ user: null, status: 'unauthenticated', reconnecting: false });
+    }
   },
 }));
 
-setOnUnauthorizedCallback(() => {
-  const estabaAutenticado = useAuthStore.getState().status === 'authenticated';
-  recordarSesion(false);
-  useAuthStore.setState({ user: null, status: 'unauthenticated' });
-  if (estabaAutenticado) toast.warning('Tu sesión caducó', 'Inicia sesión de nuevo para continuar.');
+setOnUnauthorizedCallback(sessionExpired);
+
+setOnAuthUncertainCallback(() => {
+  if (!haySesionGuardada()) return;
+  const { status } = useAuthStore.getState();
+  if (status === 'authenticated') useAuthStore.setState({ reconnecting: true });
+  else if (status === 'unauthenticated') return;
+  scheduleRetry();
 });
 
 export const useAuth = useAuthStore;
