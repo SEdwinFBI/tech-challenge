@@ -9,9 +9,10 @@ import { useCart } from '@/features/cart/hooks/useCart';
 import { useAuth } from '@/features/auth';
 import { useFavorites } from '@/features/wishlist/hooks/useFavorites';
 import { ProductGallery } from '../components/ProductGallery';
-import { ProductRail } from '../components/ProductRail';
-import { useRecommendations } from '@/features/recommendations/hooks/useRecommendations';
+import { ProductRail } from '@/shared/ui/ProductRail';
+import { useRecommendations, useRecordProductView } from '@/features/recommendations/hooks/useRecommendations';
 import { StickyBuyBar } from '../components/StickyBuyBar';
+import { ShippingPartners } from '@/shared/ui/ShippingPartners';
 import {
   ATTR_LABEL,
   attributesOf,
@@ -76,6 +77,7 @@ export const ProductDetailPage: React.FC = () => {
     }
   }, [producto]);
 
+  useRecordProductView(producto?.IDProducto);
   const related = useRecommendations('producto', producto?.IDProducto);
   const relatedItems = related.data ?? [];
 
@@ -294,7 +296,7 @@ export const ProductDetailPage: React.FC = () => {
                     {!ship.free && ship.freeFrom != null && <> Gratis desde {formatMoney(ship.freeFrom)}.</>}
                   </>
                 ) : (
-                  <>Se calcula al pagar.</>
+                  <>Se calcula con tu dirección al pagar.</>
                 )}
               </span>
             </li>
@@ -307,11 +309,21 @@ export const ProductDetailPage: React.FC = () => {
               </li>
             )}
           </ul>
+          <ShippingPartners className="mt-3" />
         </div>
       </div>
 
-      <div className="mt-14 space-y-12">
-        <section id="descripcion" className="scroll-mt-28">
+      <div className="mt-10">
+        <nav aria-label="Secciones del producto" className="sticky top-[var(--header-h,7rem)] z-30 -mx-4 flex gap-1 overflow-x-auto border-b border-slate-200 bg-white px-4 sm:-mx-6 sm:px-6">
+          {TABS.map(t => (
+            <a key={t.id} href={`#${t.id}`} className="shrink-0 border-b-2 border-transparent px-4 py-3 text-sm font-bold text-slate-600 hover:border-brand hover:text-brand">
+              {t.label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="space-y-12 pt-10">
+        <section id="descripcion" className="scroll-mt-[calc(var(--header-h,7rem)+4rem)]">
           <SectionHeader title="Descripción" />
           <div className="max-w-3xl space-y-3 text-sm leading-7 text-slate-700">
             {(producto.Descripcion || 'Sin descripción.')
@@ -320,7 +332,7 @@ export const ProductDetailPage: React.FC = () => {
           </div>
         </section>
 
-        <section id="especificaciones" className="scroll-mt-28">
+        <section id="especificaciones" className="scroll-mt-[calc(var(--header-h,7rem)+4rem)]">
           <SectionHeader title="Especificaciones" />
           <dl className="grid max-w-3xl overflow-hidden rounded-2xl border border-slate-200 text-sm sm:grid-cols-2">
             {specRows.map(([k, v], i) => (
@@ -332,7 +344,7 @@ export const ProductDetailPage: React.FC = () => {
           </dl>
         </section>
 
-        <section id="envio" className="scroll-mt-28">
+        <section id="envio" className="scroll-mt-[calc(var(--header-h,7rem)+4rem)]">
           <SectionHeader title="Compra y envío" />
           <div className="grid max-w-3xl gap-4 sm:grid-cols-2">
             <div className="rounded-2xl bg-canvas p-5">
@@ -344,12 +356,17 @@ export const ProductDetailPage: React.FC = () => {
               <p className="mt-2 leading-6">
                 Desde el monto mínimo de tu departamento, con descuento aplicado.
               </p>
+              <ShippingPartners className="mt-3" />
             </div>
           </div>
         </section>
+        </div>
+      </div>
+
+      <div className="mt-14 space-y-12">
 
         <ProductRail
-          title="Tu top 10 recomendado"
+          title="Te puede interesar"
           products={relatedItems}
           loading={related.isLoading}
         />
@@ -380,7 +397,6 @@ export const ProductDetailPage: React.FC = () => {
         loading={isUpserting}
         onAdd={handleAdd}
         offline={!online}
-        tabs={TABS}
       />
     </div>
   );
