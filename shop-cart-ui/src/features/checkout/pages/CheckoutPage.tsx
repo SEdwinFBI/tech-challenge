@@ -15,6 +15,7 @@ import { clearDraft, readDraft, saveDraft } from '@/shared/lib/draft';
 import { formatMoney } from '@/shared/lib/formatters';
 import { quoteShipping } from '@/shared/lib/pricing';
 import { formatPhone } from '@/shared/lib/phone';
+import { ShippingPartners } from '@/shared/ui/ShippingPartners';
 import type { Address } from '@/shared/types/domain';
 import { apiErrorMessage, errorCode } from '@/shared/lib/apiErrors';
 
@@ -301,6 +302,7 @@ export const CheckoutPage: React.FC = () => {
                           ? `Te faltan ${formatMoney(Math.max(0, shipping.freeFrom - netSubtotal))} para envío gratis.`
                           : 'Tarifa fija para tu departamento.'}
                     </p>
+                    <ShippingPartners className="mt-2" />
                   </div>
                 </div>
               </section>

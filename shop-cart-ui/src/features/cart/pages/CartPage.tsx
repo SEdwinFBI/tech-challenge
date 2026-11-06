@@ -6,13 +6,14 @@ import { useCart } from '../hooks/useCart';
 import { CouponDialog } from '../components/CouponDialog';
 import { useRecommendations } from '@/features/recommendations/hooks/useRecommendations';
 import { checkoutApi } from '@/features/checkout/api/checkoutApi';
-import { ProductRail } from '@/features/catalog/components/ProductRail';
+import { ProductRail } from '@/shared/ui/ProductRail';
 import { useAuth } from '@/features/auth';
 import { useFavorites } from '@/features/wishlist/hooks/useFavorites';
 import { ErrorState, FreeShippingProgress, Illustration, IvaBreakdown, PriceTag, QuantityStepper, StockIndicator } from '@/shared/ui';
 import { toast } from '@/shared/ui/toastStore';
 import { formatMoney, plural } from '@/shared/lib/formatters';
 import { quoteShipping } from '@/shared/lib/pricing';
+import { ShippingPartners } from '@/shared/ui/ShippingPartners';
 import type { CartItem } from '@/shared/types/domain';
 
 const LineSkeleton: React.FC = () => (
@@ -87,7 +88,7 @@ export const CartPage: React.FC = () => {
             Ver productos <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-        <ProductRail title="Tu top 10 recomendado" products={suggestionItems} loading={suggestions.isLoading} />
+        <ProductRail title="Complementa tu compra" products={suggestionItems} loading={suggestions.isLoading} />
       </div>
     );
   }
@@ -236,6 +237,8 @@ export const CartPage: React.FC = () => {
             </div>
           </dl>
 
+          <ShippingPartners />
+
           <div className="border-t border-slate-200 pt-4">
             <div className="flex items-end justify-between">
               <span className="text-sm font-bold text-slate-900">{quote ? 'Total estimado' : 'Total de productos'}</span>
@@ -265,7 +268,7 @@ export const CartPage: React.FC = () => {
       </div>
 
       <div className="mt-14">
-        <ProductRail title="Tu top 10 recomendado" products={suggestionItems} loading={suggestions.isLoading} />
+        <ProductRail title="Complementa tu compra" products={suggestionItems} loading={suggestions.isLoading} />
       </div>
 
       <CouponDialog isOpen={couponOpen} onClose={() => setCouponOpen(false)} />
