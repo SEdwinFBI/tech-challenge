@@ -33,7 +33,7 @@ export const AuthShell: React.FC<AuthShellProps> = ({ title, subtitle, children,
         </Link>
 
         <h2 className="mt-9 max-w-xs text-balance text-2xl font-extrabold leading-snug tracking-tight">
-          Todo para tu día, entregado en Guatemala
+          Lo que necesitas, hasta la puerta de tu casa
         </h2>
 
         <ul className="mt-8 space-y-3.5 text-left">
