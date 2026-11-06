@@ -11,6 +11,7 @@ import { SectionHeader, Rail } from '@/shared/ui/Rail';
 import { ErrorState } from '@/shared/ui';
 import { CategoryRail } from '../components/CategoryRail';
 import { HeroCarousel, type HeroSlide } from '../components/HeroCarousel';
+import { RecommendationRail } from '@/features/recommendations/components/RecommendationRail';
 
 const SECTION_SIZE = 10;
 
@@ -83,6 +84,7 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="space-y-12">
+      <RecommendationRail placement="inicio" title="Elegidos para ti" subtitle="Descubre productos según lo que te gusta." />
       {anyError && (
         <ErrorState
           title="Algunas secciones no cargaron"

@@ -37,6 +37,7 @@ export function useFavorites() {
       toast.error('No se pudo actualizar tus favoritos', msg);
     },
     onSuccess: (_d, { add }) => {
+      void queryClient.invalidateQueries({ queryKey: ['recommendations'] });
       toast.success(add ? 'Guardado en favoritos' : 'Quitado de favoritos');
     },
     onSettled: () => {

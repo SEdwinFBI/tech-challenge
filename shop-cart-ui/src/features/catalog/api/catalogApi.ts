@@ -78,8 +78,8 @@ export const catalogApi = {
     return res.data.datos;
   },
 
-  getProducts: async (params: GetProductsParams): Promise<ProductsResponse> => {
-    const res = await apiClient.get<ProductsResponse>('/catalogo/productos', { params });
+  getProducts: async (params: GetProductsParams, signal?: AbortSignal): Promise<ProductsResponse> => {
+    const res = await apiClient.get<ProductsResponse>('/catalogo/productos', { params, signal });
     return res.data;
   },
 

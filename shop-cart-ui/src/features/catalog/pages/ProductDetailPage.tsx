@@ -10,6 +10,7 @@ import { useAuth } from '@/features/auth';
 import { useFavorites } from '@/features/wishlist/hooks/useFavorites';
 import { ProductGallery } from '../components/ProductGallery';
 import { ProductRail } from '../components/ProductRail';
+import { useRecommendations } from '@/features/recommendations/hooks/useRecommendations';
 import { StickyBuyBar } from '../components/StickyBuyBar';
 import {
   ATTR_LABEL,
@@ -75,13 +76,8 @@ export const ProductDetailPage: React.FC = () => {
     }
   }, [producto]);
 
-  const related = useQuery({
-    queryKey: ['related', producto?.IDCategoria],
-    queryFn: () => catalogApi.getProducts({ idCategoria: producto!.IDCategoria, tamanoPagina: 10, orden: 'DESTACADOS' }),
-    enabled: Boolean(producto?.IDCategoria),
-    staleTime: 60_000,
-  });
-  const relatedItems = (related.data?.items ?? []).filter(p => p.IDProducto !== productId).slice(0, 8);
+  const related = useRecommendations('producto', producto?.IDProducto);
+  const relatedItems = related.data ?? [];
 
   const addresses = useQuery({
     queryKey: ['addresses'],
@@ -353,9 +349,8 @@ export const ProductDetailPage: React.FC = () => {
         </section>
 
         <ProductRail
-          title={`Más de ${producto.Categoria}`}
+          title="Tu top 10 recomendado"
           products={relatedItems}
-          to={`/categoria/${producto.IDCategoria}`}
           loading={related.isLoading}
         />
 

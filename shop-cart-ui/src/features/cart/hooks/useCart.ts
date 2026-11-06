@@ -16,6 +16,7 @@ export function useCart() {
       cartApi.upsertItem(idVariante, cantidad),
     onSuccess: (data) => {
       queryClient.setQueryData(['cart'], data);
+      void queryClient.invalidateQueries({ queryKey: ['recommendations'] });
     },
     onError: (err: unknown) => {
       const msg =
@@ -30,6 +31,7 @@ export function useCart() {
     onSuccess: (data) => {
       queryClient.setQueryData(['cart'], data);
       toast.info('Producto quitado');
+      void queryClient.invalidateQueries({ queryKey: ['recommendations'] });
     },
     onError: (err: unknown) => {
       const msg =

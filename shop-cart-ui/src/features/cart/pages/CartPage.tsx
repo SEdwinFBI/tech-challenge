@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, ArrowRight, Heart, ImageOff, LogIn, TicketPercent, X } from 'lucide-react';
 import { useCart } from '../hooks/useCart';
 import { CouponDialog } from '../components/CouponDialog';
-import { catalogApi } from '@/features/catalog/api/catalogApi';
+import { useRecommendations } from '@/features/recommendations/hooks/useRecommendations';
 import { checkoutApi } from '@/features/checkout/api/checkoutApi';
 import { ProductRail } from '@/features/catalog/components/ProductRail';
 import { useAuth } from '@/features/auth';
@@ -35,11 +35,7 @@ export const CartPage: React.FC = () => {
   const isClient = user?.rol === 'CLIENTE';
 
   const addresses = useQuery({ queryKey: ['addresses'], queryFn: checkoutApi.getAddresses, enabled: isClient, staleTime: 60_000 });
-  const suggestions = useQuery({
-    queryKey: ['cart-suggestions'],
-    queryFn: () => catalogApi.getProducts({ orden: 'DESTACADOS', tamanoPagina: 8 }),
-    staleTime: 60_000,
-  });
+  const suggestions = useRecommendations('carrito');
 
   const items = cart?.items ?? [];
   const address = addresses.data?.[0];
@@ -63,7 +59,7 @@ export const CartPage: React.FC = () => {
     removeItem(item.IDVariante);
   };
 
-  const suggestionItems = (suggestions.data?.items ?? []).slice(0, 8);
+  const suggestionItems = suggestions.data ?? [];
 
   if (isLoading) {
     return (
@@ -91,7 +87,7 @@ export const CartPage: React.FC = () => {
             Ver productos <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-        <ProductRail title="Recomendados" products={suggestionItems} to="/catalogo?orden=DESTACADOS" loading={suggestions.isLoading} />
+        <ProductRail title="Tu top 10 recomendado" products={suggestionItems} loading={suggestions.isLoading} />
       </div>
     );
   }
@@ -269,7 +265,7 @@ export const CartPage: React.FC = () => {
       </div>
 
       <div className="mt-14">
-        <ProductRail title="Recomendados" products={suggestionItems} to="/catalogo?orden=DESTACADOS" loading={suggestions.isLoading} />
+        <ProductRail title="Tu top 10 recomendado" products={suggestionItems} loading={suggestions.isLoading} />
       </div>
 
       <CouponDialog isOpen={couponOpen} onClose={() => setCouponOpen(false)} />

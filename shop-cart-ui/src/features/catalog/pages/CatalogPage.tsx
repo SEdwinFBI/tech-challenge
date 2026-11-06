@@ -9,6 +9,8 @@ import { FilterPanel } from '../components/FilterPanel';
 import { ProductCard, ProductCardSkeletonV2 } from '../components/ProductCard';
 import { ErrorState, Illustration, NumberedPagination } from '@/shared/ui';
 import { formatMoney, plural } from '@/shared/lib/formatters';
+import { RecommendationRail } from '@/features/recommendations/components/RecommendationRail';
+import { SearchRecommendation } from '@/features/recommendations/components/SearchRecommendation';
 
 export interface CatalogPageProps {
   mode?: CatalogMode;
@@ -103,6 +105,10 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({ mode = 'all' }) => {
         </aside>
 
         <div className="min-w-0">
+          {mode === 'ofertas' && (
+            <div className="mb-8"><RecommendationRail placement="ofertas" title="Ofertas para ti" subtitle="Descuentos seleccionados según tus intereses."
+              filters={{ idCategoria: params.idCategoria, precioMin: params.precioMin, precioMax: params.precioMax, q: params.q }} /></div>
+          )}
           {!(mode === 'categoria' && category) && (
             <div className="mb-4">
               <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">{title}</h1>
@@ -181,6 +187,11 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({ mode = 'all' }) => {
             >
               {items.map(p => <ProductCard key={p.IDProducto} product={p} />)}
             </div>
+          )}
+
+          {filters.q.trim().length >= 2 && !query.isLoading && !query.isPlaceholderData && !query.isError && (
+            <SearchRecommendation normalIds={items.map(p => p.IDProducto)} filters={{ q: params.q!, idCategoria: params.idCategoria,
+              precioMin: params.precioMin, precioMax: params.precioMax, soloOfertas: params.soloOfertas }} />
           )}
 
           <NumberedPagination

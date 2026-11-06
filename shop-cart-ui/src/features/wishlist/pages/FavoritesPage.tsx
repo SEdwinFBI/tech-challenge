@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { favoritesApi } from '../api/favoritesApi';
 import { ProductCard, ProductCardSkeletonV2 } from '@/features/catalog/components/ProductCard';
 import { ErrorState, Illustration } from '@/shared/ui';
+import { RecommendationRail } from '@/features/recommendations/components/RecommendationRail';
 
 export const FavoritesPage: React.FC = () => {
   const { data = [], isLoading, isError, refetch } = useQuery({ queryKey: ['favorites', 'list'], queryFn: favoritesApi.list });
@@ -34,6 +35,9 @@ export const FavoritesPage: React.FC = () => {
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3">
           {data.map(p => <ProductCard key={p.IDProducto} product={p} />)}
         </div>
+      )}
+      {!isLoading && !isError && data.length > 0 && (
+        <div className="mt-12"><RecommendationRail placement="favoritos" title="Inspirados en tus favoritos" subtitle="Alternativas y complementos de tus productos guardados." /></div>
       )}
     </div>
   );

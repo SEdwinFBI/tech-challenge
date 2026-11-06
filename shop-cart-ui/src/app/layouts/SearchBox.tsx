@@ -1,25 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { SafeImage } from '@/shared/ui/SafeImage';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
-import { ImageOff, Search, X } from 'lucide-react';
-import { catalogApi } from '@/features/catalog/api/catalogApi';
-import { useDebounce } from '@/shared/hooks/useDebounce';
-import { PriceTag } from '@/shared/ui/PriceTag';
+import { Search, X } from 'lucide-react';
+import { SearchSuggestionsPanel } from '@/features/catalog/components/SearchSuggestionsPanel';
 
 export const SearchBox: React.FC<{ className?: string }> = ({ className = '' }) => {
   const navigate = useNavigate();
   const [value, setValue] = useState('');
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLFormElement>(null);
-  const term = useDebounce(value.trim(), 250);
-
-  const { data, isFetching } = useQuery({
-    queryKey: ['search-suggestions', term],
-    queryFn: () => catalogApi.getProducts({ q: term, tamanoPagina: 5 }),
-    enabled: term.length >= 2,
-    staleTime: 30_000,
-  });
+  const panelId = useId();
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -35,11 +24,12 @@ export const SearchBox: React.FC<{ className?: string }> = ({ className = '' }) 
     navigate(value.trim() ? `/catalogo?q=${encodeURIComponent(value.trim())}` : '/catalogo');
   };
 
-  const items = data?.items ?? [];
-  const showPanel = open && term.length >= 2;
+  const showPanel = open && value.trim().length >= 2;
 
   return (
-    <form ref={wrapRef} onSubmit={submit} role="search" className={`relative ${className}`}>
+    <form ref={wrapRef} onSubmit={submit} role="search" className={`relative ${className}`}
+      onKeyDown={e => e.key === 'Escape' && setOpen(false)}
+      onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false); }}>
       <div className="flex h-11 items-center rounded-full bg-white pl-4 pr-1 shadow-sm ring-1 ring-black/5 focus-within:ring-2 focus-within:ring-cta">
         <Search className="mr-2 h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
         <input
@@ -50,9 +40,10 @@ export const SearchBox: React.FC<{ className?: string }> = ({ className = '' }) 
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          onKeyDown={e => e.key === 'Escape' && setOpen(false)}
           placeholder="Buscar productos"
           aria-label="Buscar en la tienda"
+          aria-expanded={showPanel}
+          aria-controls={showPanel ? panelId : undefined}
           autoComplete="off"
           className="h-full min-w-0 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 [&::-webkit-search-cancel-button]:hidden"
         />
@@ -79,50 +70,12 @@ export const SearchBox: React.FC<{ className?: string }> = ({ className = '' }) 
       </div>
 
       {showPanel && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl bg-white shadow-lift ring-1 ring-slate-200 animate-fade-up">
-          {isFetching && items.length === 0 ? (
-            <p className="px-4 py-3 text-sm text-slate-500">Buscando…</p>
-          ) : items.length === 0 ? (
-            <p className="px-4 py-3 text-sm text-slate-500">
-              Sin resultados para “{term}”.
-            </p>
-          ) : (
-            <ul>
-              {items.map(p => (
-                <li key={p.IDProducto}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOpen(false);
-                      navigate(`/producto/${p.IDProducto}`);
-                    }}
-                    className="flex w-full items-center gap-3 px-3 py-2 text-left transition hover:bg-slate-50"
-                  >
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-canvas">
-                      {p.ImagenUrl ? (
-                        <SafeImage src={p.ImagenUrl} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <ImageOff className="h-4 w-4 text-slate-300" />
-                      )}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-slate-800">{p.Nombre}</span>
-                      <span className="block truncate text-xs text-slate-400">{p.Categoria}</span>
-                    </span>
-                    <PriceTag amount={p.PrecioOferta ?? p.PrecioMinimo} size="sm" tone={p.PrecioOferta ? 'sale' : 'default'} />
-                  </button>
-                </li>
-              ))}
-              <li className="border-t border-slate-100">
-                <button
-                  type="submit"
-                  className="w-full px-4 py-2.5 text-left text-xs font-bold text-brand hover:bg-brand-soft"
-                >
-                  Ver todos
-                </button>
-              </li>
-            </ul>
-          )}
+        <div id={panelId} role="region" aria-label="Sugerencias de búsqueda"
+          className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[min(70vh,32rem)] overflow-y-auto rounded-2xl bg-white shadow-lift ring-1 ring-slate-200 animate-fade-up">
+          <SearchSuggestionsPanel value={value} onSelect={id => { setOpen(false); navigate(`/producto/${id}`); }} />
+          <div className="border-t border-slate-100">
+            <button type="submit" className="w-full px-4 py-2.5 text-left text-xs font-bold text-brand hover:bg-brand-soft">Ver todos</button>
+          </div>
         </div>
       )}
     </form>
