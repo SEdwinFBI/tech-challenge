@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { plural } from '@/shared/lib/formatters';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
-import { Heart, LayoutGrid, ShoppingCart, Sparkles, Tag, Flame, Star, Truck } from 'lucide-react';
+import { Heart, LayoutGrid, ShoppingCart, PackageOpen, Tag, Flame, Star, Truck } from 'lucide-react';
 import { useAuth } from '@/features/auth';
 import { useCart } from '@/features/cart/hooks/useCart';
 import { useFavorites } from '@/features/wishlist/hooks/useFavorites';
@@ -15,7 +15,7 @@ export { BrandMark };
 
 const SUBNAV = [
   { to: '/ofertas', label: 'Ofertas', icon: <Tag className="h-3.5 w-3.5" /> },
-  { to: '/novedades', label: 'Lo nuevo', icon: <Sparkles className="h-3.5 w-3.5" /> },
+  { to: '/novedades', label: 'Lo nuevo', icon: <PackageOpen className="h-3.5 w-3.5" /> },
   { to: '/catalogo?orden=MAS_VENDIDOS', label: 'Más vendidos', icon: <Flame className="h-3.5 w-3.5" /> },
   { to: '/catalogo?orden=DESTACADOS', label: 'Destacados', icon: <Star className="h-3.5 w-3.5" /> },
 ];
