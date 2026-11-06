@@ -20,10 +20,6 @@ export const RecommendationPolicy = {
     return { signals, candidates };
   },
 
-  hasNothingToRecommend(context: RecommendationContext, placement: RecommendationPlacement): boolean {
-    return placement === 'favoritos' && context.signals.length === 0;
-  },
-
   arrange(candidates: ProductDTO[], rankedIds: number[] | null): ProductDTO[] {
     const positions = new Map(rankedIds?.map((id, i) => [id, i]));
     return [...candidates].sort((a, b) => (positions.get(a.IDProducto) ?? 100) - (positions.get(b.IDProducto) ?? 100)).slice(0, RECOMMENDATION_LIMIT);

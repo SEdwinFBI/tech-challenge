@@ -35,7 +35,6 @@ export class GetRecommendationsQueryHandler implements IQueryHandler<GetRecommen
   private async build(owner: RecommendationOwner, query: GetRecommendationsQuery, filters: RecommendationFilters, key: string): Promise<RecommendationResult> {
     const placement = query.contexto;
     const context = RecommendationPolicy.prepare(await this.repo.getContext(owner, query.idProducto, placement, filters), placement, query.idProducto);
-    if (RecommendationPolicy.hasNothingToRecommend(context, placement)) return { items: [], origen: 'preferencias' };
     const ids = await this.ranker.rank(context, placement);
     const result: RecommendationResult = { items: RecommendationPolicy.arrange(context.candidates, ids), origen: ids ? 'jev' : 'preferencias' };
     await this.cache.set(key, result, ids ? 180 : 30);

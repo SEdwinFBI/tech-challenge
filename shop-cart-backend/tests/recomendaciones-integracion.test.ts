@@ -12,11 +12,14 @@ import { recomendacionesRouter } from '@/features/recomendaciones/recomendacione
 import { globalErrorHandler } from '@/core/middlewares/error.middleware';
 import jwt from 'jsonwebtoken';
 import { catalogoRouter } from '@/features/catalogo/catalogo.routes';
+import { GetRecommendationsQueryHandler } from '@/features/recomendaciones/queries/get-recommendations.query';
+import { GetRecommendationsSchema } from '@/features/recomendaciones/models/recomendaciones.schema';
+import type { ICache } from '@/core/cache/cache.interface';
 
 test('SQL y HTTP de recomendaciones: vistas, favoritos, carrito y aislamiento', {
   skip: process.env.RUN_RECOMMENDATION_INTEGRATION !== '1',
 }, async () => {
-  assert.match(env.DB_NAME, /^ShopCart(Recommendations_test|Audit_reco)$/);
+  assert.match(env.DB_NAME, /^ShopCart(Recommendations_test|Audit_[A-Za-z0-9_]+)$/);
   const pool = await getDbPool();
   const app = express();
   app.use(express.json());
@@ -152,6 +155,68 @@ test('SQL y HTTP de recomendaciones: vistas, favoritos, carrito y aislamiento', 
     assert.deepEqual(afterCounts.recordset, seedCounts.recordset);
   } finally {
     await new Promise<void>((resolve, reject) => server.close(err => err ? reject(err) : resolve()));
+  }
+});
+
+test('SQL de recomendaciones: cada contexto tiene su propio orden base sin IA', {
+  skip: process.env.RUN_RECOMMENDATION_INTEGRATION !== '1',
+}, async () => {
+  assert.match(env.DB_NAME, /^ShopCart(Recommendations_test|Audit_[A-Za-z0-9_]+)$/);
+  const pool = await getDbPool();
+  try {
+    const tag = randomUUID();
+    const user = await pool.request().input('Correo', sql.NVarChar(150), `${tag}@test.invalid`).query(`
+      INSERT INTO Usuarios (IDRol, Correo, Password, Nombre)
+      OUTPUT INSERTED.IDUsuario
+      SELECT IDRol, @Correo, 'test-only', 'Prueba contextos' FROM Roles WHERE Codigo = 'CLIENTE'`);
+    const idUsuario = user.recordset[0].IDUsuario as number;
+    const stocked = await pool.request().query(`
+      SELECT p.IDProducto, p.IDCategoria, MIN(v.IDVariante) AS IDVariante
+      FROM Productos p INNER JOIN Variantes v ON v.IDProducto = p.IDProducto AND v.Activo = 1
+      CROSS APPLY FU_Inventario_ExistenciaDisponible(v.IDVariante) d
+      WHERE p.Activo = 1 AND d.ExistenciaDisponible > 0
+      GROUP BY p.IDProducto, p.IDCategoria ORDER BY p.IDCategoria, p.IDProducto`);
+    const rows = stocked.recordset as Array<{ IDProducto: number; IDCategoria: number; IDVariante: number }>;
+    const byCategory = new Map<number, typeof rows>();
+    for (const r of rows) byCategory.set(r.IDCategoria, [...(byCategory.get(r.IDCategoria) ?? []), r]);
+    const groups = [...byCategory.values()].filter(g => g.length >= 2);
+    assert.ok(groups.length >= 3);
+    const [favGroup, cartGroup, refGroup] = groups as [typeof rows, typeof rows, typeof rows];
+    const favorites = new FavoritesRepository();
+    const favoriteIds = favGroup.slice(0, 2).map(r => r.IDProducto);
+    for (const id of favoriteIds) await favorites.add(idUsuario, id);
+    await new CartRepository().upsertItem({ idUsuario, idVariante: cartGroup[0]!.IDVariante, cantidad: 1 });
+    const cartCategory = cartGroup[0]!.IDCategoria;
+    const owner = { propietario: `u:${idUsuario}`, idUsuario };
+    await new RecommendationsRepository().recordView(owner, refGroup[0]!.IDProducto);
+    const entries = new Map<string, unknown>();
+    const cache: ICache = {
+      get: async <T>(key: string) => (entries.get(key) as T | undefined) ?? null,
+      set: async (key, data) => { entries.set(key, data); },
+      clear: async () => { entries.clear(); },
+    };
+    const handler = new GetRecommendationsQueryHandler(new RecommendationsRepository(), { rank: async () => null }, cache);
+    const ask = async (contexto: string, extra: Record<string, unknown> = {}) =>
+      (await handler.handle({ ...GetRecommendationsSchema.parse({ contexto, ...extra }), idUsuario })).items;
+    const lists: Record<string, Awaited<ReturnType<typeof ask>>> = {
+      producto: await ask('producto', { idProducto: refGroup[0]!.IDProducto }),
+      carrito: await ask('carrito'),
+      inicio: await ask('inicio'),
+      favoritos: await ask('favoritos'),
+      ofertas: await ask('ofertas'),
+    };
+    const first = (name: string) => lists[name]!.slice(0, 5).map(p => p.IDProducto).join(',');
+    assert.ok(new Set(['producto', 'carrito', 'inicio', 'favoritos'].map(first)).size > 1);
+    assert.ok(lists.producto!.every(p => p.IDProducto !== refGroup[0]!.IDProducto));
+    assert.equal(lists.producto![0]!.IDCategoria, refGroup[0]!.IDCategoria);
+    assert.ok(lists.carrito!.length > 0 && lists.carrito!.every(p => p.IDCategoria !== cartCategory));
+    assert.ok(lists.favoritos!.length > 0 && lists.favoritos!.every(p => !favoriteIds.includes(p.IDProducto)));
+    assert.equal(lists.favoritos![0]!.IDCategoria, favGroup[0]!.IDCategoria);
+    assert.ok(lists.ofertas!.length > 0 && lists.ofertas!.every(p => (p.PorcentajeDescuento ?? 0) >= 1 && (p.PrecioReferencia ?? 0) > (p.PrecioOferta ?? 0)));
+    const discounts = lists.ofertas!.map(p => p.PorcentajeDescuento ?? 0);
+    assert.ok(discounts.every(d => d >= 1));
+    console.log(JSON.stringify(Object.fromEntries(Object.entries(lists).map(([k, v]) => [k, v.slice(0, 5).map(p => p.Nombre)])), null, 1));
+  } finally {
     await pool.close();
   }
 });

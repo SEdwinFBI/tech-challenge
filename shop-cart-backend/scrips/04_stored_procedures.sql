@@ -1163,15 +1163,38 @@ BEGIN
     WHERE p.Activo = 1 AND (@Contexto <> 'favoritos' OR s.Tipo = 'FAVORITO')
     ORDER BY s.Peso DESC, s.IDProducto, s.Tipo;
 
+    DECLARE @IDCategoriaRef INT, @PrecioRef DECIMAL(12,2), @PrecioFavoritos DECIMAL(12,2), @ConCarrito BIT = 0, @ConFavoritos BIT = 0;
+    IF @IDProducto IS NOT NULL
+        SELECT @IDCategoriaRef = p.IDCategoria,
+               @PrecioRef = (SELECT MIN(v.Precio) FROM Variantes v WHERE v.IDProducto = p.IDProducto AND v.Activo = 1)
+        FROM Productos p WHERE p.IDProducto = @IDProducto;
+    IF EXISTS (SELECT 1 FROM #Senales WHERE Tipo = 'CARRITO') SET @ConCarrito = 1;
+    IF EXISTS (SELECT 1 FROM #Senales WHERE Tipo = 'FAVORITO') SET @ConFavoritos = 1;
+    SELECT @PrecioFavoritos = AVG(CAST(m.Precio AS DECIMAL(12,2)))
+    FROM #Senales s CROSS APPLY (SELECT MIN(v.Precio) AS Precio FROM Variantes v WHERE v.IDProducto = s.IDProducto AND v.Activo = 1) m
+    WHERE s.Tipo = 'FAVORITO' AND m.Precio IS NOT NULL;
+
+    CREATE TABLE #Ventas (IDProducto INT PRIMARY KEY, Unidades INT, Unidades90 INT);
+    INSERT INTO #Ventas
+    SELECT v.IDProducto, SUM(pd.CantidadComprada - pd.CantidadDevuelta),
+        SUM(CASE WHEN pe.FechaCreacion >= DATEADD(DAY, -90, SYSDATETIME()) THEN pd.CantidadComprada - pd.CantidadDevuelta ELSE 0 END)
+    FROM Pedidos pe INNER JOIN EstadosPedido e ON e.IDEstadoPedido = pe.IDEstadoPedido
+    INNER JOIN PedidoDetalles pd ON pd.IDPedido = pe.IDPedido
+    INNER JOIN Variantes v ON v.IDVariante = pd.IDVariante
+    WHERE e.Codigo IN ('ENTREGADO', 'DEVUELTO_PARCIAL')
+    GROUP BY v.IDProducto;
+
     ;WITH Candidatos AS (
     SELECT p.IDProducto, p.IDCategoria, p.Nombre, p.Descripcion, p.ImagenUrl, p.Activo,
         c.Nombre AS Categoria, MIN(v.Precio) AS PrecioMinimo, MAX(v.Precio) AS PrecioMaximo,
         SUM(disp.ExistenciaDisponible) AS StockTotalDisponible, p.Destacado,
         ofe.PrecioOferta, ofe.PrecioReferencia, ofe.PorcentajeDescuento,
-        COALESCE(afinidad.Peso, 0) AS Afinidad
+        COALESCE(afinidad.Peso, 0) AS Afinidad,
+        COALESCE(vt.Unidades, 0) AS Unidades, COALESCE(vt.Unidades90, 0) AS Unidades90
     FROM Productos p INNER JOIN Categorias c ON c.IDCategoria = p.IDCategoria AND c.Activo = 1
     INNER JOIN Variantes v ON v.IDProducto = p.IDProducto AND v.Activo = 1
     CROSS APPLY FU_Inventario_ExistenciaDisponible(v.IDVariante) disp
+    LEFT JOIN #Ventas vt ON vt.IDProducto = p.IDProducto
     OUTER APPLY (
         SELECT TOP (1) vo.Precio AS PrecioOferta, vo.PrecioReferencia,
             CAST(ROUND((vo.PrecioReferencia - vo.Precio) * 100.0 / vo.PrecioReferencia, 0) AS INT) AS PorcentajeDescuento
@@ -1183,26 +1206,44 @@ BEGIN
     ) ofe
     OUTER APPLY (SELECT SUM(s.Peso) AS Peso FROM #Senales s
                  INNER JOIN Productos preferido ON preferido.IDProducto = s.IDProducto
-                 WHERE preferido.IDCategoria = p.IDCategoria AND (@Contexto <> 'favoritos' OR s.Tipo = 'FAVORITO')) afinidad
+                 WHERE preferido.IDCategoria = p.IDCategoria AND s.Tipo <> 'CARRITO') afinidad
     WHERE p.Activo = 1 AND disp.ExistenciaDisponible > 0
       AND (@Contexto <> 'ofertas' OR ofe.PrecioReferencia IS NOT NULL)
       AND (@IDCategoria IS NULL OR p.IDCategoria = @IDCategoria)
       AND (@PrecioMin IS NULL OR v.Precio >= @PrecioMin) AND (@PrecioMax IS NULL OR v.Precio <= @PrecioMax)
       AND (@Busqueda IS NULL OR p.Nombre LIKE @Patron OR p.Descripcion LIKE @Patron OR v.SKU LIKE @Patron)
       AND (@Contexto <> 'favoritos' OR NOT EXISTS (SELECT 1 FROM #Senales s WHERE s.IDProducto = p.IDProducto AND s.Tipo = 'FAVORITO'))
+      AND (@Contexto <> 'carrito' OR @ConCarrito = 0 OR NOT EXISTS (
+            SELECT 1 FROM #Senales s INNER JOIN Productos k ON k.IDProducto = s.IDProducto
+            WHERE s.Tipo = 'CARRITO' AND k.IDCategoria = p.IDCategoria))
       AND (@IDProducto IS NULL OR p.IDProducto <> @IDProducto)
       AND NOT EXISTS (SELECT 1 FROM #Senales s WHERE s.IDProducto = p.IDProducto AND s.Tipo = 'CARRITO')
     GROUP BY p.IDProducto, p.IDCategoria, p.Nombre, p.Descripcion, p.ImagenUrl, p.Activo,
-        c.Nombre, p.Destacado, afinidad.Peso, ofe.PrecioOferta, ofe.PrecioReferencia, ofe.PorcentajeDescuento
-    ), Ordenados AS (
-        SELECT *, ROW_NUMBER() OVER (ORDER BY Afinidad DESC, Destacado DESC, IDProducto) AS PosAfinidad,
-            ROW_NUMBER() OVER (ORDER BY CASE WHEN Afinidad = 0 THEN 0 ELSE 1 END, Destacado DESC, IDProducto) AS PosExploracion
+        c.Nombre, p.Destacado, afinidad.Peso, vt.Unidades, vt.Unidades90,
+        ofe.PrecioOferta, ofe.PrecioReferencia, ofe.PorcentajeDescuento
+    ), Claves AS (
+        SELECT *,
+            CAST(CASE @Contexto
+                WHEN 'producto' THEN CASE WHEN IDCategoria = @IDCategoriaRef THEN 0 ELSE 1 END
+                WHEN 'carrito' THEN -Unidades
+                WHEN 'inicio' THEN -(Unidades90 + CASE WHEN Afinidad > 4 THEN 1.0 ELSE Afinidad / 4.0 END)
+                WHEN 'favoritos' THEN CASE WHEN @ConFavoritos = 1 AND NOT EXISTS (
+                    SELECT 1 FROM #Senales s INNER JOIN Productos f ON f.IDProducto = s.IDProducto
+                    WHERE s.Tipo = 'FAVORITO' AND f.IDCategoria = Candidatos.IDCategoria) THEN 1 ELSE 0 END
+                WHEN 'ofertas' THEN -Afinidad
+                ELSE 0 END AS FLOAT) AS Clave1,
+            CAST(CASE @Contexto
+                WHEN 'producto' THEN CASE WHEN IDCategoria = @IDCategoriaRef THEN ABS(PrecioMinimo - @PrecioRef) ELSE -Afinidad END
+                WHEN 'favoritos' THEN CASE WHEN @ConFavoritos = 1 THEN ABS(PrecioMinimo - @PrecioFavoritos) ELSE -Unidades END
+                WHEN 'ofertas' THEN -COALESCE(PorcentajeDescuento, 0)
+                ELSE 0 END AS FLOAT) AS Clave2
         FROM Candidatos
+    ), Ordenados AS (
+        SELECT *, ROW_NUMBER() OVER (ORDER BY Clave1, Clave2, Destacado DESC, IDProducto) AS Orden FROM Claves
     )
-    SELECT IDProducto, IDCategoria, Nombre, Descripcion, ImagenUrl, Activo, Categoria,
+    SELECT TOP (30) IDProducto, IDCategoria, Nombre, Descripcion, ImagenUrl, Activo, Categoria,
         PrecioMinimo, PrecioMaximo, StockTotalDisponible, Destacado, Afinidad, PrecioOferta, PrecioReferencia, PorcentajeDescuento
-    FROM Ordenados WHERE PosAfinidad <= 20 OR PosExploracion <= 10
-    ORDER BY Afinidad DESC, Destacado DESC, IDProducto;
+    FROM Ordenados ORDER BY Orden;
 END;
 GO
 

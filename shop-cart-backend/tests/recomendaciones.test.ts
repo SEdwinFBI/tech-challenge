@@ -66,8 +66,19 @@ describe('Recomendaciones personalizadas', () => {
     assert.ok(!(await handler.handle(ask({ contexto: 'favoritos' }))).items.some(p => p.IDProducto === 1));
     assert.deepEqual((await handler.handle(ask({ contexto: 'ofertas' }))).items.map(p => p.IDProducto), [3]);
     assert.deepEqual(placements, ['inicio', 'favoritos', 'ofertas']);
+  });
+
+  it('sin IA conserva el orden del repositorio en cada contexto, incluso sin favoritos', async () => {
+    const { context, repo, cache } = fixture();
     context.signals = [];
-    assert.equal((await handler.handle(ask({ contexto: 'favoritos', idCategoria: 1 }))).items.length, 0);
+    context.candidates.reverse();
+    const expected = context.candidates.slice(0, 10).map(p => p.IDProducto);
+    const handler = new GetRecommendationsQueryHandler(repo, { rank: async () => null }, cache);
+    for (const contexto of ['producto', 'carrito', 'inicio', 'favoritos']) {
+      const result = await handler.handle(ask({ contexto }));
+      assert.equal(result.origen, 'preferencias');
+      assert.deepEqual(result.items.map(p => p.IDProducto), expected);
+    }
   });
 
   it('valida contextos y rangos de precios fuera de los routers', () => {
