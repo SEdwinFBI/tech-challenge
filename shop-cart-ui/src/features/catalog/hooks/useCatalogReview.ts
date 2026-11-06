@@ -1,10 +1,13 @@
 import { useMutation } from '@tanstack/react-query';
-import { catalogReviewApi } from '../api/catalogReviewApi';
-import type { ReviewInput } from '../models/catalogReview';
+import { catalogApi, type ReviewInput } from '../api/catalogApi';
 
-export function useCatalogReview(input: ReviewInput) {
-  const mutation = useMutation({ mutationFn: catalogReviewApi.review });
-  const current = JSON.stringify(mutation.variables) === JSON.stringify(input);
-  return { analyze: () => mutation.mutate(input), isPending: mutation.isPending,
-    isError: current && mutation.isError, result: current ? mutation.data : undefined };
+export function useCatalogReview() {
+  const mutation = useMutation({ mutationFn: (input: ReviewInput) => catalogApi.review(input) });
+  return {
+    analyze: mutation.mutate,
+    reset: mutation.reset,
+    isPending: mutation.isPending,
+    isError: mutation.isError,
+    result: mutation.data,
+  };
 }

@@ -1,6 +1,18 @@
 import { apiClient } from '@/shared/lib/apiClient';
 import { Category, ProductDetail, ProductImage, ProductListItem, Variant } from '@/shared/types/domain';
 
+export interface ReviewInput {
+  nombre: string;
+  descripcion?: string;
+  idProducto?: number;
+}
+
+export interface ReviewResult {
+  categoriaSugerida: { IDCategoria: number; Nombre: string } | null;
+  posiblesDuplicados: Array<{ IDProducto: number; Nombre: string; Categoria: string }>;
+  evaluacionDisponible: boolean;
+}
+
 export interface GetProductsParams {
   pagina?: number;
   tamanoPagina?: number;
@@ -158,6 +170,11 @@ export const catalogApi = {
 
   setCategoryImage: async (idCategoria: number, imagenUrl: string | null): Promise<void> => {
     await apiClient.patch(`/catalogo/categorias/${idCategoria}/imagen`, { imagenUrl });
+  },
+
+  review: async (body: ReviewInput): Promise<ReviewResult> => {
+    const res = await apiClient.post<ReviewResult>('/catalogo/revision', body);
+    return res.data;
   },
 
   /** Admin: incluye productos y variantes inactivos. */

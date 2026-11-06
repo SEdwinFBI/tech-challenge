@@ -3,6 +3,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { toast } from '@/shared/ui/toastStore';
 import { favoritesApi } from '../api/favoritesApi';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
+import { RECOMMENDATIONS_KEY } from '@/shared/lib/queryKeys';
 
 const IDS_KEY = ['favorites', 'ids'] as const;
 
@@ -37,7 +38,7 @@ export function useFavorites() {
       toast.error('No se pudo actualizar tus favoritos', msg);
     },
     onSuccess: (_d, { add }) => {
-      void queryClient.invalidateQueries({ queryKey: ['recommendations'] });
+      void queryClient.invalidateQueries({ queryKey: RECOMMENDATIONS_KEY });
       toast.success(add ? 'Guardado en favoritos' : 'Quitado de favoritos');
     },
     onSettled: () => {

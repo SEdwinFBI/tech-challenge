@@ -1,7 +1,7 @@
 import { Sparkles } from 'lucide-react';
-import { ProductCard } from '@/features/catalog/components/ProductCard';
-import type { SearchRecommendationFilters } from '../models/recommendations';
-import { useSearchRecommendation } from '../hooks/useSearchRecommendation';
+import { ProductCard } from '@/shared/ui/ProductCard';
+import type { SearchRecommendationFilters } from '../api/recommendationsApi';
+import { useSearchRecommendation } from '../hooks/useRecommendations';
 
 interface Props {
   filters: SearchRecommendationFilters;

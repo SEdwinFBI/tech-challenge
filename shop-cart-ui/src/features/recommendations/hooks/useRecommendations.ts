@@ -1,25 +1,62 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth';
+import { useDebounce } from '@/shared/hooks/useDebounce';
 import { getGuestToken } from '@/shared/lib/guestToken';
-import { recommendationsApi } from '../api/recommendationsApi';
-import type { RecommendationPlacement, RecommendationFilters } from '../models/recommendations';
+import { RECOMMENDATIONS_KEY } from '@/shared/lib/queryKeys';
+import {
+  recommendationsApi,
+  type RecommendationFilters,
+  type RecommendationPlacement,
+  type SearchRecommendationFilters,
+} from '../api/recommendationsApi';
+
+const viewedInSession = new Set<string>();
+
+function useIdentity() {
+  const user = useAuth(s => s.user);
+  return user ? `u:${user.idUsuario}` : `g:${getGuestToken()}`;
+}
 
 export function useRecommendations(contexto: RecommendationPlacement, idProducto?: number, filters: RecommendationFilters = {}) {
-  const user = useAuth(s => s.user);
-  const identity = user ? `u:${user.idUsuario}` : `g:${getGuestToken()}`;
-  const view = useQuery({
-    queryKey: ['recommendation-view', identity, idProducto],
-    queryFn: () => recommendationsApi.recordView(idProducto!),
-    enabled: contexto === 'producto' && Boolean(idProducto),
+  const identity = useIdentity();
+  return useQuery({
+    queryKey: [...RECOMMENDATIONS_KEY, identity, contexto, idProducto, filters],
+    queryFn: () => recommendationsApi.list(contexto, idProducto, filters),
+    enabled: contexto !== 'producto' || Boolean(idProducto),
+    staleTime: 30_000,
+    retry: false,
+  });
+}
+
+export function useRecordProductView(idProducto?: number) {
+  const identity = useIdentity();
+  const { mutate } = useMutation({ mutationFn: recommendationsApi.recordView });
+
+  useEffect(() => {
+    if (!idProducto) return;
+    const key = `${identity}:${idProducto}`;
+    if (viewedInSession.has(key)) return;
+    viewedInSession.add(key);
+    mutate(idProducto);
+  }, [identity, idProducto, mutate]);
+}
+
+export function useSearchRecommendation(filters: SearchRecommendationFilters, { enabled = true, debounceMs = 350 } = {}) {
+  const serialized = JSON.stringify(filters);
+  const settled = useDebounce(serialized, debounceMs) === serialized;
+  const active = enabled && settled;
+  const query = useQuery({
+    queryKey: ['search-recommendation', filters],
+    queryFn: ({ signal }) => recommendationsApi.search(filters, signal),
+    enabled: active && filters.q.trim().length >= 2,
     staleTime: 60_000,
     retry: false,
     refetchOnWindowFocus: false,
   });
-  return useQuery({
-    queryKey: ['recommendations', identity, contexto, idProducto, filters, view.dataUpdatedAt],
-    queryFn: () => recommendationsApi.list(contexto, idProducto, filters),
-    enabled: contexto !== 'producto' || (Boolean(idProducto) && (view.isSuccess || view.isError)),
-    staleTime: 30_000,
-    retry: false,
-  });
+  return {
+    product: active ? query.data : null,
+    isFetching: active && query.isFetching,
+    isError: active && query.isError,
+  };
 }

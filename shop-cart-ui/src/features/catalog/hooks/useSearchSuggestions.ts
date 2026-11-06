@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@/shared/hooks/useDebounce';
-import { useSearchRecommendation } from '@/features/recommendations/hooks/useSearchRecommendation';
 import { catalogApi } from '../api/catalogApi';
 import { useCategories } from './useCatalog';
 
@@ -24,7 +23,6 @@ export function useSearchSuggestions(value: string, open: boolean) {
     retry: false,
     placeholderData: keepPreviousData,
   });
-  const ai = useSearchRecommendation({ q: term }, { enabled, debounceMs: 0 });
   const { data: allCategories } = useCategories();
 
   const categories = useMemo(() => {
@@ -37,18 +35,18 @@ export function useSearchSuggestions(value: string, open: boolean) {
 
   const active = input.length >= MIN_QUERY;
   const items = active ? products.data?.items ?? [] : [];
-  const recommendation = settled && ai.product && !items.some(p => p.IDProducto === ai.product!.IDProducto) ? ai.product : null;
 
   return {
     input,
+    term,
+    enabled,
+    settled,
     active,
     items,
     categories,
-    recommendation,
     loading: active && (!settled || (products.isFetching && items.length === 0)),
     stale: active && (!settled || products.isPlaceholderData),
     failed: enabled && products.isError,
-    recommendationLoading: active && (!settled || ai.isFetching),
   };
 }
 

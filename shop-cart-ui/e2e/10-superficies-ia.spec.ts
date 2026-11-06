@@ -7,13 +7,13 @@ test('inicio, favoritos y ofertas presentan recomendaciones independientes', asy
   expect((await request.post('/api/v1/auth/register', { data: { correo, password: PASSWORD, nombreCompleto: 'Prueba superficies' } })).status()).toBe(201);
   await login(page, correo);
   await page.goto('/');
-  const home = page.getByRole('region', { name: 'Elegidos para ti' }).first();
+  const home = page.getByRole('region', { name: 'Lo más vendido', exact: true }).first();
   await expect(home.locator('article')).toHaveCount(10);
   await page.goto('/producto/2');
   await page.getByRole('button', { name: 'Guardar en favoritos', exact: true }).first().click();
   await expect(page.getByText('Guardado en favoritos', { exact: true })).toBeVisible();
   await page.goto('/cuenta/favoritos');
-  const favorites = page.getByRole('region', { name: 'Inspirados en tus favoritos' }).first();
+  const favorites = page.getByRole('region', { name: 'Parecidos a tus favoritos' }).first();
   await expect(favorites.locator('article')).toHaveCount(10);
   await expect(favorites.locator('a[href="/producto/2"]')).toHaveCount(0);
   await page.goto('/ofertas');

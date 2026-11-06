@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowRight } from 'lucide-react';
 import { catalogApi, type GetProductsParams } from '@/features/catalog/api/catalogApi';
 import { useCategories } from '@/features/catalog/hooks/useCatalog';
-import { ProductRail } from '@/features/catalog/components/ProductRail';
+import { ProductRail } from '@/shared/ui/ProductRail';
 import { useRecentlyViewed } from '@/shared/lib/recentlyViewed';
 import { SectionHeader, Rail } from '@/shared/ui/Rail';
 import { ErrorState } from '@/shared/ui';
@@ -84,7 +84,7 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="space-y-12">
-      <RecommendationRail placement="inicio" title="Elegidos para ti" subtitle="Descubre productos según lo que te gusta." />
+      <RecommendationRail placement="inicio" title="Lo más vendido" subtitle="Descubre productos según lo que te gusta." />
       {anyError && (
         <ErrorState
           title="Algunas secciones no cargaron"

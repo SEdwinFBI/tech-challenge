@@ -1,6 +1,6 @@
-import { ProductRail } from '@/features/catalog/components/ProductRail';
+import { ProductRail } from '@/shared/ui/ProductRail';
 import { useRecommendations } from '../hooks/useRecommendations';
-import type { RecommendationFilters, RecommendationPlacement } from '../models/recommendations';
+import type { RecommendationFilters, RecommendationPlacement } from '../api/recommendationsApi';
 
 interface Props {
   placement: RecommendationPlacement;

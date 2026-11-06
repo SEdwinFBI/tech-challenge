@@ -4,6 +4,7 @@ import { ArrowLeft, Search, X } from 'lucide-react';
 import { SearchSuggestionsPanel, type SearchOption } from '@/features/catalog/components/SearchSuggestionsPanel';
 import { useRecentSearches } from '@/features/catalog/hooks/useRecentSearches';
 import { optionDomId, useSearchSuggestions } from '@/features/catalog/hooks/useSearchSuggestions';
+import { useSearchRecommendation } from '@/features/recommendations/hooks/useRecommendations';
 
 const fold = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
@@ -25,10 +26,13 @@ const SearchCombobox: React.FC<ComboboxProps> = ({ variant, onDone, onClose }) =
   const inputRef = useRef<HTMLInputElement>(null);
   const recent = useRecentSearches();
   const s = useSearchSuggestions(value, open);
+  const ai = useSearchRecommendation({ q: s.term }, { enabled: s.enabled, debounceMs: 0 });
+  const recommendation = s.settled && ai.product && !s.items.some(p => p.IDProducto === ai.product!.IDProducto) ? ai.product : null;
+  const recommendationLoading = s.active && (!s.settled || ai.isFetching);
 
   const options = useMemo<SearchOption[]>(() => {
     const list: SearchOption[] = s.items.map(product => ({ key: `p-${product.IDProducto}`, kind: 'product', product }));
-    if (s.recommendation) list.push({ key: `r-${s.recommendation.IDProducto}`, kind: 'recommendation', product: s.recommendation });
+    if (recommendation) list.push({ key: `r-${recommendation.IDProducto}`, kind: 'recommendation', product: recommendation });
     s.categories.forEach(category => list.push({ key: `c-${category.IDCategoria}`, kind: 'category', category }));
     const typed = fold(s.input);
     recent.items
@@ -37,9 +41,9 @@ const SearchCombobox: React.FC<ComboboxProps> = ({ variant, onDone, onClose }) =
       .forEach(term => list.push({ key: `h-${encodeURIComponent(term)}`, kind: 'recent', term }));
     if (s.input) list.push({ key: 'all', kind: 'all', term: s.input });
     return list;
-  }, [s.items, s.recommendation, s.categories, s.input, s.active, recent.items]);
+  }, [s.items, recommendation, s.categories, s.input, s.active, recent.items]);
 
-  const noResults = s.active && !s.loading && !s.stale && !s.failed && s.items.length === 0 && !s.recommendation && s.categories.length === 0;
+  const noResults = s.active && !s.loading && !s.stale && !s.failed && s.items.length === 0 && !recommendation && s.categories.length === 0;
   const hint = sheet && !s.input && options.length === 0 ? 'Escribe el nombre de un producto o una categoría.' : null;
   const showPanel = open && (sheet || options.length > 0 || noResults);
 
@@ -143,7 +147,7 @@ const SearchCombobox: React.FC<ComboboxProps> = ({ variant, onDone, onClose }) =
       activeKey={activeKey}
       loading={s.loading}
       stale={s.stale}
-      recommendationLoading={s.recommendationLoading}
+      recommendationLoading={recommendationLoading}
       noResults={noResults}
       hint={hint}
       onActivate={setActiveKey}
@@ -222,11 +226,6 @@ const SearchCombobox: React.FC<ComboboxProps> = ({ variant, onDone, onClose }) =
           className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl bg-white text-slate-900 shadow-lift ring-1 ring-slate-200 animate-fade-up"
         >
           <div className="max-h-[min(70vh,30rem)] overflow-y-auto overscroll-contain">{panel}</div>
-          <div className="hidden items-center gap-3 border-t border-slate-100 bg-slate-50 px-4 py-2 text-[11px] text-slate-500 lg:flex" aria-hidden="true">
-            <span><kbd className="font-bold">↑↓</kbd> moverte</span>
-            <span><kbd className="font-bold">Enter</kbd> elegir</span>
-            <span><kbd className="font-bold">Esc</kbd> cerrar</span>
-          </div>
         </div>
       )}
     </form>

@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { favoritesApi } from '../api/favoritesApi';
-import { ProductCard, ProductCardSkeletonV2 } from '@/features/catalog/components/ProductCard';
+import { ProductCard, ProductCardSkeletonV2 } from '@/shared/ui/ProductCard';
 import { ErrorState, Illustration } from '@/shared/ui';
 import { RecommendationRail } from '@/features/recommendations/components/RecommendationRail';
 
@@ -37,7 +37,7 @@ export const FavoritesPage: React.FC = () => {
         </div>
       )}
       {!isLoading && !isError && data.length > 0 && (
-        <div className="mt-12"><RecommendationRail placement="favoritos" title="Inspirados en tus favoritos" subtitle="Alternativas y complementos de tus productos guardados." /></div>
+        <div className="mt-12"><RecommendationRail placement="favoritos" title="Parecidos a tus favoritos" subtitle="Alternativas y complementos de tus productos guardados." /></div>
       )}
     </div>
   );

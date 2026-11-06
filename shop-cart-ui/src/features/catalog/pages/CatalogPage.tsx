@@ -6,7 +6,7 @@ import { catalogApi } from '../api/catalogApi';
 import { useCategories } from '../hooks/useCatalog';
 import { ORDER_OPTIONS, PAGE_SIZE, useCatalogFilters, type CatalogMode, type CatalogOrder } from '../hooks/useCatalogFilters';
 import { FilterPanel } from '../components/FilterPanel';
-import { ProductCard, ProductCardSkeletonV2 } from '../components/ProductCard';
+import { ProductCard, ProductCardSkeletonV2 } from '@/shared/ui/ProductCard';
 import { Button, ErrorState, Skeleton, NumberedPagination } from '@/shared/ui';
 import { formatMoney, plural } from '@/shared/lib/formatters';
 import { RecommendationRail } from '@/features/recommendations/components/RecommendationRail';

@@ -10,7 +10,7 @@ test('top 10: registra vistas y se actualiza con favoritos y carrito', async ({ 
   const view = page.waitForResponse(r => r.url().includes('/recomendaciones/vistas') && r.request().method() === 'POST');
   await page.goto('/producto/2');
   expect((await view).status()).toBe(204);
-  const rail = page.getByRole('region', { name: 'Tu top 10 recomendado' }).first();
+  const rail = page.getByRole('region', { name: 'Te puede interesar', exact: true }).first();
   await expect(rail).toBeVisible();
   await expect(rail.locator('article')).toHaveCount(10);
   const favoriteRefresh = page.waitForResponse(r => r.url().includes('/recomendaciones?') && r.request().method() === 'GET');
@@ -24,6 +24,7 @@ test('top 10: registra vistas y se actualiza con favoritos y carrito', async ({ 
   const added = await (await cartRefresh).json();
   expect(added.items.every((p: { IDProducto: number }) => p.IDProducto !== 2)).toBeTruthy();
   await page.goto('/carrito');
-  await expect(rail).toBeVisible();
-  await expect(rail.locator('article')).toHaveCount(10);
+  const cartRail = page.getByRole('region', { name: 'Complementa tu compra', exact: true }).first();
+  await expect(cartRail).toBeVisible();
+  await expect(cartRail.locator('article')).toHaveCount(10);
 });

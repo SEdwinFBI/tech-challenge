@@ -1,19 +1,21 @@
+import { useEffect } from 'react';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useCatalogReview } from '../hooks/useCatalogReview';
-import type { ReviewInput } from '../models/catalogReview';
+import type { ReviewInput } from '../api/catalogApi';
 
 interface Props extends ReviewInput { onCategory: (id: number) => void }
 
 export function CatalogReviewPanel({ nombre, descripcion, idProducto, onCategory }: Props) {
   const online = useOnlineStatus();
   const input = { nombre: nombre.trim(), descripcion: descripcion?.trim() || undefined, idProducto };
-  const { analyze, isPending, isError, result } = useCatalogReview(input);
+  const { analyze, reset, isPending, isError, result } = useCatalogReview();
+  useEffect(reset, [reset, input.nombre, input.descripcion, input.idProducto]);
   return (
     <section aria-label="Revisión del catálogo" className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
       <p className="text-sm font-bold text-slate-900">Revisión del catálogo</p>
       <p className="text-xs text-slate-600">Obtén una categoría sugerida y revisa posibles publicaciones duplicadas antes de guardar.</p>
       <button type="button" disabled={!online || input.nombre.length < 3 || isPending}
-        onClick={analyze} className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-bold disabled:opacity-50">
+        onClick={() => analyze(input)} className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-bold disabled:opacity-50">
         {isPending ? 'Revisando…' : 'Analizar producto'}
       </button>
       {isError && <p role="alert" className="text-sm text-rose-700">No pudimos revisar el producto. Puedes intentarlo de nuevo.</p>}

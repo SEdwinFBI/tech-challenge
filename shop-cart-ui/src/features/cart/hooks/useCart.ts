@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cartApi } from '../api/cartApi';
 import { toast } from '@/shared/ui/toastStore';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
+import { RECOMMENDATIONS_KEY } from '@/shared/lib/queryKeys';
 
 export function useCart() {
   const queryClient = useQueryClient();
@@ -16,7 +17,7 @@ export function useCart() {
       cartApi.upsertItem(idVariante, cantidad),
     onSuccess: (data) => {
       queryClient.setQueryData(['cart'], data);
-      void queryClient.invalidateQueries({ queryKey: ['recommendations'] });
+      void queryClient.invalidateQueries({ queryKey: RECOMMENDATIONS_KEY });
     },
     onError: (err: unknown) => {
       const msg =
@@ -31,7 +32,7 @@ export function useCart() {
     onSuccess: (data) => {
       queryClient.setQueryData(['cart'], data);
       toast.info('Producto quitado');
-      void queryClient.invalidateQueries({ queryKey: ['recommendations'] });
+      void queryClient.invalidateQueries({ queryKey: RECOMMENDATIONS_KEY });
     },
     onError: (err: unknown) => {
       const msg =
