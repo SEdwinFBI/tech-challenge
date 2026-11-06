@@ -26,14 +26,17 @@ import {
   EmptyState,
 } from '@/shared/ui';
 import { Eye } from 'lucide-react';
+import { AuditDiff } from '../components/AuditDiff';
+import { ACCION_LABEL, MODULO_LABEL, accionLabel, entidadLabel, moduloLabel } from '../lib/auditLabels';
 
-const MODULOS = ['PRODUCTOS', 'PRECIOS', 'INVENTARIO', 'PEDIDOS', 'USUARIOS', 'CUPONES'];
+const MODULOS = Object.entries(MODULO_LABEL).map(([value, label]) => ({ value, label }));
+const ACCIONES = Object.entries(ACCION_LABEL).map(([value, label]) => ({ value, label }));
 
 const FILTROS = ['modulo', 'accion', 'busqueda', 'desde', 'hasta'] as const;
 const DEFS: Record<'fecha' | 'modulo' | 'accion' | 'usuario', FilterDef> = {
   fecha: { type: 'fechas', keyDesde: 'desde', keyHasta: 'hasta', label: 'Fecha' },
-  modulo: { type: 'opciones', key: 'modulo', label: 'Módulo', options: MODULOS.map(m => ({ value: m, label: m })), allLabel: 'Todos los módulos' },
-  accion: { type: 'texto', key: 'accion', label: 'Acción', placeholder: 'Ej. CAMBIO_ESTADO' },
+  modulo: { type: 'opciones', key: 'modulo', label: 'Módulo', options: MODULOS, allLabel: 'Todos los módulos' },
+  accion: { type: 'opciones', key: 'accion', label: 'Acción', options: ACCIONES, allLabel: 'Todas las acciones' },
   usuario: { type: 'texto', key: 'busqueda', label: 'Usuario', placeholder: 'Correo del usuario' },
 };
 
@@ -55,7 +58,7 @@ export const AdminAuditLogPage: React.FC = () => {
         orden: sort.orden,
         direccion: sort.direccion,
         modulo: f.modulo || undefined,
-        accion: f.accion.trim() || undefined,
+        accion: f.accion || undefined,
         busqueda: f.busqueda.trim() || undefined,
         ...dateRangeToIso(f.desde, f.hasta),
       }),
@@ -63,20 +66,10 @@ export const AdminAuditLogPage: React.FC = () => {
 
   const logs = data?.items || [];
 
-  const formatJsonPretty = (val: string | null) => {
-    if (!val) return 'Sin valor previo (Creación inicial)';
-    try {
-      const parsed = JSON.parse(val);
-      return JSON.stringify(parsed, null, 2);
-    } catch {
-      return val;
-    }
-  };
-
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Bitácora de auditoría (RF-09)"
+        title="Bitácora de auditoría"
         description="Cambios en precios, existencias, roles y estados de pedidos. No se pueden editar."
       />
 
@@ -96,7 +89,7 @@ export const AdminAuditLogPage: React.FC = () => {
                 <SortableHead column="modulo" sort={sort} onSort={toggle} filter={{ def: DEFS.modulo, values: f, onChange: patch }}>Módulo / Entidad</SortableHead>
                 <FilterableHead filter={{ def: DEFS.accion, values: f, onChange: patch }}>Acción</FilterableHead>
                 <SortableHead column="usuario" sort={sort} onSort={toggle} filter={{ def: DEFS.usuario, values: f, onChange: patch }}>Usuario</SortableHead>
-                <TableHead className="text-right">Auditoría Diff</TableHead>
+                <TableHead className="text-right">Cambios</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -118,12 +111,12 @@ export const AdminAuditLogPage: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Badge variant="neutral" size="sm">
-                      {log.Modulo}
+                      {moduloLabel(log.Modulo)}
                     </Badge>
-                    <span className="text-xs text-slate-400 block mt-0.5">{log.Entidad}</span>
+                    <span className="text-xs text-slate-400 block mt-0.5">{entidadLabel(log.Entidad)}</span>
                   </TableCell>
                   <TableCell className="font-semibold text-slate-800 text-xs">
-                    {log.Accion}
+                    {accionLabel(log.Accion)}
                   </TableCell>
                   <TableCell>
                     <p className="text-xs font-medium text-slate-800">{log.Usuario}</p>
@@ -162,29 +155,11 @@ export const AdminAuditLogPage: React.FC = () => {
           isOpen={Boolean(selectedEntry)}
           onClose={() => setSelectedEntry(null)}
           title={`Detalle de auditoría #${selectedEntry.IDBitacora}`}
-          description={`${selectedEntry.Modulo} • ${selectedEntry.Accion} por ${selectedEntry.Usuario}`}
+          description={`${moduloLabel(selectedEntry.Modulo)} • ${accionLabel(selectedEntry.Accion)} • ${entidadLabel(selectedEntry.Entidad)} #${selectedEntry.IDEntidad} por ${selectedEntry.Usuario}`}
           maxWidth="2xl"
         >
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <span className="text-xs font-bold uppercase tracking-wider text-rose-600 block">
-                  Valor anterior:
-                </span>
-                <pre className="p-3 bg-rose-50/70 border border-rose-200 rounded-xl text-xs text-rose-950 font-mono overflow-x-auto max-h-64 whitespace-pre-wrap">
-                  {formatJsonPretty(selectedEntry.ValorAnterior)}
-                </pre>
-              </div>
-
-              <div className="space-y-1.5">
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 block">
-                  Valor nuevo:
-                </span>
-                <pre className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl text-xs text-emerald-950 font-mono overflow-x-auto max-h-64 whitespace-pre-wrap">
-                  {formatJsonPretty(selectedEntry.ValorNuevo)}
-                </pre>
-              </div>
-            </div>
+            <AuditDiff before={selectedEntry.ValorAnterior} after={selectedEntry.ValorNuevo} />
 
             <div className="flex justify-end pt-4 border-t border-slate-100">
               <Button size="sm" variant="outline" onClick={() => setSelectedEntry(null)}>
