@@ -24,7 +24,7 @@ export class S3ImageStorage implements IImageStorage {
     const extension = EXTENSIONES[contentType];
     if (!extension) throw new Error(`Tipo de contenido no soportado: ${contentType}`);
 
-    const clave = `productos/${idProducto}/${randomUUID()}.${extension}`;
+    const clave = `uploads/productos/${idProducto}/${randomUUID()}.${extension}`;
     const comando = new PutObjectCommand({
       Bucket: env.S3_BUCKET,
       Key: clave,
