@@ -320,7 +320,7 @@ export const ProductDetailPage: React.FC = () => {
                     {!ship.free && ship.freeFrom != null && <> Gratis desde {formatMoney(ship.freeFrom)}.</>}
                   </>
                 ) : (
-                  <>Se calcula con tu dirección al pagar.</>
+                  <>Entregamos en todo el país y puedes seguir tu pedido desde tu cuenta.</>
                 )}
               </span>
             </li>
