@@ -8,7 +8,7 @@ API de comercio electrónico para gestionar catálogo, inventario, carritos, ped
 
 | Parte | Tecnologías |
 | --- | --- |
-| Base de datos | SQL Server 2022+, procedimientos almacenados, funciones, vistas y triggers |
+| Base de datos | SQL Server 2022 o posterior (Docker usa 2025), procedimientos almacenados, funciones, vistas y triggers |
 | Backend | Node.js 24, TypeScript, Express 5, Zod, `mssql`, JWT, bcrypt, Helmet, express-rate-limit, ExcelJS, node-cron |
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, TanStack Query, React Hook Form, Zustand, Recharts, PWA con `vite-plugin-pwa` |
 | Imágenes | AWS S3 con URL firmada y CloudFront; la imagen se comprime en el navegador antes de subirla |
@@ -53,6 +53,8 @@ npm ci
 Crear `.env` a partir de [`.env.example`](shop-cart-backend/.env.example).
 
 Completar las credenciales de SQL Server y los secretos de JWT antes de iniciar la aplicación.
+
+Para SQL Server con Docker, crear el `.env` de la raíz a partir de [`.env.example`](.env.example). `MSSQL_SA_PASSWORD` debe tener el mismo valor que `DB_PASSWORD` del `.env` del backend. `docker compose up -d mssql-server` levanta solo SQL Server.
 
 | Variable | Uso |
 | --- | --- |
@@ -123,6 +125,8 @@ docker compose --profile app up -d --build
 
 La aplicación queda en `http://localhost:8080`. El encabezado `X-Instancia` indica qué réplica respondió. Para apagar todo: `docker compose --profile app down`.
 
+Puertos del host: 8080 web, 1433 SQL Server, 9090 Prometheus y 3002 Grafana. `GRAFANA_ADMIN_PASSWORD` es obligatoria en el `.env` de la raíz. Los puertos se pueden cambiar con `WEB_PORT`, `MSSQL_PORT`, `PROMETHEUS_PORT` y `GRAFANA_PORT`.
+
 
 
 ### Observabilidad
@@ -135,7 +139,7 @@ Con `docker compose --profile app up -d --build` también arrancan Prometheus y 
 
 Paneles del dashboard:
 
-- Peticiones por segundo, latencia p50 y p95, y porcentaje de errores 5xx, por instancia.
+- Peticiones por segundo, latencia p50 y p95 por instancia, y porcentaje de errores 5xx (0 si no hay errores).
 - Checkout por resultado y confirmados en la última hora.
 - Intentos de pago por estado en la última hora.
 - Clientes SSE conectados por instancia.
@@ -263,7 +267,7 @@ npm test
 
 Las pruebas de integración y concurrencia HTTP necesitan una API local conectada a una base de pruebas cuyo nombre comience por `ShopCartAudit_`. Crean registros de prueba y los conservan para inspección.
 
-Para preparar ese entorno, hay que  configurar `DB_NAME` con otra base de datos para test, `PORT=3107` y `RATE_LIMIT_AUTH_MAX=500` las suites registran muchos usuarios, ejecutar `npm run db:setup` e iniciar la API. 
+Para preparar ese entorno, hay que  configurar `DB_NAME` con otra base de datos para test, `PORT=3107` `RATE_LIMIT_AUTH_MAX=500` las suites registran muchos usuarios y `RESERVATION_TTL_MINUTES=1` porque la suite extra de concurrencia espera a que venza una reserva, ejecutar `npm run db:setup` e iniciar la API. 
 
 ```powershell
 $env:RUN_AUDIT_INTEGRATION = '1'
