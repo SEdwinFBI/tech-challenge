@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { productPath } from '@/shared/lib/slug';
 import { Link, useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, ArrowRight, Heart, ImageOff, LogIn, TicketPercent, X } from 'lucide-react';
@@ -109,7 +110,7 @@ export const CartPage: React.FC = () => {
               return (
                 <li key={item.IDCarritoItem} className="flex gap-4 py-5">
                   <Link
-                    to={`/producto/${item.IDProducto ?? ''}`}
+                    to={item.IDProducto ? productPath(item.IDProducto, item.Producto) : '/carrito'}
                     className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-canvas sm:h-28 sm:w-28"
                     tabIndex={-1}
                     aria-hidden="true"
@@ -124,7 +125,7 @@ export const CartPage: React.FC = () => {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <Link to={`/producto/${item.IDProducto ?? ''}`} className="line-clamp-2 text-sm font-bold text-slate-900 hover:text-brand sm:text-base">
+                        <Link to={item.IDProducto ? productPath(item.IDProducto, item.Producto) : '/carrito'} className="line-clamp-2 text-sm font-bold text-slate-900 hover:text-brand sm:text-base">
                           {item.Producto}
                         </Link>
                         <p className="mt-0.5 text-xs text-slate-500">

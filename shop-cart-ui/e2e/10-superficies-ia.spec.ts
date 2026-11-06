@@ -15,7 +15,7 @@ test('inicio, favoritos y ofertas presentan recomendaciones independientes', asy
   await page.goto('/cuenta/favoritos');
   const favorites = page.getByRole('region', { name: 'Parecidos a tus favoritos' }).first();
   await expect(favorites.locator('article')).toHaveCount(10);
-  await expect(favorites.locator('a[href="/producto/2"]')).toHaveCount(0);
+  await expect(favorites.locator('a[href^="/producto/2-"]')).toHaveCount(0);
   await page.goto('/ofertas');
   const offers = page.getByRole('region', { name: 'Ofertas para ti' }).first();
   await expect(offers.locator('article')).toHaveCount(10);
@@ -31,7 +31,7 @@ test('busqueda conserva resultados normales y muestra solo una alternativa disti
   await page.goto('/catalogo?q=camisa');
   const recommendation = page.getByRole('region', { name: 'Recomendado por la IA' });
   await expect(recommendation.locator('article')).toHaveCount(1);
-  await expect(recommendation.locator(`a[href="/producto/${alternative.IDProducto}"]`).first()).toBeVisible();
+  await expect(recommendation.locator(`a[href^="/producto/${alternative.IDProducto}-"]`).first()).toBeVisible();
   const normalCard = normal.items[0];
   await page.unroute('**/api/v1/recomendaciones/busqueda?**');
   await page.route('**/api/v1/recomendaciones/busqueda?**', route => route.fulfill({ json: { ok: true, item: normalCard } }));

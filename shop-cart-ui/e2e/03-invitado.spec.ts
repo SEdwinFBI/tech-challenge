@@ -6,6 +6,7 @@ test('invitado: el carrito se conserva al iniciar sesión', async ({ page, reque
   await clearCart(request, token);
 
   await page.goto('/producto/2');
+  await expect(page).toHaveURL(/\/producto\/2-[a-z0-9-]+$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Camisa Oxford Clásica' })).toBeVisible();
   await page.getByRole('button', { name: /^Agregar al carrito/ }).first().click();
   await expect(page.getByRole('link', { name: /Carrito, 1 producto/ }).first()).toBeVisible();

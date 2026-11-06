@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { parseProductParam, productParam, productPath } from '@/shared/lib/slug';
+import { NotFoundPage } from '@/app/pages/NotFoundPage';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronRight, Heart, Loader2, MapPin, ShoppingCart, Truck } from 'lucide-react';
 import { catalogApi } from '../api/catalogApi';
@@ -38,9 +40,11 @@ const TABS = [
 
 export const ProductDetailPage: React.FC = () => {
   const online = useOnlineStatus();
-  const { id } = useParams();
-  const productId = Number(id);
+  const { id: param } = useParams();
+  const parsedId = parseProductParam(param);
+  const productId = parsedId ?? 0;
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useAuth(s => s.user);
   const { cart, upsertItem, isUpserting } = useCart();
   const { isFavorite, toggle } = useFavorites();
@@ -49,10 +53,26 @@ export const ProductDetailPage: React.FC = () => {
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['product', productId],
     queryFn: () => catalogApi.getProductById(productId),
-    enabled: Number.isFinite(productId) && productId > 0,
+    enabled: parsedId !== null,
   });
 
   const producto = data?.producto;
+
+  useEffect(() => {
+    if (!producto || producto.IDProducto !== parsedId) return;
+    if (param !== productParam(producto.IDProducto, producto.Nombre)) {
+      navigate(productPath(producto.IDProducto, producto.Nombre) + location.search + location.hash, { replace: true });
+    }
+  }, [producto, parsedId, param, navigate, location.search, location.hash]);
+
+  useEffect(() => {
+    if (!producto) return;
+    const previous = document.title;
+    document.title = `${producto.Nombre} · Don Arturo`;
+    return () => {
+      document.title = previous;
+    };
+  }, [producto]);
   const variantes = useMemo(() => (data?.variantes ?? []).filter(v => v.Activo), [data]);
   const attrs = useMemo(() => attributesOf(variantes), [variantes]);
 
@@ -97,6 +117,8 @@ export const ProductDetailPage: React.FC = () => {
     io.observe(el);
     return () => io.disconnect();
   }, [variant?.IDVariante]);
+
+  if (parsedId === null) return <NotFoundPage />;
 
   if (isLoading) {
     return (
@@ -364,7 +386,7 @@ export const ProductDetailPage: React.FC = () => {
             <SectionHeader title="Vistos recientemente" />
             <Rail ariaLabel="Vistos recientemente">
               {recientes.slice(0, 10).map(p => (
-                <Link key={p.id} to={`/producto/${p.id}`} className="group block w-36 sm:w-40">
+                <Link key={p.id} to={productPath(p.id, p.nombre)} className="group block w-36 sm:w-40">
                   <span className="block aspect-square overflow-hidden rounded-card bg-canvas">
                     {p.imagen && <img src={p.imagen} alt="" loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />}
                   </span>

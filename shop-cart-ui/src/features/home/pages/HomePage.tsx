@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { productPath } from '@/shared/lib/slug';
 import { SafeImage } from '@/shared/ui/SafeImage';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
@@ -169,7 +170,7 @@ export const HomePage: React.FC = () => {
           <SectionHeader title="Vistos recientemente" />
           <Rail ariaLabel="Vistos recientemente">
             {recientes.map(p => (
-              <Link key={p.id} to={`/producto/${p.id}`} className="group block w-36 sm:w-40">
+              <Link key={p.id} to={productPath(p.id, p.nombre)} className="group block w-36 sm:w-40">
                 <span className="block aspect-square overflow-hidden rounded-card bg-canvas">
                   {p.imagen && <SafeImage src={p.imagen} alt="" loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />}
                 </span>

@@ -32,7 +32,7 @@ En desarrollo, la pantalla de ingreso ofrece botones para rellenarlas; en produc
 
 | Zona | Rutas | Acceso |
 | :--- | :--- | :--- |
-| Tienda | `/`, `/catalogo`, `/categoria/:id`, `/ofertas`, `/novedades`, `/producto/:id`, `/carrito` | Público (invitado con token de carrito) |
+| Tienda | `/`, `/catalogo`, `/categoria/:id`, `/ofertas`, `/novedades`, `/producto/:id-:slug`, `/carrito` | Público (invitado con token de carrito) |
 | Cuenta | `/cuenta/pedidos`, `/cuenta/pedidos/:id`, `/cuenta/favoritos`, `/cuenta/direcciones`, `/cuenta/perfil` | Cliente (el perfil también para staff) |
 | Pago | `/checkout`, `/pedido/:id/confirmado` | Cliente |
 | Backoffice | `/admin/pedidos`, `/admin/inventario` | Operador y Administrador |

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { productPath } from '@/shared/lib/slug';
 import { useNavigate } from 'react-router';
 import { useCart } from './useCart';
 import { toast } from '@/shared/ui/toastStore';
@@ -17,7 +18,7 @@ export function useQuickAdd() {
       const activas = detalle.variantes.filter(v => v.Activo);
 
       if (activas.length !== 1) {
-        navigate(`/producto/${idProducto}`);
+        navigate(productPath(idProducto, detalle.producto.Nombre));
         return;
       }
       const variante = activas[0];

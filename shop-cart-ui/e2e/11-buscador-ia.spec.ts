@@ -28,7 +28,7 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 
     await expect(ai).toBeVisible();
     await expect(page).toHaveURL(/\/catalogo$/);
     await ai.click();
-    await expect(page).toHaveURL('/producto/13');
+    await expect(page).toHaveURL(/\/producto\/13-[a-z0-9-]+$/);
     await expect(list).toHaveCount(0);
   });
 }
@@ -87,7 +87,7 @@ test('buscador: teclado, historial y cierre al hacer clic fuera', async ({ page 
   await expect(page.getByRole('option', { name: new RegExp(`^${normal.Nombre}`) })).toHaveAttribute('aria-selected', 'true');
   await expect(input).toHaveAttribute('aria-activedescendant', /.+/);
   await input.press('Enter');
-  await expect(page).toHaveURL('/producto/2');
+  await expect(page).toHaveURL(/\/producto\/2-[a-z0-9-]+$/);
   await page.goto('/catalogo');
   await input.click();
   await expect(page.getByRole('option', { name: 'camisa' })).toBeVisible();

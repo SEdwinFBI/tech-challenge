@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { productPath } from '@/shared/lib/slug';
 import { SafeImage } from '@/shared/ui/SafeImage';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
@@ -100,7 +101,7 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({ open, onClose }) => {
                 </div>
                 <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                   {(preview?.items ?? []).map(p => (
-                    <Link key={p.IDProducto} to={`/producto/${p.IDProducto}`} onClick={onClose} className="group block">
+                    <Link key={p.IDProducto} to={productPath(p.IDProducto, p.Nombre)} onClick={onClose} className="group block">
                       <span className="block aspect-square overflow-hidden rounded-2xl bg-canvas">
                         {p.ImagenUrl && (
                           <SafeImage src={p.ImagenUrl} alt="" loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />

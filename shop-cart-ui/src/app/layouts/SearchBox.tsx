@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { productPath } from '@/shared/lib/slug';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, Search, X } from 'lucide-react';
 import { SearchSuggestionsPanel, type SearchOption } from '@/features/catalog/components/SearchSuggestionsPanel';
@@ -64,7 +65,7 @@ const SearchCombobox: React.FC<ComboboxProps> = ({ variant, onDone, onClose }) =
     if (o.kind === 'product' || o.kind === 'recommendation') {
       recent.add(s.input);
       finish();
-      navigate(`/producto/${o.product.IDProducto}`);
+      navigate(productPath(o.product.IDProducto, o.product.Nombre));
     } else if (o.kind === 'category') {
       finish();
       navigate(`/categoria/${o.category.IDCategoria}`);

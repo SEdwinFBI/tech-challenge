@@ -1,4 +1,5 @@
 import React from 'react';
+import { productPath } from '@/shared/lib/slug';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { SafeImage } from '@/shared/ui/SafeImage';
 import { Link } from 'react-router';
@@ -30,7 +31,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, variant = 'gr
   const soldOut = product.StockTotalDisponible <= 0;
   const onSale = Boolean(product.PorcentajeDescuento && product.PrecioReferencia && product.PrecioOferta);
   const adding = pendingId === product.IDProducto;
-  const to = `/producto/${product.IDProducto}`;
+  const to = productPath(product.IDProducto, product.Nombre);
 
   return (
     <article
