@@ -1106,7 +1106,23 @@ BEGIN
           AND UltimaVista < DATEADD(MINUTE, -1, SYSDATETIME());
     ELSE
         INSERT INTO RecomendacionVistas (Propietario, IDProducto, Visitas) VALUES (@Propietario, @IDProducto, 1);
+    DELETE FROM RecomendacionVistas WHERE IDRecomendacionVista IN (
+        SELECT IDRecomendacionVista FROM RecomendacionVistas WHERE Propietario = @Propietario
+        ORDER BY UltimaVista DESC, IDRecomendacionVista DESC OFFSET 50 ROWS);
     COMMIT;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE SP_Recomendaciones_PurgarVistas
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @Borradas INT = 1;
+    WHILE @Borradas > 0
+    BEGIN
+        DELETE TOP (5000) FROM RecomendacionVistas WHERE UltimaVista < DATEADD(DAY, -90, SYSDATETIME());
+        SET @Borradas = @@ROWCOUNT;
+    END;
 END;
 GO
 
@@ -1202,15 +1218,9 @@ BEGIN
     FROM STRING_SPLIT(REPLACE(REPLACE(REPLACE(@Busqueda, ',', ' '), '.', ' '), '-', ' '), ' ')
     WHERE LEN(value) >= 2 AND LOWER(value) COLLATE Latin1_General_CI_AI NOT IN ('de', 'del', 'la', 'el', 'los', 'las', 'para', 'con', 'un', 'una', 'por', 'en', 'que', 'quiero', 'busco');
     INSERT INTO @Terminos
-    SELECT DISTINCT s.Alternativa FROM (VALUES
-        (N'zapatos', N'tenis'), (N'zapatillas', N'tenis'), (N'tenis', N'zapatillas'), (N'calzado', N'zapatos'),
-        (N'camisas', N'camisa'), (N'camisa', N'blusa'), (N'blusa', N'camisa'),
-        (N'auriculares', N'audifonos'), (N'audifonos', N'auriculares'), (N'inalambricos', N'bluetooth'),
-        (N'bolso', N'morral'), (N'morral', N'bolso'), (N'portatil', N'laptop'),
-        (N'taza', N'vaso'), (N'cargador', N'carga'), (N'cafetera', N'prensa')
-    ) s(Termino, Alternativa)
+    SELECT DISTINCT s.Sinonimo COLLATE Latin1_General_CI_AI FROM SinonimosBusqueda s
     WHERE EXISTS (SELECT 1 FROM @Terminos t WHERE t.Palabra = s.Termino COLLATE Latin1_General_CI_AI)
-      AND NOT EXISTS (SELECT 1 FROM @Terminos t WHERE t.Palabra = s.Alternativa COLLATE Latin1_General_CI_AI);
+      AND NOT EXISTS (SELECT 1 FROM @Terminos t WHERE t.Palabra = s.Sinonimo COLLATE Latin1_General_CI_AI);
     SELECT TOP (20) p.IDProducto, p.Nombre, p.Descripcion, p.ImagenUrl, p.Activo, p.IDCategoria,
         c.Nombre AS Categoria, MIN(v.Precio) AS PrecioMinimo, MAX(v.Precio) AS PrecioMaximo,
         SUM(disp.ExistenciaDisponible) AS StockTotalDisponible, ofe.PrecioOferta, ofe.PrecioReferencia, ofe.PorcentajeDescuento

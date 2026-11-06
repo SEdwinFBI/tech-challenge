@@ -141,6 +141,22 @@ CREATE TABLE RecomendacionVistas (
 );
 GO
 
+CREATE TABLE SinonimosBusqueda (
+    IDSinonimo INT IDENTITY(1,1) CONSTRAINT PK_SinonimosBusqueda PRIMARY KEY,
+    Termino NVARCHAR(100) NOT NULL,
+    Sinonimo NVARCHAR(100) NOT NULL,
+    CONSTRAINT UQ_SinonimosBusqueda_TerminoSinonimo UNIQUE (Termino, Sinonimo)
+);
+GO
+
+INSERT INTO SinonimosBusqueda (Termino, Sinonimo) VALUES
+    (N'zapatos', N'tenis'), (N'zapatillas', N'tenis'), (N'tenis', N'zapatillas'), (N'calzado', N'zapatos'),
+    (N'camisas', N'camisa'), (N'camisa', N'blusa'), (N'blusa', N'camisa'),
+    (N'auriculares', N'audifonos'), (N'audifonos', N'auriculares'), (N'inalambricos', N'bluetooth'),
+    (N'bolso', N'morral'), (N'morral', N'bolso'), (N'portatil', N'laptop'),
+    (N'taza', N'vaso'), (N'cargador', N'carga'), (N'cafetera', N'prensa');
+GO
+
 CREATE TABLE Variantes (
     IDVariante INT IDENTITY(1,1) CONSTRAINT PK_Variantes PRIMARY KEY,
     IDProducto INT NOT NULL CONSTRAINT FK_Variantes_Productos FOREIGN KEY REFERENCES Productos(IDProducto),
@@ -380,4 +396,5 @@ CREATE INDEX IX_Kardex_IDVariante_Fecha ON Kardex(IDVariante, FechaMovimiento DE
 CREATE INDEX IX_Bitacora_Modulo_Fecha ON Bitacora(Modulo, FechaRegistro DESC);
 CREATE INDEX IX_Carritos_TokenInvitado ON Carritos(TokenInvitado) WHERE TokenInvitado IS NOT NULL;
 CREATE INDEX IX_Carritos_IDUsuario ON Carritos(IDUsuario) WHERE IDUsuario IS NOT NULL;
+CREATE INDEX IX_RecomendacionVistas_UltimaVista ON RecomendacionVistas(UltimaVista);
 GO
