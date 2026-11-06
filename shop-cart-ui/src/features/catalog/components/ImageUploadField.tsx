@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Copy, ImagePlus, Loader2, RotateCcw, X } from 'lucide-react';
-import { useImageUpload, useStorageAvailable } from '../hooks/useImageUpload';
+import { useImageUpload, useStorageAvailable, type UploadedImage } from '../hooks/useImageUpload';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { compressImage, CompressImageError, formatBytes, type CompressedImage } from '@/shared/lib/compress-image';
 import { SafeImage } from '@/shared/ui/SafeImage';
@@ -181,7 +181,7 @@ export interface CoverUploadFieldProps {
   productId: number;
   imageUrl: string;
   disabled?: boolean;
-  onUploaded: (url: string) => Promise<void>;
+  onUploaded: (image: UploadedImage) => Promise<void>;
   children: React.ReactNode;
 }
 
@@ -283,7 +283,7 @@ export const PendingCoverField: React.FC<PendingCoverFieldProps> = ({ value, onC
 export interface GalleryAddTileProps {
   productId: number;
   remaining: number;
-  onUploaded: (url: string) => Promise<void>;
+  onUploaded: (image: UploadedImage) => Promise<void>;
   onFinished: (count: number) => void;
 }
 

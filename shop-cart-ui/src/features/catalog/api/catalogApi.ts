@@ -118,6 +118,7 @@ export const catalogApi = {
     nombre?: string;
     descripcion?: string;
     imagenUrl?: string;
+    imagenClave?: string;
     activo?: boolean;
   }): Promise<void> => {
     await apiClient.put(`/catalogo/productos/${id}`, data);
@@ -152,8 +153,8 @@ export const catalogApi = {
     await apiClient.patch(`/catalogo/variantes/${idVariante}/precio`, { nuevoPrecio });
   },
 
-  addProductImage: async (idProducto: number, url: string): Promise<ProductImage> => {
-    const res = await apiClient.post<{ ok: boolean; datos: ProductImage }>(`/catalogo/productos/${idProducto}/imagenes`, { url });
+  addProductImage: async (idProducto: number, source: { clave: string } | { url: string }): Promise<ProductImage> => {
+    const res = await apiClient.post<{ ok: boolean; datos: ProductImage }>(`/catalogo/productos/${idProducto}/imagenes`, source);
     return res.data.datos;
   },
 

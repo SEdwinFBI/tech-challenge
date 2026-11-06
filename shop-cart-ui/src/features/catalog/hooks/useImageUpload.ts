@@ -28,10 +28,15 @@ function putBlob(url: string, blob: Blob, headers: Record<string, string>, onPro
   });
 }
 
-export async function uploadCompressed(productId: number, img: CompressedImage, onProgress: (pct: number) => void): Promise<string> {
+export interface UploadedImage {
+  clave: string;
+  urlPublica: string;
+}
+
+export async function uploadCompressed(productId: number, img: CompressedImage, onProgress: (pct: number) => void): Promise<UploadedImage> {
   const firma = await catalogApi.requestImageUpload(productId, img.type, img.size);
   await putBlob(firma.urlSubida, img.blob, firma.cabeceras ?? { 'Content-Type': img.type }, onProgress);
-  return firma.urlPublica;
+  return { clave: firma.clave, urlPublica: firma.urlPublica };
 }
 
 type StorageState = 'unknown' | 'ready' | 'off';
@@ -82,8 +87,8 @@ export function useImageUpload(productId: number | null) {
   const available = useStorageAvailable(productId);
 
   const compressed = useRef<CompressedImage | null>(null);
-  const publicUrl = useRef<string | null>(null);
-  const onUploaded = useRef<((url: string) => Promise<void>) | null>(null);
+  const uploaded = useRef<UploadedImage | null>(null);
+  const onUploaded = useRef<((image: UploadedImage) => Promise<void>) | null>(null);
   const previewUrl = useRef<string | null>(null);
 
   const dropPreview = useCallback(() => {
@@ -96,7 +101,7 @@ export function useImageUpload(productId: number | null) {
 
   const reset = useCallback(() => {
     compressed.current = null;
-    publicUrl.current = null;
+    uploaded.current = null;
     onUploaded.current = null;
     dropPreview();
     setPhase('idle');
@@ -111,12 +116,12 @@ export function useImageUpload(productId: number | null) {
     setProgress(0);
     try {
       if (!navigator.onLine) throw new TypeError('offline');
-      if (!publicUrl.current) {
+      if (!uploaded.current) {
         setPhase('uploading');
-        publicUrl.current = await uploadCompressed(productId, img, setProgress);
+        uploaded.current = await uploadCompressed(productId, img, setProgress);
       }
       setPhase('saving');
-      await onUploaded.current?.(publicUrl.current);
+      await onUploaded.current?.(uploaded.current);
       setLastResult({ originalSize: img.originalSize, size: img.size });
       reset();
       return true;
@@ -133,7 +138,7 @@ export function useImageUpload(productId: number | null) {
   }, [productId, reset]);
 
   const start = useCallback(
-    async (file: File, done: (url: string) => Promise<void>): Promise<boolean> => {
+    async (file: File, done: (image: UploadedImage) => Promise<void>): Promise<boolean> => {
       reset();
       setLastResult(null);
       onUploaded.current = done;

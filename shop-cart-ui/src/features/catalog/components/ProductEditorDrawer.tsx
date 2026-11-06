@@ -177,7 +177,7 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
       toast.error('URL no válida');
       return;
     }
-    if (producto && (await run(() => catalogApi.addProductImage(producto.IDProducto, url), 'Imagen agregada', 'No se pudo agregar la imagen'))) {
+    if (producto && (await run(() => catalogApi.addProductImage(producto.IDProducto, { url }), 'Imagen agregada', 'No se pudo agregar la imagen'))) {
       setNewImage('');
     }
   };
@@ -306,9 +306,9 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
                   key={producto.IDProducto}
                   productId={producto.IDProducto}
                   imageUrl={imagenUrl}
-                  onUploaded={async url => {
-                    await catalogApi.updateProduct(producto.IDProducto, { imagenUrl: url });
-                    setImagenUrl(url);
+                  onUploaded={async ({ clave, urlPublica }) => {
+                    await catalogApi.updateProduct(producto.IDProducto, { imagenClave: clave });
+                    setImagenUrl(urlPublica);
                     toast.success('Imagen principal actualizada');
                     refreshAll();
                   }}
@@ -354,8 +354,8 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
                   key={producto.IDProducto}
                   productId={producto.IDProducto}
                   remaining={MAX_IMAGES - imagenes.length}
-                  onUploaded={async url => {
-                    await catalogApi.addProductImage(producto.IDProducto, url);
+                  onUploaded={async ({ clave }) => {
+                    await catalogApi.addProductImage(producto.IDProducto, { clave });
                     refreshAll();
                   }}
                   onFinished={n => toast.success(n === 1 ? 'Imagen agregada' : `${n} imágenes agregadas`)}

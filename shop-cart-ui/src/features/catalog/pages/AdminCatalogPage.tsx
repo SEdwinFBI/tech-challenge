@@ -150,8 +150,8 @@ export const AdminCatalogPage: React.FC = () => {
       if (cover && created.IDProducto) {
         setCoverProgress(0);
         try {
-          const url = await uploadCompressed(created.IDProducto, cover, setCoverProgress);
-          await catalogApi.updateProduct(created.IDProducto, { imagenUrl: url });
+          const { clave } = await uploadCompressed(created.IDProducto, cover, setCoverProgress);
+          await catalogApi.updateProduct(created.IDProducto, { imagenClave: clave });
           toast.success('Producto creado');
         } catch (err) {
           toast.warning('Producto creado sin imagen principal', apiMessage(err, 'Súbela desde Editar.'));
