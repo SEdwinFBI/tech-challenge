@@ -31,6 +31,7 @@ import { GetLowStockQueryHandler } from '@/features/inventario/queries/get-low-s
 import { GetProductAdminQueryHandler } from '@/features/catalogo/queries/get-product-admin.query';
 import { GetProductInventoryQueryHandler } from '@/features/catalogo/queries/get-product-inventory.query';
 import { resolveDashboardRange } from '@/features/dashboard/domain/dashboard-range';
+import { ICache } from '@/core/cache/cache.interface';
 import { GetDashboardSummarySchema, ExportDashboardExcelSchema } from '@/features/dashboard/models/dashboard.schema';
 import { GetDashboardSummaryQueryHandler } from '@/features/dashboard/queries/get-dashboard-summary.query';
 import { ExportDashboardExcelQueryHandler } from '@/features/dashboard/queries/export-dashboard-excel.query';
@@ -115,6 +116,39 @@ describe('Consulta operativa de inventario', () => {
 describe('Periodos del dashboard', () => {
   const now = new Date('2026-11-02T02:30:00.000Z');
 
+  it('reutiliza la cache en rangos abiertos y distingue fechas explicitas y agrupaciones', async () => {
+    const entries = new Map<string, unknown>();
+    const cache: ICache = {
+      get: async <T>(key: string) => (entries.get(key) as T | undefined) ?? null,
+      set: async (key, data, ttl) => { assert.equal(ttl, 180); entries.set(key, data); },
+      clear: async () => { entries.clear(); },
+    };
+    let reads = 0;
+    const repo = {
+      getMetricsSummary: async () => {
+        reads++;
+        return { kpis: {}, top10Productos: [], ventasPorCategoria: [] };
+      },
+      getSalesByPeriod: async () => [],
+    } as unknown as IDashboardRepository;
+    const handler = new GetDashboardSummaryQueryHandler(repo, cache);
+    for (const query of [{}, { fechaInicio: new Date('2026-01-01') }, ...(['HOY', 'SEMANA', 'MES', 'ANIO'] as const).map(periodo => ({ periodo }))]) {
+      await cache.clear();
+      const before = reads;
+      assert.equal((await handler.handle(query)).desdeCache, false);
+      await new Promise(resolve => setTimeout(resolve, 5));
+      assert.equal((await handler.handle(query)).desdeCache, true);
+      assert.equal(reads, before + 1);
+    }
+    await cache.clear();
+    const query = { fechaInicio: new Date('2026-01-01'), fechaFin: new Date('2026-11-01T12:00:00.123Z') };
+    assert.equal((await handler.handle(query)).desdeCache, false);
+    assert.equal((await handler.handle(query)).desdeCache, true);
+    assert.equal((await handler.handle({ ...query, fechaFin: new Date('2026-11-01T12:00:00.124Z') })).desdeCache, false);
+    assert.equal((await handler.handle({ ...query, agrupacion: 'MES' })).desdeCache, false);
+    assert.equal((await handler.handle({ fechaInicio: query.fechaInicio })).desdeCache, false);
+  });
+
   it('calcula los cuatro periodos con el calendario de Guatemala', () => {
     const cases = { HOY: '2026-11-01T06:00:00.000Z', SEMANA: '2026-10-26T06:00:00.000Z', MES: '2026-11-01T06:00:00.000Z', ANIO: '2026-01-01T06:00:00.000Z' } as const;
     for (const [periodo, expected] of Object.entries(cases)) {
@@ -137,6 +171,23 @@ describe('Periodos del dashboard', () => {
     assert.equal(range.fechaInicio.toISOString(), fechaInicio.toISOString());
     assert.equal(range.fechaFin.toISOString(), now.toISOString());
     assert.equal(resolveDashboardRange({}, now).fechaInicio.getTime(), now.getTime() - 30 * 86400 * 1000);
+  });
+
+  it('trunca al minuto el fin implícito y comparte rango entre llamadas cercanas', () => {
+    const a = resolveDashboardRange({ periodo: 'HOY' }, new Date('2026-11-04T15:30:05.123Z'));
+    const b = resolveDashboardRange({ periodo: 'HOY' }, new Date('2026-11-04T15:30:15.987Z'));
+    assert.equal(a.fechaFin.toISOString(), '2026-11-04T15:30:00.000Z');
+    assert.equal(a.fechaFin.getTime(), b.fechaFin.getTime());
+    assert.equal(a.fechaInicio.getTime(), b.fechaInicio.getTime());
+    const sinPeriodo = resolveDashboardRange({}, new Date('2026-11-04T15:30:59.999Z'));
+    assert.equal(sinPeriodo.fechaInicio.getTime(), sinPeriodo.fechaFin.getTime() - 30 * 86400 * 1000);
+  });
+
+  it('no altera fechas explícitas', () => {
+    const fechaFin = new Date('2026-11-04T15:30:05.123Z');
+    const range = resolveDashboardRange({ fechaInicio: new Date('2026-11-01T00:00:00.456Z'), fechaFin }, new Date('2026-11-05T00:00:00Z'));
+    assert.equal(range.fechaFin.toISOString(), '2026-11-04T15:30:05.123Z');
+    assert.equal(range.fechaInicio.toISOString(), '2026-11-01T00:00:00.456Z');
   });
 
   it('rechaza periodos, fechas y rangos inválidos en resumen y Excel', () => {

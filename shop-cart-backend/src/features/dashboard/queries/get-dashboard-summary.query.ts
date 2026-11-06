@@ -22,7 +22,11 @@ export class GetDashboardSummaryQueryHandler
     const { fechaInicio, fechaFin } = resolveDashboardRange(query);
     const agrupacion = (query.agrupacion || 'DIA').toUpperCase();
 
-    const cacheKey = `dash_${fechaInicio.toISOString()}_${fechaFin.toISOString()}_${agrupacion}`;
+    const inicioKey = !query.fechaInicio && !query.fechaFin && !query.periodo
+      ? 'ultimos30dias'
+      : fechaInicio.toISOString();
+    const finKey = query.fechaFin ? fechaFin.toISOString() : 'actual';
+    const cacheKey = `dash_${inicioKey}_${finKey}_${agrupacion}`;
     const cached = await this.cache.get<DashboardSummaryData>(cacheKey);
     if (cached) {
       return { desdeCache: true, ...cached };
