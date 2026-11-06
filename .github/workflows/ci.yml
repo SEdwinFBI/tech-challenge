@@ -48,6 +48,7 @@ jobs:
       AUDIT_DB_NAME: ShopCartAudit_ci
       AUDIT_API_URL: http://localhost:3107/api/v1
       AUDIT_PASSWORD: Admin123!
+      RESERVATION_TTL_MINUTES: '1'
     services:
       mssql:
         image: mcr.microsoft.com/mssql/server:2022-latest
@@ -98,7 +99,7 @@ jobs:
         run: nohup npm run dev > api.log 2>&1 &
       - name: Esperar a que la API responda
         run: |
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             if curl -fsS http://localhost:3107/health; then
               echo
               exit 0
@@ -113,3 +114,12 @@ jobs:
       - name: Pruebas de concurrencia HTTP
         working-directory: shop-cart-backend
         run: npm run test:concurrency:http
+      - name: Pruebas de recomendaciones
+        working-directory: shop-cart-backend
+        env:
+          DB_NAME: ShopCartRecommendations_test
+          RUN_RECOMMENDATION_INTEGRATION: '1'
+          TYPESAFE_API_KEY: ''
+        run: |
+          npm run db:setup
+          npm run test:recommendations:integration
