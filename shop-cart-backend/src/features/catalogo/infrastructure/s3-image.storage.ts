@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { DeleteObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from '@/core/config/env';
-import { claveParaEliminar } from '../domain/imagen-almacenada';
+import { keyToDelete } from '../domain/stored-image.policy';
 import { IImageStorage, UrlSubidaImagen } from '../abstracts/image-storage.interface';
 
 const EXTENSIONES: Record<string, string> = {
@@ -49,7 +49,7 @@ export class S3ImageStorage implements IImageStorage {
 
   async eliminar(valorAlmacenado: string): Promise<void> {
     if (!this.disponible()) return;
-    const clave = claveParaEliminar(valorAlmacenado, env.CDN_BASE_URL);
+    const clave = keyToDelete(valorAlmacenado, env.CDN_BASE_URL);
     if (!clave) return;
     try {
       await this.obtenerCliente().send(new DeleteObjectCommand({ Bucket: env.S3_BUCKET, Key: clave }));

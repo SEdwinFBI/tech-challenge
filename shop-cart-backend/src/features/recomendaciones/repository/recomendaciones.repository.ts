@@ -1,6 +1,6 @@
 import { getDbPool, sql } from '@/core/config/db';
 import type { ProductDTO } from '@/features/catalogo/models/catalogo.model';
-import { conImagenesPublicas } from '@/features/catalogo/infrastructure/imagen-publica';
+import { withPublicImages } from '@/features/catalogo/infrastructure/public-image.resolver';
 import type { IRecommendationsRepository } from '../abstracts/recomendaciones.repository.interface';
 import type {
   GetSearchRecommendationQuery,
@@ -31,7 +31,7 @@ export class RecommendationsRepository implements IRecommendationsRepository {
       .input('Busqueda', sql.NVarChar(150), filters.q ?? null)
       .execute('SP_Recomendaciones_ObtenerContexto');
     const sets = result.recordsets as [sql.IRecordSet<PreferenceSignal>, sql.IRecordSet<ProductDTO>];
-    return { signals: sets[0] ?? [], candidates: conImagenesPublicas(sets[1] ?? [], 'ImagenUrl') };
+    return { signals: sets[0] ?? [], candidates: withPublicImages(sets[1] ?? [], 'ImagenUrl') };
   }
 
   async findSearchCandidates(input: GetSearchRecommendationQuery): Promise<ProductDTO[]> {
@@ -42,7 +42,7 @@ export class RecommendationsRepository implements IRecommendationsRepository {
       .input('PrecioMax', sql.Decimal(12, 2), input.precioMax ?? null)
       .input('SoloOfertas', sql.Bit, input.soloOfertas ?? false)
       .execute<ProductDTO>('SP_Recomendaciones_BuscarCandidatos');
-    return conImagenesPublicas(result.recordset, 'ImagenUrl');
+    return withPublicImages(result.recordset, 'ImagenUrl');
   }
 
   async purgeViews(): Promise<void> {

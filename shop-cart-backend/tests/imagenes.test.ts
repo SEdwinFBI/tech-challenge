@@ -7,16 +7,17 @@ import { ICatalogRepository } from '@/features/catalogo/abstracts/catalogo.repos
 import { IImageStorage } from '@/features/catalogo/abstracts/image-storage.interface';
 import { CreateImageUploadUrlCommandHandler } from '@/features/catalogo/commands/create-image-upload-url.command';
 import { DeleteProductCommandHandler } from '@/features/catalogo/commands/delete-product.command';
+import { ProductImageService } from '@/features/catalogo/infrastructure/product-image.service';
 import { UpdateProductCommandHandler } from '@/features/catalogo/commands/update-product.command';
 import { DeleteProductImageCommandHandler } from '@/features/catalogo/commands/delete-product-image.command';
 import { AddProductImageCommandHandler } from '@/features/catalogo/commands/add-product-image.command';
 import {
-  claveDesdeUrlCdn,
-  claveParaEliminar,
-  esClaveSubidaProducto,
-  prepararImagenProducto,
-  resolverUrlImagen,
-} from '@/features/catalogo/domain/imagen-almacenada';
+  keyFromCdnUrl,
+  keyToDelete,
+  isProductUploadKey,
+  prepareProductImage,
+  resolveImageUrl,
+} from '@/features/catalogo/domain/stored-image.policy';
 import {
   AddProductImageSchema,
   CreateImageUploadUrlSchema,
@@ -135,83 +136,83 @@ const CDN = 'https://cdn.example.com';
 const UUID = '3f2b8c1e-9a47-4d6e-b1a2-5c7d8e9f0a1b';
 const CLAVE_10 = `uploads/productos/10/${UUID}.webp`;
 
-describe('resolverUrlImagen', () => {
+describe('resolveImageUrl', () => {
   it('deja intacta una URL absoluta', () => {
-    assert.equal(resolverUrlImagen('https://images.unsplash.com/a.jpg', CDN), 'https://images.unsplash.com/a.jpg');
-    assert.equal(resolverUrlImagen('http://x.test/a.png', CDN), 'http://x.test/a.png');
+    assert.equal(resolveImageUrl('https://images.unsplash.com/a.jpg', CDN), 'https://images.unsplash.com/a.jpg');
+    assert.equal(resolveImageUrl('http://x.test/a.png', CDN), 'http://x.test/a.png');
   });
 
   it('antepone el CDN a una clave y tolera barras sobrantes', () => {
-    assert.equal(resolverUrlImagen(CLAVE_10, CDN), `${CDN}/${CLAVE_10}`);
-    assert.equal(resolverUrlImagen(CLAVE_10, `${CDN}/`), `${CDN}/${CLAVE_10}`);
+    assert.equal(resolveImageUrl(CLAVE_10, CDN), `${CDN}/${CLAVE_10}`);
+    assert.equal(resolveImageUrl(CLAVE_10, `${CDN}/`), `${CDN}/${CLAVE_10}`);
   });
 
   it('devuelve null para valores vacíos', () => {
-    assert.equal(resolverUrlImagen(null, CDN), null);
-    assert.equal(resolverUrlImagen(undefined, CDN), null);
-    assert.equal(resolverUrlImagen('', CDN), null);
+    assert.equal(resolveImageUrl(null, CDN), null);
+    assert.equal(resolveImageUrl(undefined, CDN), null);
+    assert.equal(resolveImageUrl('', CDN), null);
   });
 });
 
-describe('esClaveSubidaProducto', () => {
+describe('isProductUploadKey', () => {
   it('acepta la clave del propio producto', () => {
-    assert.equal(esClaveSubidaProducto(CLAVE_10, 10), true);
-    assert.equal(esClaveSubidaProducto(`uploads/productos/10/${UUID}.jpg`, 10), true);
-    assert.equal(esClaveSubidaProducto(`uploads/productos/10/${UUID}.png`, 10), true);
+    assert.equal(isProductUploadKey(CLAVE_10, 10), true);
+    assert.equal(isProductUploadKey(`uploads/productos/10/${UUID}.jpg`, 10), true);
+    assert.equal(isProductUploadKey(`uploads/productos/10/${UUID}.png`, 10), true);
   });
 
   it('rechaza la clave de otro producto, incluso con prefijo numérico común', () => {
-    assert.equal(esClaveSubidaProducto(CLAVE_10, 11), false);
-    assert.equal(esClaveSubidaProducto(CLAVE_10, 1), false);
-    assert.equal(esClaveSubidaProducto(`uploads/productos/100/${UUID}.webp`, 10), false);
+    assert.equal(isProductUploadKey(CLAVE_10, 11), false);
+    assert.equal(isProductUploadKey(CLAVE_10, 1), false);
+    assert.equal(isProductUploadKey(`uploads/productos/100/${UUID}.webp`, 10), false);
   });
 
   it('rechaza path traversal, otros prefijos y extensiones', () => {
-    assert.equal(esClaveSubidaProducto('uploads/productos/10/../11/x.webp', 10), false);
-    assert.equal(esClaveSubidaProducto(`uploads/productos/10/../11/${UUID}.webp`, 10), false);
-    assert.equal(esClaveSubidaProducto(`uploads/productos/10/../../secretos/${UUID}.webp`, 10), false);
-    assert.equal(esClaveSubidaProducto(`otros/productos/10/${UUID}.webp`, 10), false);
-    assert.equal(esClaveSubidaProducto(`/uploads/productos/10/${UUID}.webp`, 10), false);
-    assert.equal(esClaveSubidaProducto(`uploads/productos/10/${UUID}.gif`, 10), false);
-    assert.equal(esClaveSubidaProducto(`uploads/productos/10/${UUID}.webp?x=1`, 10), false);
+    assert.equal(isProductUploadKey('uploads/productos/10/../11/x.webp', 10), false);
+    assert.equal(isProductUploadKey(`uploads/productos/10/../11/${UUID}.webp`, 10), false);
+    assert.equal(isProductUploadKey(`uploads/productos/10/../../secretos/${UUID}.webp`, 10), false);
+    assert.equal(isProductUploadKey(`otros/productos/10/${UUID}.webp`, 10), false);
+    assert.equal(isProductUploadKey(`/uploads/productos/10/${UUID}.webp`, 10), false);
+    assert.equal(isProductUploadKey(`uploads/productos/10/${UUID}.gif`, 10), false);
+    assert.equal(isProductUploadKey(`uploads/productos/10/${UUID}.webp?x=1`, 10), false);
   });
 });
 
-describe('claveDesdeUrlCdn', () => {
+describe('keyFromCdnUrl', () => {
   it('convierte una URL del CDN en su clave sin query ni hash', () => {
-    assert.equal(claveDesdeUrlCdn(`${CDN}/${CLAVE_10}`, CDN), CLAVE_10);
-    assert.equal(claveDesdeUrlCdn(`${CDN}/${CLAVE_10}?v=2#x`, `${CDN}/`), CLAVE_10);
+    assert.equal(keyFromCdnUrl(`${CDN}/${CLAVE_10}`, CDN), CLAVE_10);
+    assert.equal(keyFromCdnUrl(`${CDN}/${CLAVE_10}?v=2#x`, `${CDN}/`), CLAVE_10);
   });
 
   it('devuelve null para URLs ajenas o sin CDN configurado', () => {
-    assert.equal(claveDesdeUrlCdn('https://images.unsplash.com/a.jpg', CDN), null);
-    assert.equal(claveDesdeUrlCdn(`${CDN}/${CLAVE_10}`, undefined), null);
+    assert.equal(keyFromCdnUrl('https://images.unsplash.com/a.jpg', CDN), null);
+    assert.equal(keyFromCdnUrl(`${CDN}/${CLAVE_10}`, undefined), null);
   });
 });
 
-describe('prepararImagenProducto', () => {
+describe('prepareProductImage', () => {
   it('guarda la clave propia tal cual', () => {
-    assert.deepEqual(prepararImagenProducto({ clave: CLAVE_10 }, 10, CDN), { valor: CLAVE_10, clave: CLAVE_10 });
+    assert.deepEqual(prepareProductImage({ clave: CLAVE_10 }, 10, CDN), { valor: CLAVE_10, clave: CLAVE_10 });
   });
 
   it('convierte una URL del CDN en su clave (compatibilidad)', () => {
-    assert.deepEqual(prepararImagenProducto({ url: `${CDN}/${CLAVE_10}` }, 10, CDN), { valor: CLAVE_10, clave: CLAVE_10 });
+    assert.deepEqual(prepareProductImage({ url: `${CDN}/${CLAVE_10}` }, 10, CDN), { valor: CLAVE_10, clave: CLAVE_10 });
   });
 
   it('guarda una URL externa sin cambios', () => {
     const url = 'https://cdn.dummyjson.com/img/1.webp';
-    assert.deepEqual(prepararImagenProducto({ url }, 10, CDN), { valor: url, clave: null });
+    assert.deepEqual(prepareProductImage({ url }, 10, CDN), { valor: url, clave: null });
   });
 
   it('rechaza con 400 IMAGEN_CLAVE_INVALIDA la clave de otro producto, también vía URL del CDN', () => {
     for (const fuente of [{ clave: CLAVE_10 }, { url: `${CDN}/${CLAVE_10}` }]) {
       assert.throws(
-        () => prepararImagenProducto(fuente, 11, CDN),
+        () => prepareProductImage(fuente, 11, CDN),
         (err: unknown) => err instanceof DomainError && err.httpStatus === 400 && err.code === 'IMAGEN_CLAVE_INVALIDA',
       );
     }
     assert.throws(
-      () => prepararImagenProducto({ clave: 'uploads/productos/10/../11/x.webp' }, 10, CDN),
+      () => prepareProductImage({ clave: 'uploads/productos/10/../11/x.webp' }, 10, CDN),
       (err: unknown) => err instanceof DomainError && err.code === 'IMAGEN_CLAVE_INVALIDA',
     );
   });
@@ -219,27 +220,27 @@ describe('prepararImagenProducto', () => {
   it('exige exactamente una fuente', () => {
     for (const fuente of [{}, { clave: CLAVE_10, url: 'https://a.test/x.png' }]) {
       assert.throws(
-        () => prepararImagenProducto(fuente, 10, CDN),
+        () => prepareProductImage(fuente, 10, CDN),
         (err: unknown) => err instanceof DomainError && err.code === 'IMAGEN_FUENTE_INVALIDA',
       );
     }
   });
 });
 
-describe('claveParaEliminar', () => {
+describe('keyToDelete', () => {
   it('usa la clave almacenada', () => {
-    assert.equal(claveParaEliminar(CLAVE_10, CDN), CLAVE_10);
+    assert.equal(keyToDelete(CLAVE_10, CDN), CLAVE_10);
   });
 
   it('convierte una URL del CDN en su clave', () => {
-    assert.equal(claveParaEliminar(`${CDN}/${CLAVE_10}?v=1`, CDN), CLAVE_10);
+    assert.equal(keyToDelete(`${CDN}/${CLAVE_10}?v=1`, CDN), CLAVE_10);
   });
 
   it('ignora URLs externas, vacíos y claves fuera de uploads/productos/', () => {
-    assert.equal(claveParaEliminar('https://images.unsplash.com/a.jpg', CDN), null);
-    assert.equal(claveParaEliminar(null, CDN), null);
-    assert.equal(claveParaEliminar('otros/archivo.webp', CDN), null);
-    assert.equal(claveParaEliminar('uploads/productos/../secreto', CDN), null);
+    assert.equal(keyToDelete('https://images.unsplash.com/a.jpg', CDN), null);
+    assert.equal(keyToDelete(null, CDN), null);
+    assert.equal(keyToDelete('otros/archivo.webp', CDN), null);
+    assert.equal(keyToDelete('uploads/productos/../secreto', CDN), null);
   });
 });
 
@@ -275,7 +276,7 @@ describe('AddProductImageCommandHandler', () => {
     const handler = new AddProductImageCommandHandler(
       repoCon({ addProductImage: async (_id, valor) => (guardados.push(valor), imagen) }),
       new FakePublisher(),
-      storage,
+      new ProductImageService(storage),
     );
     await handler.handle({ idProducto: 10, clave: CLAVE_10, idAdmin: 1 });
     assert.deepEqual(guardados, [CLAVE_10]);
@@ -289,7 +290,7 @@ describe('AddProductImageCommandHandler', () => {
     const handler = new AddProductImageCommandHandler(
       repoCon({ addProductImage: async () => ((guardado = true), imagen) }),
       new FakePublisher(),
-      storage,
+      new ProductImageService(storage),
     );
     await assert.rejects(
       () => handler.handle({ idProducto: 10, clave: CLAVE_10, idAdmin: 1 }),
@@ -300,7 +301,7 @@ describe('AddProductImageCommandHandler', () => {
 
   it('responde 400 con la clave de otro producto sin consultar el almacenamiento', async () => {
     const storage = new FakeStorage(true);
-    const handler = new AddProductImageCommandHandler(repoCon({}), new FakePublisher(), storage);
+    const handler = new AddProductImageCommandHandler(repoCon({}), new FakePublisher(), new ProductImageService(storage));
     await assert.rejects(
       () => handler.handle({ idProducto: 11, clave: CLAVE_10, idAdmin: 1 }),
       (err: unknown) => err instanceof DomainError && err.httpStatus === 400 && err.code === 'IMAGEN_CLAVE_INVALIDA',
@@ -314,7 +315,7 @@ describe('AddProductImageCommandHandler', () => {
     const handler = new AddProductImageCommandHandler(
       repoCon({ addProductImage: async (_id, valor) => (guardados.push(valor), imagen) }),
       new FakePublisher(),
-      storage,
+      new ProductImageService(storage),
     );
     await handler.handle({ idProducto: 10, url: 'https://images.unsplash.com/a.jpg', idAdmin: 1 });
     assert.deepEqual(guardados, ['https://images.unsplash.com/a.jpg']);
@@ -337,7 +338,7 @@ describe('limpieza de portadas y galería en el almacenamiento', () => {
     const handler = new UpdateProductCommandHandler(
       repoCon({ getProductByIdAdmin: async () => detalle(anterior), updateProduct: async () => ({ IDProducto: 10 }) }),
       new FakePublisher(),
-      storage,
+      new ProductImageService(storage),
     );
     await handler.handle({ idProducto: 10, idAdmin: 1, ...cmd });
     return storage;
@@ -382,7 +383,7 @@ describe('limpieza de portadas y galería en el almacenamiento', () => {
         },
       }),
       new FakePublisher(),
-      storage,
+      new ProductImageService(storage),
     );
     await assert.rejects(() => handler.handle({ idProducto: 10, idAdmin: 1, imagenClave: claveB }));
     assert.deepEqual(storage.eliminadas, []);
@@ -397,7 +398,7 @@ describe('limpieza de portadas y galería en el almacenamiento', () => {
         deleteOrDeactivateProduct: async () => ({ Resultado: 'ELIMINADO' }) as never,
       }),
       new FakePublisher(),
-      storage,
+      new ProductImageService(storage),
     );
     await handler.handle({ idProducto: 10, idAdmin: 1 });
     assert.deepEqual(storage.eliminadas.sort(), [claveA, claveB].sort());
@@ -411,7 +412,7 @@ describe('limpieza de portadas y galería en el almacenamiento', () => {
         deleteOrDeactivateProduct: async () => ({ Resultado: 'DESACTIVADO' }) as never,
       }),
       new FakePublisher(),
-      storage,
+      new ProductImageService(storage),
     );
     await handler.handle({ idProducto: 10, idAdmin: 1 });
     assert.deepEqual(storage.eliminadas, []);

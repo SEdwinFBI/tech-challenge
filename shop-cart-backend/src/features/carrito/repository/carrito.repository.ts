@@ -1,5 +1,5 @@
 import { getDbPool, sql } from '@/core/config/db';
-import { conImagenesPublicas } from '@/features/catalogo/infrastructure/imagen-publica';
+import { withPublicImages } from '@/features/catalogo/infrastructure/public-image.resolver';
 import { ICartRepository } from '../abstracts/carrito.repository.interface';
 import {
   CartDetailResult,
@@ -22,7 +22,7 @@ export class CartRepository implements ICartRepository {
       sql.IRecordSet<CartSummaryDTO> | undefined,
     ];
     return {
-      items: conImagenesPublicas(sets[0] || [], 'ImagenUrl'),
+      items: withPublicImages(sets[0] || [], 'ImagenUrl'),
       resumen: sets[1]?.[0] || {
         IDCarrito: null,
         CodigoCuponAplicado: null,

@@ -1,5 +1,5 @@
 import { getDbPool, sql } from '@/core/config/db';
-import { conImagenesPublicas } from '@/features/catalogo/infrastructure/imagen-publica';
+import { withPublicImages } from '@/features/catalogo/infrastructure/public-image.resolver';
 import { IFavoritesRepository } from '../abstracts/favoritos.repository.interface';
 import { FavoriteIdDTO, FavoriteProductDTO } from '../models/favoritos.model';
 
@@ -10,7 +10,7 @@ export class FavoritesRepository implements IFavoritesRepository {
       .request()
       .input('IDUsuario', sql.Int, idUsuario)
       .execute<FavoriteProductDTO>('SP_Favoritos_Listar');
-    return conImagenesPublicas(res.recordset, 'ImagenUrl');
+    return withPublicImages(res.recordset, 'ImagenUrl');
   }
 
   async listIds(idUsuario: number): Promise<FavoriteIdDTO[]> {

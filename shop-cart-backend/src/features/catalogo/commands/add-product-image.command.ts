@@ -2,21 +2,20 @@ import { ICommandHandler } from '@/core/cqrs/index';
 import { IEventPublisher } from '@/core/events/event-publisher.interface';
 import { obtenerEventPublisher } from '@/core/events/event-publisher.factory';
 import { ICatalogRepository } from '../abstracts/catalogo.repository.interface';
-import { IImageStorage } from '../abstracts/image-storage.interface';
+import { IProductImageService } from '../abstracts/product-image.service.interface';
 import { AddProductImageCommand, ProductImageDTO } from '../models/catalogo.schema';
-import { S3ImageStorage } from '../infrastructure/s3-image.storage';
+import { ProductImageService } from '../infrastructure/product-image.service';
 import { CatalogRepository } from '../repository/catalogo.repository';
-import { prepararImagenAlmacenada } from './preparar-imagen-producto';
 
 export class AddProductImageCommandHandler implements ICommandHandler<AddProductImageCommand, ProductImageDTO> {
   constructor(
     private readonly repo: ICatalogRepository = new CatalogRepository(),
     private readonly events: IEventPublisher = obtenerEventPublisher(),
-    private readonly storage: IImageStorage = new S3ImageStorage(),
+    private readonly images: IProductImageService = new ProductImageService(),
   ) {}
 
   async handle(cmd: AddProductImageCommand): Promise<ProductImageDTO> {
-    const valor = await prepararImagenAlmacenada({ clave: cmd.clave, url: cmd.url }, cmd.idProducto, this.storage);
+    const valor = await this.images.prepare({ clave: cmd.clave, url: cmd.url }, cmd.idProducto);
     const imagen = await this.repo.addProductImage(cmd.idProducto, valor, cmd.idAdmin);
     await this.events.publish({
       tipo: 'CATALOGO_ACTUALIZADO',
