@@ -17,7 +17,7 @@ test('seguridad: cliente no entra al panel ni lee pedidos ajenos', async ({ page
   const res = await request.get(`/api/v1/pedidos/${ajeno}`, { headers });
   expect([403, 404]).toContain(res.status());
 
-  const cambio = await request.patch(`/api/v1/pedidos/${ajeno}/estado`, { headers, data: { nuevoEstado: 'CANCELADO', comentario: 'e2e' } });
+  const cambio = await request.patch(`/api/v1/pedidos/${ajeno}/estado`, { headers, data: { nuevoEstado: 'CANCELADO', comentario: 'prueba de seguridad' } });
   expect([403, 404]).toContain(cambio.status());
 
   const cupones = await request.get('/api/v1/cupones', { headers });
