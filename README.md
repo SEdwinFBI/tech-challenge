@@ -198,7 +198,7 @@ Los contratos de las peticiones y respuestas estan en OpenAPI.
 
 ![Diagrama ER](docs/imagenes/modelo-er.svg)
 
-La base tiene 32 tablas en seis áreas: acceso y auditoría, catálogo, inventario, carrito y cupones, pedidos, y envío. Las llaves primarias siguen el formato `IDProducto` y todo el acceso a datos pasa por procedimientos almacenados. Los montos usan `DECIMAL`.
+La base tiene 31 tablas en seis áreas: acceso y auditoría, catálogo, inventario, carrito y cupones, pedidos, y envío. Las llaves primarias siguen el formato `IDProducto` y todo el acceso a datos pasa por procedimientos almacenados. Los montos usan `DECIMAL`.
 
 ## Estados del pedido
 
