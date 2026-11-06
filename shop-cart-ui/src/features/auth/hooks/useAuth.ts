@@ -79,9 +79,9 @@ function attachListeners(): void {
 
 function sessionExpired(): void {
   stopRetries();
+  const teniaSesion = useAuthStore.getState().status === 'authenticated' || haySesionGuardada();
   setAccessToken(null);
   recordarSesion(false);
-  const teniaSesion = useAuthStore.getState().status !== 'unauthenticated';
   useAuthStore.setState({ user: null, status: 'unauthenticated', reconnecting: false });
   if (teniaSesion) toast.warning('Tu sesión caducó', 'Inicia sesión de nuevo para continuar.');
 }
