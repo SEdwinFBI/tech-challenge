@@ -59,6 +59,8 @@ authRouter.post('/login', authRateLimiter, async (req, res, next) => {
   }
 });
 
+const REFRESH_DEFINITIVE_ERRORS = [50011, 50012, 50013];
+
 authRouter.post('/refresh', async (req, res, next) => {
   try {
     const token: string | undefined = req.cookies?.refreshToken || req.body?.refreshToken;
@@ -67,7 +69,9 @@ authRouter.post('/refresh', async (req, res, next) => {
     setCookie(res, data.refreshToken);
     res.json({ ok: true, accessToken: data.accessToken, usuario: data.usuario });
   } catch (err) {
-    if ((err as { number?: number })?.number !== 50016) res.clearCookie('refreshToken', { path: '/api/v1/auth' });
+    if (err instanceof DomainError || REFRESH_DEFINITIVE_ERRORS.includes((err as { number?: number })?.number ?? 0)) {
+      res.clearCookie('refreshToken', { path: '/api/v1/auth' });
+    }
     next(err);
   }
 });
