@@ -62,3 +62,8 @@ export async function createCoupon(request: APIRequestContext, token: string, co
 export function uniqueCode(prefix: string) {
   return `${prefix}${Date.now().toString(36).toUpperCase()}`;
 }
+
+export async function searchInput(page: Page) {
+  if ((page.viewportSize()?.width ?? 1280) < 768) await page.getByRole('button', { name: 'Abrir búsqueda' }).click();
+  return page.getByRole('combobox', { name: 'Buscar en la tienda' });
+}

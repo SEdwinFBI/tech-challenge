@@ -31,3 +31,4 @@ export * from './Drawer';
 export * from './SortableHead';
 export * from './ColumnFilter';
 export * from './FilterChips';
+export * from './Highlight';

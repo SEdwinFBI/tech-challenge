@@ -1,5 +1,5 @@
 import { expect, type APIRequestContext, type Page } from '@playwright/test';
-import { USERS, apiToken, clearCart, createCoupon, login, uniqueCode } from './helpers';
+import { USERS, apiToken, clearCart, createCoupon, login, searchInput, uniqueCode } from './helpers';
 
 const monto = (etiqueta: string, n: number | string, signo = '') =>
   new RegExp(`${etiqueta}\\s*${signo}Q\\s*${(typeof n === 'number' ? n.toFixed(2) : n).replace('.', '\\.')}`);
@@ -14,8 +14,9 @@ export async function compraCompleta(page: Page, request: APIRequestContext) {
   await login(page, USERS.cliente);
 
   await page.goto('/catalogo');
-  await page.getByRole('searchbox', { name: 'Buscar en la tienda' }).fill('camisa');
-  await page.getByRole('searchbox', { name: 'Buscar en la tienda' }).press('Enter');
+  const search = await searchInput(page);
+  await search.fill('camisa');
+  await search.press('Enter');
   await expect(page.getByRole('heading', { name: /Resultados para/ })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Camisa Oxford Clásica', exact: true })).toBeVisible();
 

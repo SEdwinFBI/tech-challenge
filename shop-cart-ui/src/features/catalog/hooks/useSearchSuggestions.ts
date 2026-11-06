@@ -1,28 +1,55 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useSearchRecommendation } from '@/features/recommendations/hooks/useSearchRecommendation';
 import { catalogApi } from '../api/catalogApi';
+import { useCategories } from './useCatalog';
+
+export const SUGGESTION_DEBOUNCE_MS = 250;
+export const MIN_QUERY = 2;
+
+const fold = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
 export function useSearchSuggestions(value: string, open: boolean) {
   const input = value.trim();
-  const term = useDebounce(input, 350);
-  const current = term === input;
-  const enabled = open && current && term.length >= 2;
-  const normal = useQuery({
+  const term = useDebounce(input, SUGGESTION_DEBOUNCE_MS);
+  const settled = term === input;
+  const enabled = open && settled && term.length >= MIN_QUERY;
+
+  const products = useQuery({
     queryKey: ['search-suggestions', term],
     queryFn: ({ signal }) => catalogApi.getProducts({ q: term, tamanoPagina: 5 }, signal),
     enabled,
     staleTime: 30_000,
     retry: false,
+    placeholderData: keepPreviousData,
   });
   const ai = useSearchRecommendation({ q: term }, { enabled, debounceMs: 0 });
-  const items = enabled ? normal.data?.items ?? [] : [];
-  const recommendation = ai.product && !items.some(p => p.IDProducto === ai.product!.IDProducto) ? ai.product : null;
+  const { data: allCategories } = useCategories();
+
+  const categories = useMemo(() => {
+    if (input.length < MIN_QUERY) return [];
+    const tokens = fold(input).split(/\s+/).filter(Boolean);
+    return (allCategories ?? [])
+      .filter(c => c.Activo !== false && tokens.every(t => fold(c.Nombre).includes(t)))
+      .slice(0, 3);
+  }, [allCategories, input]);
+
+  const active = input.length >= MIN_QUERY;
+  const items = active ? products.data?.items ?? [] : [];
+  const recommendation = settled && ai.product && !items.some(p => p.IDProducto === ai.product!.IDProducto) ? ai.product : null;
+
   return {
-    term: input, items, recommendation,
-    isLoading: open && input.length >= 2 && (!current || normal.isLoading),
-    isError: enabled && normal.isError,
-    recommendationLoading: ai.isFetching,
-    recommendationError: ai.isError,
+    input,
+    active,
+    items,
+    categories,
+    recommendation,
+    loading: active && (!settled || (products.isFetching && items.length === 0)),
+    stale: active && (!settled || products.isPlaceholderData),
+    failed: enabled && products.isError,
+    recommendationLoading: active && (!settled || ai.isFetching),
   };
 }
+
+export const optionDomId = (listId: string, key: string) => `${listId}-${key}`;

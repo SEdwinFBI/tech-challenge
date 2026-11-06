@@ -5,7 +5,7 @@ import { Heart, LayoutGrid, ShoppingCart, Sparkles, Tag, Flame, Star, Truck } fr
 import { useAuth } from '@/features/auth';
 import { useCart } from '@/features/cart/hooks/useCart';
 import { useFavorites } from '@/features/wishlist/hooks/useFavorites';
-import { SearchBox } from './SearchBox';
+import { MobileSearch, SearchBox } from './SearchBox';
 import { MegaMenu } from './MegaMenu';
 import { AccountMenu } from './AccountMenu';
 import { MobileBottomNav } from './MobileBottomNav';
@@ -109,7 +109,7 @@ export const StoreLayout: React.FC = () => {
         </div>
 
         <div className="px-4 pb-3 md:hidden">
-          <SearchBox />
+          <MobileSearch />
         </div>
 
         <div className="hidden bg-brand-deep md:block">
