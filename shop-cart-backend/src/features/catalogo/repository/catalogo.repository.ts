@@ -1,5 +1,6 @@
 import { getDbPool, sql } from '@/core/config/db';
 import { ICatalogRepository } from '../abstracts/catalogo.repository.interface';
+import { conImagenPublica, conImagenesPublicas } from '../infrastructure/imagen-publica';
 import {
   CatalogReviewContext,
   CategoryDTO,
@@ -30,7 +31,7 @@ export class CatalogRepository implements ICatalogRepository {
       .request()
       .input('SoloActivas', sql.Bit, soloActivas ? 1 : 0)
       .execute<CategoryDTO>('SP_Catalogo_ListarCategorias');
-    return res.recordset;
+    return conImagenesPublicas(res.recordset, 'ImagenUrl');
   }
 
   async saveCategory(params: SaveCategoryParams): Promise<SaveCategoryResult> {
@@ -66,7 +67,7 @@ export class CatalogRepository implements ICatalogRepository {
       .execute<ProductDTO>('SP_Catalogo_ListarProductos');
 
     return {
-      items: res.recordset,
+      items: conImagenesPublicas(res.recordset, 'ImagenUrl'),
       totalRegistros: (res.recordsets as sql.IRecordSet<{ TotalRegistros: number }>[])[1]?.[0]?.TotalRegistros ?? 0,
     };
   }
@@ -80,9 +81,9 @@ export class CatalogRepository implements ICatalogRepository {
 
     const sets = res.recordsets as [sql.IRecordSet<ProductDTO>, sql.IRecordSet<VariantDTO>, sql.IRecordSet<ProductImageDTO>];
     return {
-      producto: sets[0]?.[0] || null,
+      producto: conImagenPublica(sets[0]?.[0], 'ImagenUrl') || null,
       variantes: sets[1] || [],
-      imagenes: sets[2] || [],
+      imagenes: conImagenesPublicas(sets[2] || [], 'Url'),
     };
   }
 
@@ -117,7 +118,7 @@ export class CatalogRepository implements ICatalogRepository {
       .input('Activo', sql.Bit, dto.activo !== undefined ? (dto.activo ? 1 : 0) : null)
       .input('IDUsuarioAdmin', sql.Int, dto.idAdmin)
       .execute<UpdateProductResult>('SP_Catalogo_ActualizarProducto');
-    return res.recordset[0] as UpdateProductResult;
+    return conImagenPublica(res.recordset[0] as UpdateProductResult, 'ImagenUrl');
   }
 
   async createVariant(dto: CreateVariantParams): Promise<CreateVariantResult> {
@@ -178,7 +179,7 @@ export class CatalogRepository implements ICatalogRepository {
       .request()
       .input('IDProducto', sql.Int, idProducto)
       .execute<ProductImageDTO>('SP_Catalogo_ListarImagenesProducto');
-    return res.recordset;
+    return conImagenesPublicas(res.recordset, 'Url');
   }
 
   async addProductImage(idProducto: number, url: string, idAdmin: number): Promise<ProductImageDTO> {
@@ -189,7 +190,7 @@ export class CatalogRepository implements ICatalogRepository {
       .input('Url', sql.NVarChar(500), url)
       .input('IDUsuarioAdmin', sql.Int, idAdmin)
       .execute<ProductImageDTO>('SP_Catalogo_AgregarImagenProducto');
-    return res.recordset[0] as ProductImageDTO;
+    return conImagenPublica(res.recordset[0] as ProductImageDTO, 'Url');
   }
 
   async deleteProductImage(idProductoImagen: number, idAdmin: number): Promise<string | null> {
@@ -241,9 +242,9 @@ export class CatalogRepository implements ICatalogRepository {
 
     const sets = res.recordsets as [sql.IRecordSet<ProductDTO>, sql.IRecordSet<VariantDTO>, sql.IRecordSet<ProductImageDTO>];
     return {
-      producto: sets[0]?.[0] || null,
+      producto: conImagenPublica(sets[0]?.[0], 'ImagenUrl') || null,
       variantes: sets[1] || [],
-      imagenes: sets[2] || [],
+      imagenes: conImagenesPublicas(sets[2] || [], 'Url'),
     };
   }
 

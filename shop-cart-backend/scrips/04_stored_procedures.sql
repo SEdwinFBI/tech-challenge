@@ -537,6 +537,9 @@ BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
 
+        IF @ImagenUrl IS NOT NULL AND @ImagenUrl NOT LIKE 'http://%' AND @ImagenUrl NOT LIKE 'https://%' AND @ImagenUrl NOT LIKE 'uploads/%'
+            THROW 50094, 'La imagen debe ser una URL http(s) o una clave uploads/.', 1;
+
         IF EXISTS (SELECT 1 FROM Variantes WITH (UPDLOCK, HOLDLOCK) WHERE SKU = @SKU)
             THROW 50023, 'Ya existe una variante con el SKU especificado.', 1;
 
@@ -662,6 +665,9 @@ BEGIN
     SET XACT_ABORT ON;
     BEGIN TRY
         BEGIN TRANSACTION;
+
+        IF @ImagenUrl IS NOT NULL AND @ImagenUrl NOT LIKE 'http://%' AND @ImagenUrl NOT LIKE 'https://%' AND @ImagenUrl NOT LIKE 'uploads/%'
+            THROW 50094, 'La imagen debe ser una URL http(s) o una clave uploads/.', 1;
 
         DECLARE @CatAnterior INT, @NomAnterior NVARCHAR(150), @ActivoAnterior BIT;
         SELECT @CatAnterior = IDCategoria, @NomAnterior = Nombre, @ActivoAnterior = Activo
@@ -822,8 +828,8 @@ BEGIN
     SET XACT_ABORT ON;
     BEGIN TRY
         BEGIN TRANSACTION;
-        IF @Url IS NULL OR (@Url NOT LIKE 'http://%' AND @Url NOT LIKE 'https://%')
-            THROW 50094, 'La URL de la imagen debe iniciar con http:// o https://.', 1;
+        IF @Url IS NULL OR (@Url NOT LIKE 'http://%' AND @Url NOT LIKE 'https://%' AND @Url NOT LIKE 'uploads/%')
+            THROW 50094, 'La imagen debe ser una URL http(s) o una clave uploads/.', 1;
         IF NOT EXISTS (SELECT 1 FROM Productos WITH (UPDLOCK, HOLDLOCK) WHERE IDProducto = @IDProducto)
             THROW 50090, 'El producto no existe.', 1;
         IF (SELECT COUNT(1) FROM ProductoImagenes WHERE IDProducto = @IDProducto) >= 10

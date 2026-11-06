@@ -249,9 +249,10 @@ catalogoRouter.post(
   requireNumericId,
   async (req, res, next) => {
     try {
-      const { url } = AddProductImageSchema.parse(req.body);
+      const { clave, url } = AddProductImageSchema.parse(req.body);
       const imagen = await addProductImageCommandHandler.handle({
         idProducto: Number(req.params.id),
+        clave,
         url,
         idAdmin: req.user!.idUsuario,
       });

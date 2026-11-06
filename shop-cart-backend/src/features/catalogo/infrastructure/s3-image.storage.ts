@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from '@/core/config/env';
+import { claveParaEliminar } from '../domain/imagen-almacenada';
 import { IImageStorage, UrlSubidaImagen } from '../abstracts/image-storage.interface';
 
 const EXTENSIONES: Record<string, string> = {
@@ -46,16 +47,27 @@ export class S3ImageStorage implements IImageStorage {
     };
   }
 
-  async eliminar(urlPublica: string): Promise<void> {
+  async eliminar(valorAlmacenado: string): Promise<void> {
     if (!this.disponible()) return;
-    const prefijo = `${this.baseCdn()}/`;
-    if (!urlPublica.startsWith(prefijo)) return;
-    const clave = urlPublica.slice(prefijo.length).split(/[?#]/)[0];
+    const clave = claveParaEliminar(valorAlmacenado, env.CDN_BASE_URL);
     if (!clave) return;
     try {
       await this.obtenerCliente().send(new DeleteObjectCommand({ Bucket: env.S3_BUCKET, Key: clave }));
     } catch (err) {
       console.error('No se pudo eliminar la imagen del almacenamiento:', err);
+    }
+  }
+
+  async existe(clave: string): Promise<boolean> {
+    try {
+      await this.obtenerCliente().send(new HeadObjectCommand({ Bucket: env.S3_BUCKET, Key: clave }));
+      return true;
+    } catch (err) {
+      const e = err as { name?: string; $metadata?: { httpStatusCode?: number } };
+      const estado = e.$metadata?.httpStatusCode;
+      if (e.name === 'NotFound' || e.name === 'NoSuchKey' || estado === 404) return false;
+      if (estado === 403) return true;
+      throw err;
     }
   }
 

@@ -155,6 +155,7 @@ export interface CreateProductResult {
 
 export interface UpdateProductResult {
   IDProducto?: number;
+  ImagenUrl?: string | null;
   Mensaje?: string;
 }
 

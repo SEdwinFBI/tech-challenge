@@ -45,13 +45,19 @@ export const CreateProductSchema = z.object({
 });
 export type CreateProductDTO = z.infer<typeof CreateProductSchema>;
 
-export const UpdateProductSchema = z.object({
-  idCategoria: z.number().int().positive().optional(),
-  nombre: z.string().min(3).optional(),
-  descripcion: z.string().optional(),
-  imagenUrl: z.string().url().optional(),
-  activo: z.boolean().optional(),
-});
+export const UpdateProductSchema = z
+  .object({
+    idCategoria: z.number().int().positive().optional(),
+    nombre: z.string().min(3).optional(),
+    descripcion: z.string().optional(),
+    imagenUrl: z.string().url().max(500).optional(),
+    imagenClave: z.string().min(1).max(500).optional(),
+    activo: z.boolean().optional(),
+  })
+  .refine((d) => !(d.imagenUrl && d.imagenClave), {
+    message: 'Envía imagenClave o imagenUrl, no ambos.',
+    path: ['imagenClave'],
+  });
 export type UpdateProductDTO = z.infer<typeof UpdateProductSchema>;
 
 export const CreateVariantSchema = z.object({
@@ -107,13 +113,20 @@ export type GetProductsQuery = GetProductsDTO & {
   rolUsuario?: string;
 };
 
-export const AddProductImageSchema = z.object({
-  url: z
-    .string()
-    .url()
-    .max(500)
-    .refine(u => /^https?:\/\//i.test(u), { message: 'La URL debe iniciar con http:// o https://' }),
-});
+export const AddProductImageSchema = z
+  .object({
+    clave: z.string().min(1).max(500).optional(),
+    url: z
+      .string()
+      .url()
+      .max(500)
+      .refine(u => /^https?:\/\//i.test(u), { message: 'La URL debe iniciar con http:// o https://' })
+      .optional(),
+  })
+  .refine((d) => Boolean(d.clave) !== Boolean(d.url), {
+    message: 'Envía exactamente uno de clave o url.',
+    path: ['clave'],
+  });
 export type AddProductImageDTO = z.infer<typeof AddProductImageSchema>;
 
 export const SetReferencePriceSchema = z.object({
@@ -128,7 +141,8 @@ export type SetFeaturedDTO = z.infer<typeof SetFeaturedSchema>;
 
 export interface AddProductImageCommand {
   idProducto: number;
-  url: string;
+  clave?: string;
+  url?: string;
   idAdmin: number;
 }
 

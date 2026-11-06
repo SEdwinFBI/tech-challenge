@@ -8,6 +8,7 @@ export interface UrlSubidaImagen {
 
 export interface IImageStorage {
   crearUrlSubida(idProducto: number, contentType: string, tamanoBytes: number): Promise<UrlSubidaImagen>;
-  eliminar(urlPublica: string): Promise<void>;
+  eliminar(valorAlmacenado: string): Promise<void>;
+  existe(clave: string): Promise<boolean>;
   disponible(): boolean;
 }
