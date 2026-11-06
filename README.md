@@ -75,6 +75,10 @@ Para SQL Server con Docker, crear el `.env` de la raíz a partir de [`.env.examp
 | `CDN_BASE_URL` | URL base de CloudFront desde donde se sirven las imágenes, por ejemplo `https://dxxxx.cloudfront.net`; opcional. |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Credenciales de AWS; si no se definen, se usa la cadena de credenciales por defecto del SDK. |
 | `REDIS_URL` | URL de Redis, por ejemplo `redis://localhost:6379`; opcional. Sin ella, el estado compartido queda en memoria del proceso. |
+| `TYPESAFE_API_KEY` | Clave del proveedor de IA para las recomendaciones; opcional; sin clave se usa el orden local. |
+| `JEV_MODEL` | Modelo de IA; opcional; sin clave se usa el orden local. Por defecto, `jev-latest`. |
+| `JEV_TIMEOUT_MS` | Tiempo máximo de espera de la IA en milisegundos; opcional; sin clave se usa el orden local. Por defecto, `2000`. |
+| `JEV_URL` | URL del servicio de IA; opcional; sin clave se usa el orden local. |
 | `INSTANCE_ID` | Nombre de la instancia que se devuelve en el encabezado `X-Instancia`; por defecto, el hostname. |
 | `GRAFANA_ADMIN_PASSWORD` | Contraseña del administrador de Grafana; va en el `.env` de la raíz, junto a `MSSQL_SA_PASSWORD`. |
 | `TRUST_PROXY` | `1` cuando la API está detrás de Nginx, para que el límite de intentos use la IP del cliente; opcional. |
@@ -251,6 +255,7 @@ Extras del reto: dashboard en vivo con SSE, exportación a Excel, caché del res
 - El ordenamiento se hace en el servidor .
 - La primera dirección activa de un cliente queda como predeterminada
 - Las Estadisticas cuentan como completados los pedidos entregados y descuentan las devoluciones. 
+- La IA solo recibe nombres de productos, categorías, precios y el texto de búsqueda, nunca ids de usuario ni correos, y tiene un presupuesto de 30 llamadas por minuto compartido entre réplicas.
 
 
 

@@ -1,25 +1,42 @@
-El detalle del producto y el carrito muestran hasta diez recomendaciones disponibles. Las vistas aportan un punto, los favoritos actuales tres, el carrito actual cuatro y las compras no canceladas ni devueltas seis. Las vistas repetidas durante un minuto se ignoran; se acumulan hasta tres y pierden la mitad de su peso cada catorce dias. Las compras pierden la mitad cada treinta dias. Las vistas y compras anteriores a noventa dias no participan.
+# Recomendaciones y revisión del catálogo
 
-Los favoritos y el carrito se consultan en SQL en cada solicitud. Quitarlos elimina su contribucion; modificar cantidades no multiplica el peso. El producto abierto y los presentes en el carrito se excluyen del resultado. Los visitantes tienen un perfil separado mediante un hash de su token; las cuentas usan su identificador autenticado. El historial de invitado no se transfiere al iniciar sesion.
+## Señales
 
-Ejecutar `npm run db:setup` crea la tabla de recomendaciones (`scrips/01_tablas_y_semilla_base.sql`) y sus procedimientos (`scrips/04_stored_procedures.sql`). Configurar `TYPESAFE_API_KEY` solamente en `shop-cart-backend/.env`. `JEV_MODEL` selecciona el modelo y `JEV_TIMEOUT_MS` limita la espera (2000 ms por defecto). Docker carga este archivo en las dos replicas mediante la configuracion existente.
+Las vistas valen 1 punto, los favoritos 3, el carrito 4 y las compras no canceladas ni devueltas 6. Las vistas repetidas dentro de un minuto se ignoran; se acumulan hasta 3 y pierden la mitad de su peso cada 14 días. Las compras pierden la mitad cada 30 días. Lo anterior a 90 días no cuenta.
 
-Jev recibe nombres, categorias, precios de candidatos y señales ponderadas, sin identificadores de usuario, tokens ni datos de pago. La respuesta se valida antes de ordenar. Sin preferencias, sin clave o con un fallo del proveedor se usa el orden local por afinidad y destacados. Un fallo pausa las llamadas durante treinta segundos. Las recomendaciones se guardan durante 180 segundos en la cache compartida; el respaldo dura treinta. La clave depende del perfil y los candidatos actuales para detectar cambios de favoritos, carrito o stock.
+Favoritos y carrito se leen de SQL en cada consulta. El producto abierto y los del carrito no se recomiendan. Los visitantes usan el hash SHA-256 de su `X-Guest-Token`; las cuentas, su id. El historial de invitado no pasa a la cuenta al iniciar sesión.
 
-`POST /api/v1/recomendaciones/vistas` acepta `{ "idProducto": 1 }`. `GET /api/v1/recomendaciones?contexto=producto&idProducto=1` devuelve recomendaciones para el detalle; `contexto=carrito` prioriza complementos al ordenar con Jev. Ambos usan autenticacion opcional y requieren `X-Guest-Token` para invitados. El resultado contiene `items` y `origen`. No se almacena en caches HTTP compartidas.
+Cada propietario guarda como máximo 50 vistas (`SP_Recomendaciones_RegistrarVista` borra las más antiguas). Cada día a las 03:17 el servidor ejecuta `SP_Recomendaciones_PurgarVistas`, que borra las de más de 90 días; con varias réplicas, el lock de Redis hace que corra una sola.
 
-Las pruebas de recomendaciones forman parte de `npm test` y simulan el proveedor, sin consumir la API. Para medir su utilidad en produccion conviene comparar clics, altas de carrito y compras frente al orden local.
+## Rutas
 
-Los contextos `inicio`, `favoritos` y `ofertas` tienen politicas independientes. Inicio mezcla preferencias actuales; favoritos usa solo las señales de productos guardados y excluye esos mismos productos; ofertas selecciona variantes disponibles con descuento real antes de reducir la lista y respeta categoria, texto y precio. Las listas existentes conservan su orden y paginacion; la seleccion personalizada se presenta en una seccion adicional.
+- `POST /api/v1/recomendaciones/vistas` con `{ "idProducto": 1 }`. Responde 204.
+- `GET /api/v1/recomendaciones?contexto=producto|carrito|inicio|favoritos|ofertas&idProducto=1`. Responde `{ ok, items, origen }`, con `origen` igual a `jev` o `preferencias`.
+- `GET /api/v1/recomendaciones/busqueda?q=...`. Responde `{ ok, item }`; `item` es `null` si no hay una alternativa suficientemente relevante.
+- `POST /api/v1/catalogo/revision` (solo administrador) con nombre, descripción e id del producto que se edita. Responde `{ ok, categoriaSugerida, posiblesDuplicados, evaluacionDisponible }` y no modifica datos.
 
-`GET /api/v1/recomendaciones/busqueda?q=...` selecciona hasta veinte candidatos por palabras clave y un diccionario SQL de sinonimos. Excluye todos los productos que coinciden con la consulta literal de la busqueda normal, incluso si aparecen en otras paginas. Jev evalua el cumplimiento de la consulta y solo devuelve el mejor si supera 1.7 sobre 2; sin coincidencias suficientes o ante una caida devuelve `item: null`. El frontend muestra como maximo una tarjeta bajo “Recomendado por la IA”, comprueba nuevamente que no figure en la lista normal y cancela consultas obsoletas. Una busqueda de una sola palabra puede no tener una alternativa diferente suficientemente relevante; en ese caso se conserva solo la lista normal.
+Las rutas de recomendaciones aceptan sesión opcional (un token vencido se trata como invitado) y exigen `X-Guest-Token` si no hay sesión. Llevan límite de peticiones y `Cache-Control: private, no-store`.
 
-`POST /api/v1/catalogo/revision` requiere un administrador y acepta nombre, descripcion e ID del producto que se edita. SQL recupera categorias activas y hasta veinte productos con coincidencias en el nombre. Jev propone una categoria y marca posibles duplicados; el propio producto se excluye. El endpoint no modifica datos. Las sugerencias aparecen al pulsar “Analizar producto” en el alta y la edicion, y “Usar categoria” solo cambia el formulario. Cambiar el nombre o descripcion oculta respuestas anteriores. Sin proveedor, solo se muestran nombres exactamente iguales.
+## IA
 
-La separacion de responsabilidades usa esquemas en `models`, resolucion del propietario en `http`, contratos de repositorios y evaluadores, consultas que reciben dependencias por constructor, adaptadores SQL/Jev y archivos `*.dependencies.ts` para construirlas. El cliente compartido `core/ai/jev-score.client.ts` solo resuelve transporte, validacion, tiempo limite y recuperacion del proveedor. Las politicas y los casos de uso deciden que evaluar. En el frontend, modelos, acceso HTTP, hooks y componentes estan separados.
+Se configura con `TYPESAFE_API_KEY`, `JEV_MODEL`, `JEV_TIMEOUT_MS` y `JEV_URL`, solo en `shop-cart-backend/.env`. Sin clave, o ante cualquier fallo, se usa el orden local por afinidad y destacados.
 
-El seed incluye veinte productos adicionales identificados por los SKU `DEMO-EXTRA-01` a `DEMO-EXTRA-20`, cada uno con una imagen externa, variante y existencia inicial; diez tienen descuento. Repetirlo no duplica productos, variantes ni imagenes. Repara el enlace de la blusa y agrega una portada de botines; actualiza los enlaces antiguos conocidos y completa galerias ausentes. Las imagenes siguen siendo URLs HTTPS de Unsplash y DummyJSON, sin archivos locales.
+- Recibe nombres, categorías, precios, descuentos y señales con su peso, o el texto de búsqueda. Nunca ids de usuario, tokens ni datos de pago.
+- La respuesta se valida antes de usarla.
+- Un fallo pausa las llamadas 30 segundos (compartido por la caché cuando hay Redis). Solo se registra el código HTTP o el tipo de error.
+- Presupuesto: 30 llamadas por minuto en total entre réplicas (contador en Redis o en memoria). Agotado, se usa el orden local.
+- Las recomendaciones se guardan en la caché antes de consultar SQL: 180 s si las ordenó la IA, 30 s si es el orden local. La clave depende del propietario, el contexto, el producto y los filtros, así que un cambio de favoritos o carrito puede tardar hasta ese tiempo en notarse.
+- La búsqueda usa hasta 20 candidatos por palabras clave y la tabla `SinonimosBusqueda`. Excluye lo que ya devuelve la búsqueda normal. Solo consulta a la IA con 3 o más caracteres y solo devuelve un producto si su puntuación llega a 1.7 de 2.
+- La revisión propone una categoría (desde 1.5) y duplicados (desde 1.7, máximo 5). Sin IA, solo marca nombres exactamente iguales.
 
-Para desarrollo, ejecutar `npm run db:setup` dentro de `shop-cart-backend` aplica el seed y los scripts 06, 07 y 08. Las pruebas SQL/HTTP requieren `DB_NAME=ShopCartRecommendations_test`, `RUN_RECOMMENDATION_INTEGRATION=1` y `TYPESAFE_API_KEY` vacia antes de ejecutar `npm run test:recommendations:integration`. El navegador se verifica con las pruebas 09 y 10 de Playwright; las respuestas de IA se simulan en los escenarios de presentacion para evitar consumo y variaciones del proveedor.
+## Base de datos
 
-El buscador superior tambien presenta la recomendacion al escribir, sin presionar Enter, en escritorio y movil. Espera 350 ms antes de consultar, muestra hasta cinco resultados normales y una alternativa bajo “Recomendado por la IA”, y elimina duplicados. Las solicitudes anteriores se cancelan al cambiar el texto o cerrar el desplegable. El formulario solo controla apertura y navegacion; un hook consulta las APIs y los componentes del panel presentan los resultados. La prueba 11 verifica estos comportamientos sin consumir el proveedor.
+`npm run db:setup` crea las tablas `RecomendacionVistas` y `SinonimosBusqueda` (con sus sinónimos base) en `scrips/01_tablas_y_semilla_base.sql` y los procedimientos en `scrips/04_stored_procedures.sql`. El script 01 solo se ejecuta si la base no tiene tablas; una base existente necesita aplicar a mano `SinonimosBusqueda` y el índice `IX_RecomendacionVistas_UltimaVista`.
+
+## Estructura
+
+`models` (esquemas Zod, tipos y resultados), `abstracts` (puertos), `repository` (solo procedimientos), `domain` (reglas puras), `infrastructure` (adaptadores de IA con sus textos), `commands` y `queries` (casos de uso). El cliente `core/ai/jev-score.client.ts` solo hace la llamada HTTP; `core/ai/score-client.factory.ts` aplica el presupuesto.
+
+## Pruebas
+
+`npm test` incluye `tests/recomendaciones.test.ts` y simula el proveedor. La prueba SQL/HTTP (`npm run test:recommendations:integration`) necesita `RUN_RECOMMENDATION_INTEGRATION=1`, `TYPESAFE_API_KEY` vacía y `DB_NAME=ShopCartRecommendations_test`.
