@@ -100,26 +100,40 @@ export const AdminInventoryPage: React.FC = () => {
   const [tipo, setTipo] = useState<Tipo>('ENTRADA_COMPRA');
   const [cantidad, setCantidad] = useState('');
   const [motivo, setMotivo] = useState('');
+  const [submitted, setSubmitted] = useState(false);
 
   const openMovement = (prefill: VariantInfo | null, defaultTipo: Tipo = 'ENTRADA_COMPRA') => {
     setVariant(prefill);
     setTipo(defaultTipo);
     setCantidad('');
     setMotivo('');
+    setSubmitted(false);
     setModalOpen(true);
   };
 
   const qty = Number(cantidad);
   const delta = tipo === 'ENTRADA_COMPRA' ? Math.abs(qty) : qty;
   const resulting = variant && Number.isFinite(qty) && cantidad !== '' ? variant.existenciaFisica + delta : null;
-  const invalidQty = cantidad === '' || !Number.isFinite(qty) || qty === 0 || (tipo === 'ENTRADA_COMPRA' && qty < 0);
   const negative = resulting !== null && resulting < 0;
   const motivoOk = motivo.trim().length >= 5;
+
+  const errors = {
+    variant: variant ? '' : 'Elige una variante',
+    qty:
+      cantidad === '' || cantidad === '-'
+        ? 'Escribe la cantidad'
+        : !Number.isFinite(qty) || qty === 0
+          ? tipo === 'ENTRADA_COMPRA' ? 'La entrada debe ser mayor a cero' : 'El ajuste no puede ser cero'
+          : negative
+            ? 'El ajuste dejaría la existencia en negativo'
+            : '',
+    motivo: motivo.trim() === '' ? 'El motivo es obligatorio' : motivoOk ? '' : 'Escribe al menos 5 caracteres',
+  };
 
   const mutation = useMutation({
     mutationFn: inventoryApi.createMovement,
     onSuccess: res => {
-      toast.success('Movimiento registrado en el kardex', `Nuevo saldo en bodega: ${plural(res.saldoPosterior, 'unidad', 'unidades')}.`);
+      toast.success('Movimiento registrado en el kardex', `Nueva existencia: ${plural(res.saldoPosterior, 'unidad', 'unidades')}.`);
       setModalOpen(false);
       queryClient.invalidateQueries({ queryKey: ['kardex'] });
       queryClient.invalidateQueries({ queryKey: ['low-stock'] });
@@ -135,10 +149,8 @@ export const AdminInventoryPage: React.FC = () => {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!variant) return toast.error('Elige un producto y una variante');
-    if (invalidQty) return toast.error('Ingresa una cantidad válida', tipo === 'ENTRADA_COMPRA' ? 'La entrada debe ser mayor a cero.' : 'El ajuste no puede ser cero.');
-    if (negative) return toast.error('El ajuste dejaría la existencia en negativo');
-    if (!motivoOk) return toast.error('Motivo obligatorio', 'Escribe una justificación de al menos 5 caracteres.');
+    setSubmitted(true);
+    if (errors.variant || errors.qty || errors.motivo || !variant) return;
     mutation.mutate({ idVariante: variant.idVariante, tipoMovimiento: tipo, cantidad: delta, motivo: motivo.trim() });
   };
 
@@ -204,7 +216,9 @@ export const AdminInventoryPage: React.FC = () => {
                     <TableHead>SKU / Producto</TableHead>
                     <SortableHead column="tipo" sort={sort} onSort={toggle} filter={{ def: KARDEX_DEFS.tipo, values: kf, onChange: patchKardex }}>Tipo</SortableHead>
                     <SortableHead column="cantidad" sort={sort} onSort={toggle}>Variación</SortableHead>
-                    <TableHead>Saldo en bodega</TableHead>
+                    <TableHead>
+                      <span title="Existencia física que quedó en bodega después del movimiento" className="cursor-help underline decoration-dotted underline-offset-4">Saldo</span>
+                    </TableHead>
                     <TableHead>Responsable / Motivo</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -234,7 +248,7 @@ export const AdminInventoryPage: React.FC = () => {
                               {positive ? `+${m.Cantidad}` : m.Cantidad}
                             </span>
                           </TableCell>
-                          <TableCell className="text-sm font-bold tabular text-slate-900">{m.SaldoPosterior} uds.</TableCell>
+                          <TableCell className="text-sm font-bold tabular text-slate-900">{m.SaldoPosterior}</TableCell>
                           <TableCell className="text-xs">
                             <p className="font-semibold text-slate-700">{m.UsuarioOperador}</p>
                             <p className="mt-0.5 max-w-xs truncate italic text-slate-500">{m.Motivo}</p>
@@ -254,8 +268,9 @@ export const AdminInventoryPage: React.FC = () => {
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
             <p className="flex items-start gap-2 text-sm text-amber-900">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>Variantes activas con existencia disponible igual o menor al umbral configurado
-              {low.data?.items[0] ? <> (<strong>{low.data.items[0].UmbralAplicado}</strong> unidades)</> : null}. Incluye las agotadas.</span>
+              <span>
+                Variantes activas con {low.data?.items[0] ? <strong>{plural(low.data.items[0].UmbralAplicado, 'unidad disponible', 'unidades disponibles')} o menos</strong> : 'pocas unidades disponibles'}. Incluye las agotadas.
+              </span>
             </p>
           </div>
 
@@ -272,7 +287,7 @@ export const AdminInventoryPage: React.FC = () => {
                   <TableRow>
                     <SortableHead column="sku" sort={lowSort} onSort={toggleLowSort} filter={{ def: BAJAS_DEF, values: lf, onChange: patchLow }}>SKU / Producto</SortableHead>
                     <TableHead>Categoría</TableHead>
-                    <TableHead>En bodega</TableHead>
+                    <TableHead>Existencia</TableHead>
                     <TableHead>Apartadas</TableHead>
                     <SortableHead column="existencia" sort={lowSort} onSort={toggleLowSort}>Disponible</SortableHead>
                     <TableHead className="text-right">Acción</TableHead>
@@ -295,7 +310,7 @@ export const AdminInventoryPage: React.FC = () => {
                         <TableCell className="tabular text-sm text-slate-500">{i.UnidadesReservadas}</TableCell>
                         <TableCell>
                           <Badge variant={i.ExistenciaDisponible <= 0 ? 'error' : 'warning'} size="sm">
-                            {i.ExistenciaDisponible <= 0 ? 'Agotado' : `${i.ExistenciaDisponible} disp.`}
+                            {i.ExistenciaDisponible <= 0 ? 'Agotado' : `${plural(i.ExistenciaDisponible, 'disponible')}`}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
@@ -330,7 +345,10 @@ export const AdminInventoryPage: React.FC = () => {
 
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Registrar movimiento" description="Entrada por compra o ajuste manual. El motivo es obligatorio." maxWidth="lg">
         <form onSubmit={submit} className="space-y-4" noValidate>
-          <VariantPicker value={variant} onChange={setVariant} />
+          <div>
+            <VariantPicker value={variant} onChange={setVariant} />
+            {submitted && errors.variant && <p role="alert" className="mt-1 text-xs font-semibold text-rose-600">{errors.variant}</p>}
+          </div>
           <Select
             label="Tipo de movimiento"
             value={tipo}
@@ -347,14 +365,14 @@ export const AdminInventoryPage: React.FC = () => {
               value={cantidad}
               onChange={e => setCantidad(e.target.value.replace(tipo === 'AJUSTE' ? /[^0-9-]/g : /\D/g, ''))}
               placeholder={tipo === 'AJUSTE' ? 'Positivo suma, negativo resta' : 'Unidades que ingresan'}
-              className="h-11 w-full rounded-lg border border-slate-300 px-3.5 text-sm tabular outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+              className={`h-11 w-full rounded-lg border px-3.5 text-sm tabular outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 ${submitted && errors.qty ? 'border-rose-400' : 'border-slate-300'}`}
             />
+            {submitted && errors.qty && <p role="alert" className="mt-1 text-xs font-semibold text-rose-600">{errors.qty}</p>}
           </label>
 
-          {variant && resulting !== null && (
-            <p className={`rounded-xl px-4 py-3 text-sm font-semibold tabular ${negative ? 'bg-rose-50 text-rose-700' : 'bg-brand-soft text-brand'}`} role="status">
-              {variant.existenciaFisica} {delta >= 0 ? '+' : '−'} {Math.abs(delta)} = <strong>{resulting}</strong> unidades en bodega
-              {negative && ' · el ajuste no puede dejar la existencia en negativo'}
+          {variant && resulting !== null && !negative && (
+            <p className="rounded-xl bg-brand-soft px-4 py-3 text-sm font-semibold tabular text-brand" role="status">
+              {variant.existenciaFisica} {delta >= 0 ? '+' : '−'} {Math.abs(delta)} = <strong>{resulting}</strong> de existencia
             </p>
           )}
 
@@ -365,14 +383,14 @@ export const AdminInventoryPage: React.FC = () => {
               onChange={e => setMotivo(e.target.value)}
               rows={3}
               placeholder="Ej. Compra a proveedor, factura 12345"
-              className="w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+              className={`w-full rounded-lg border px-3.5 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 ${submitted && errors.motivo ? 'border-rose-400' : 'border-slate-300'}`}
             />
-            {motivo.length > 0 && !motivoOk && <p className="mt-1 text-xs font-semibold text-rose-600">Escribe al menos 5 caracteres.</p>}
+            {submitted && errors.motivo && <p role="alert" className="mt-1 text-xs font-semibold text-rose-600">{errors.motivo}</p>}
           </label>
 
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
             <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
-            <Button type="submit" loading={mutation.isPending} disabled={!variant || invalidQty || negative || !motivoOk || !online} title={online ? undefined : 'Sin conexión'}>Registrar movimiento</Button>
+            <Button type="submit" loading={mutation.isPending} disabled={!online} title={online ? undefined : 'Sin conexión'}>Registrar movimiento</Button>
           </div>
         </form>
       </Modal>

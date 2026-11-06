@@ -30,13 +30,17 @@ export const VariantPicker: React.FC<VariantPickerProps> = ({ value, onChange, l
     queryKey: ['picker-products', debounced],
     queryFn: () => catalogApi.getProducts({ q: debounced || undefined, tamanoPagina: 8, orden: 'NOMBRE_ASC' }),
     enabled: !value,
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    gcTime: 0,
   });
 
   const detail = useQuery({
     queryKey: ['inventory-product', productId],
     queryFn: () => catalogApi.getProductInventory(productId!),
     enabled: productId !== null && !value,
+    staleTime: 0,
+    gcTime: 0,
   });
 
   if (value) {
@@ -48,7 +52,7 @@ export const VariantPicker: React.FC<VariantPickerProps> = ({ value, onChange, l
             <p className="truncate font-bold text-slate-900">{value.producto}</p>
             <p className="text-xs text-slate-600">
               <span className="font-mono font-bold">{value.sku}</span>
-              {value.atributos && <> · {value.atributos}</>} · {value.existenciaFisica} en bodega
+              {value.atributos && <> · {value.atributos}</>} · Existencia {value.existenciaFisica} · Disponible {value.existenciaDisponible}
             </p>
           </div>
           <button
@@ -131,7 +135,7 @@ export const VariantPicker: React.FC<VariantPickerProps> = ({ value, onChange, l
                     <span className="font-mono text-xs font-bold text-slate-800">{v.SKU}</span>
                     <span className="ml-2 text-xs text-slate-500">{[v.Talla, v.Color, v.Presentacion].filter(Boolean).join(' · ')}</span>
                   </span>
-                  <span className="shrink-0 text-xs tabular text-slate-500">{v.ExistenciaFisica} en bodega{v.Activo ? '' : ' · inactiva'}</span>
+                  <span className="shrink-0 text-xs tabular text-slate-500">Existencia {v.ExistenciaFisica} · Disponible {v.ExistenciaDisponible}{v.Activo ? '' : ' · inactiva'}</span>
                 </button>
               </li>
             ))}
