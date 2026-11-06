@@ -53,10 +53,12 @@ export interface DashboardMetricsSummary {
 
 export interface DashboardSummaryData extends DashboardMetricsSummary {
   serieTemporal: SalesByPeriodItemDTO[];
+  generadoEn: string;
 }
 
 export type DashboardSummaryResponse = DashboardMetricsSummary & {
   serieTemporal: SalesByPeriodItemDTO[];
   desdeCache: boolean;
+  generadoEn: string;
   timestamp?: string;
 };

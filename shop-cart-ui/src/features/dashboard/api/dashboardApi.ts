@@ -31,6 +31,7 @@ export interface TimeSeriesPoint {
 }
 
 export interface DashboardSummaryResponse {
+  generadoEn?: string;
   ok: boolean;
   desdeCache: boolean;
   kpis: DashboardKPIs;

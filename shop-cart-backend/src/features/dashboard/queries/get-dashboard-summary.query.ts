@@ -42,6 +42,7 @@ export class GetDashboardSummaryQueryHandler
       top10Productos: resumen.top10Productos,
       ventasPorCategoria: resumen.ventasPorCategoria,
       serieTemporal,
+      generadoEn: new Date().toISOString(),
     };
 
     await this.cache.set(cacheKey, data, 180);

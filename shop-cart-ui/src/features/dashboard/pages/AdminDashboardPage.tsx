@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { BarChart3, Download, PackageCheck, Radio, Receipt, ShoppingCart, Table2, TrendingUp } from 'lucide-react';
+import { BarChart3, Download, PackageCheck, Receipt, RefreshCw, ShoppingCart, Table2, TrendingUp } from 'lucide-react';
 import { dashboardApi } from '../api/dashboardApi';
 import { useDashboardStream } from '../hooks/useDashboardStream';
 import { formatMoney, plural } from '@/shared/lib/formatters';
@@ -24,14 +24,14 @@ const AXIS = '#78716c';
 
 const compactQ = (n: number) => (n >= 1000 ? `Q${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `Q${Math.round(n)}`);
 
-const Kpi: React.FC<{ label: string; value: string; note: string; icon: React.ReactNode; tone: string }> = ({ label, value, note, icon, tone }) => (
+const Kpi: React.FC<{ label: string; value: string; note?: string; icon: React.ReactNode; tone: string }> = ({ label, value, note, icon, tone }) => (
   <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
     <div className="mb-3 flex items-center justify-between">
       <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</span>
       <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${tone}`}>{icon}</span>
     </div>
     <p className="text-2xl font-extrabold tabular text-slate-900">{value}</p>
-    <p className="mt-1 text-xs text-slate-500">{note}</p>
+    {note && <p className="mt-1 text-xs text-slate-500">{note}</p>}
   </div>
 );
 
@@ -48,6 +48,15 @@ const ChartCard: React.FC<{ title: string; subtitle?: string; action?: React.Rea
   </section>
 );
 
+function agoLabel(iso: string | number | undefined, now: number): string {
+  if (!iso) return 'Actualizado hace un momento';
+  const min = Math.floor((now - new Date(iso).getTime()) / 60_000);
+  if (min < 1) return 'Actualizado hace un momento';
+  if (min < 60) return `Actualizado hace ${min} min`;
+  const h = Math.floor(min / 60);
+  return `Actualizado hace ${h} h`;
+}
+
 const EmptyChart: React.FC<{ text: string }> = ({ text }) => (
   <div className="flex h-64 items-center justify-center rounded-xl bg-canvas text-sm font-medium text-slate-500">{text}</div>
 );
@@ -58,7 +67,7 @@ export const AdminDashboardPage: React.FC = () => {
   const [tabla, setTabla] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, refetch, isFetching, dataUpdatedAt } = useQuery({
     queryKey: ['admin-dashboard', periodo],
     queryFn: () => dashboardApi.getSummary({ periodo }),
     staleTime: 30_000,
@@ -67,6 +76,12 @@ export const AdminDashboardPage: React.FC = () => {
   const live = useDashboardStream(() => {
     refetch();
   });
+
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
 
   const serie = useMemo(() => data?.serieTemporal ?? [], [data]);
   const categorias = useMemo(
@@ -118,18 +133,28 @@ export const AdminDashboardPage: React.FC = () => {
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Solo pedidos entregados, menos devoluciones."
+        description="Pedidos entregados, descontando devoluciones."
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${
-                live ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-100 text-slate-500'
-              }`}
-              role="status"
-            >
-              <Radio className={`h-3.5 w-3.5 ${live ? 'animate-pulse' : ''}`} />
-              {live ? 'En vivo' : 'Sin conexión'}
-            </span>
+            {live ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700" role="status">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" aria-hidden="true" />
+                En vivo
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 py-1 pl-3 pr-1 text-xs font-bold text-slate-600" role="status">
+                {agoLabel(data.generadoEn ?? dataUpdatedAt, now)}
+                <button
+                  type="button"
+                  onClick={() => { void refetch(); }}
+                  disabled={isFetching}
+                  aria-label="Actualizar"
+                  className="flex h-6 w-6 items-center justify-center rounded-full text-slate-600 hover:bg-white disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+                </button>
+              </span>
+            )}
             <div role="group" aria-label="Periodo" className="flex rounded-xl bg-slate-200 p-0.5 text-xs font-bold">
               {PERIODOS.map(p => (
                 <button
@@ -153,13 +178,11 @@ export const AdminDashboardPage: React.FC = () => {
         }
       />
 
-      {data.desdeCache && <p className="text-xs font-semibold text-slate-500">Datos en caché.</p>}
-
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label={`Ventas netas · ${periodoLabel}`} value={formatMoney(k.VentasNetasQuetzales)} note="Sin devoluciones" icon={<TrendingUp className="h-4 w-4" />} tone="bg-indigo-50 text-indigo-700" />
-        <Kpi label="Pedidos completados" value={String(k.TotalPedidosCompletados)} note="Excluye cancelados y pendientes" icon={<PackageCheck className="h-4 w-4" />} tone="bg-emerald-50 text-emerald-700" />
-        <Kpi label="Ticket promedio" value={formatMoney(k.TicketPromedioQuetzales)} note="Ventas entre pedidos completados" icon={<Receipt className="h-4 w-4" />} tone="bg-amber-50 text-amber-700" />
-        <Kpi label="Carritos abandonados" value={String(k.CarritosAbandonadosActuales)} note="Con productos y sin actividad reciente" icon={<ShoppingCart className="h-4 w-4" />} tone="bg-rose-50 text-rose-700" />
+        <Kpi label={`Ventas netas · ${periodoLabel}`} value={formatMoney(k.VentasNetasQuetzales)} icon={<TrendingUp className="h-4 w-4" />} tone="bg-indigo-50 text-indigo-700" />
+        <Kpi label="Pedidos completados" value={String(k.TotalPedidosCompletados)} icon={<PackageCheck className="h-4 w-4" />} tone="bg-emerald-50 text-emerald-700" />
+        <Kpi label="Ticket promedio" value={formatMoney(k.TicketPromedioQuetzales)} note="Ventas ÷ pedidos completados" icon={<Receipt className="h-4 w-4" />} tone="bg-amber-50 text-amber-700" />
+        <Kpi label="Carritos abandonados (ahora)" value={String(k.CarritosAbandonadosActuales)} note="No depende del periodo" icon={<ShoppingCart className="h-4 w-4" />} tone="bg-rose-50 text-rose-700" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
