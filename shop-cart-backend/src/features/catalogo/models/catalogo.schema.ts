@@ -41,7 +41,11 @@ export const CreateProductSchema = z.object({
   color: z.string().optional(),
   presentacion: z.string().optional(),
   precio: z.number().positive(),
+  precioReferencia: z.number().positive().optional(),
   existenciaInicial: z.number().int().min(0).default(0),
+}).refine(d => d.precioReferencia === undefined || d.precioReferencia > d.precio, {
+  message: 'El precio de referencia debe ser mayor al precio de venta.',
+  path: ['precioReferencia'],
 });
 export type CreateProductDTO = z.infer<typeof CreateProductSchema>;
 

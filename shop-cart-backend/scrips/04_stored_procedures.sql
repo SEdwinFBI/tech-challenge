@@ -528,6 +528,7 @@ CREATE OR ALTER PROCEDURE SP_Catalogo_CrearProductoConVariante
     @Color VARCHAR(50) = NULL,
     @Presentacion VARCHAR(50) = NULL,
     @Precio DECIMAL(12,2),
+    @PrecioReferencia DECIMAL(12,2) = NULL,
     @ExistenciaInicial INT = 0,
     @IDUsuarioAdmin INT
 AS
@@ -540,6 +541,9 @@ BEGIN
         IF @ImagenUrl IS NOT NULL AND @ImagenUrl NOT LIKE 'http://%' AND @ImagenUrl NOT LIKE 'https://%' AND @ImagenUrl NOT LIKE 'uploads/%'
             THROW 50094, 'La imagen debe ser una URL http(s) o una clave uploads/.', 1;
 
+        IF @PrecioReferencia IS NOT NULL AND @PrecioReferencia <= @Precio
+            THROW 50095, 'El precio de referencia debe ser mayor al precio de venta actual.', 1;
+
         IF EXISTS (SELECT 1 FROM Variantes WITH (UPDLOCK, HOLDLOCK) WHERE SKU = @SKU)
             THROW 50023, 'Ya existe una variante con el SKU especificado.', 1;
 
@@ -547,8 +551,8 @@ BEGIN
         VALUES (@IDCategoria, @Nombre, @Descripcion, @ImagenUrl);
         DECLARE @IDProducto INT = CAST(SCOPE_IDENTITY() AS INT);
 
-        INSERT INTO Variantes (IDProducto, SKU, Talla, Color, Presentacion, Precio, ExistenciaFisica)
-        VALUES (@IDProducto, @SKU, @Talla, @Color, @Presentacion, @Precio, @ExistenciaInicial);
+        INSERT INTO Variantes (IDProducto, SKU, Talla, Color, Presentacion, Precio, PrecioReferencia, ExistenciaFisica)
+        VALUES (@IDProducto, @SKU, @Talla, @Color, @Presentacion, @Precio, @PrecioReferencia, @ExistenciaInicial);
         DECLARE @IDVariante INT = CAST(SCOPE_IDENTITY() AS INT);
 
         IF @ExistenciaInicial > 0

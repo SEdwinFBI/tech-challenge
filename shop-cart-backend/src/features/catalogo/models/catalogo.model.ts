@@ -103,6 +103,7 @@ export interface CreateProductWithVariantParams {
   color?: string;
   presentacion?: string;
   precio: number;
+  precioReferencia?: number;
   existenciaInicial: number;
   idAdmin: number;
 }

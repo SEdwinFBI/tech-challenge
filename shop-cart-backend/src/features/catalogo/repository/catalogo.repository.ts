@@ -100,6 +100,7 @@ export class CatalogRepository implements ICatalogRepository {
       .input('Color', sql.VarChar(50), dto.color ?? null)
       .input('Presentacion', sql.NVarChar(50), dto.presentacion ?? null)
       .input('Precio', sql.Decimal(12, 2), dto.precio)
+      .input('PrecioReferencia', sql.Decimal(12, 2), dto.precioReferencia ?? null)
       .input('ExistenciaInicial', sql.Int, dto.existenciaInicial)
       .input('IDUsuarioAdmin', sql.Int, dto.idAdmin)
       .execute<CreateProductResult>('SP_Catalogo_CrearProductoConVariante');

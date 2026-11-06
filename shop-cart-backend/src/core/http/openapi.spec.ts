@@ -668,6 +668,7 @@ export const openApiSpec = {
                   descripcion: { type: 'string', example: 'Chaqueta clásica de cuero vacuno' },
                   idCategoria: { type: 'integer', example: 2 },
                   imagenPrincipalUrl: { type: 'string', format: 'uri' },
+                  precioReferencia: { type: 'number', minimum: 0.01, example: 250.0, description: 'Opcional. Precio tachado para mostrar la oferta; debe ser mayor a precio. El cliente paga precio.' },
                 },
               },
             },
@@ -1694,7 +1695,7 @@ export const openApiSpec = {
       patch: {
         tags: ['Catalogo'],
         summary: 'Precio de referencia (Admin)',
-        description: 'Solo para mostrar descuentos. Debe ser mayor al precio de venta y no altera el cobro. Enviar null lo elimina.',
+        description: 'Solo para mostrar descuentos (precio antes). Debe ser mayor al precio de venta y no altera el cobro. Enviar null lo quita y la variante deja de mostrarse como oferta.',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
         requestBody: { required: true, content: { 'application/json': { schema: {

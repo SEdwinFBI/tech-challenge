@@ -6,6 +6,7 @@ import { DomainError } from '@/core/domain/domain.error';
 import {
   AddProductImageSchema,
   GetProductsSchema,
+  CreateProductSchema,
   SetFeaturedSchema,
   SetReferencePriceSchema,
 } from '@/features/catalogo/models/catalogo.schema';
@@ -14,6 +15,7 @@ import { GetProductsFilter, ProductDetailResult } from '@/features/catalogo/mode
 import { GetProductsQueryHandler } from '@/features/catalogo/queries/get-products.query';
 import { GetProductImagesQueryHandler } from '@/features/catalogo/queries/get-product-images.query';
 import { SetReferencePriceCommandHandler } from '@/features/catalogo/commands/set-reference-price.command';
+import { CreateProductCommandHandler } from '@/features/catalogo/commands/create-product.command';
 import { AddFavoriteSchema } from '@/features/favoritos/models/favoritos.schema';
 import { IFavoritesRepository } from '@/features/favoritos/abstracts/favoritos.repository.interface';
 import { AddFavoriteCommandHandler } from '@/features/favoritos/commands/add-favorite.command';
@@ -250,6 +252,15 @@ describe('Extensiones de tienda: esquemas de catálogo', () => {
     assert.equal(SetReferencePriceSchema.safeParse({}).success, false);
   });
 
+  it('crear producto: el precio de referencia es opcional y debe superar al precio', () => {
+    const base = { idCategoria: 1, nombre: 'Botín de cuero', sku: 'BOT-01', precio: 160 };
+    assert.equal(CreateProductSchema.safeParse(base).success, true);
+    assert.equal(CreateProductSchema.safeParse({ ...base, precioReferencia: 200 }).success, true);
+    assert.equal(CreateProductSchema.safeParse({ ...base, precioReferencia: 160 }).success, false);
+    assert.equal(CreateProductSchema.safeParse({ ...base, precioReferencia: 100 }).success, false);
+    assert.equal(CreateProductSchema.safeParse({ ...base, precioReferencia: 0 }).success, false);
+  });
+
   it('destacado exige un booleano', () => {
     assert.equal(SetFeaturedSchema.safeParse({ destacado: true }).success, true);
     assert.equal(SetFeaturedSchema.safeParse({ destacado: 'si' }).success, false);
@@ -293,6 +304,39 @@ describe('Extensiones de tienda: handlers de catálogo', () => {
       (err: unknown) => err instanceof DomainError && err.code === 'INVALID_REFERENCE_PRICE' && err.httpStatus === 400,
     );
     assert.equal(llamado, false);
+  });
+
+  it('crear producto: rechaza un precio de referencia que no supera al precio antes de la base de datos', async () => {
+    let llamado = false;
+    const handler = new CreateProductCommandHandler(
+      asCatalogRepo({
+        createProductWithVariant: async () => {
+          llamado = true;
+          return { IDProducto: 1, IDVariante: 1 };
+        },
+      }),
+      new FakePublisher(),
+    );
+    await assert.rejects(
+      () => handler.handle({ idCategoria: 1, nombre: 'Botín', sku: 'BOT-01', precio: 160, precioReferencia: 160, existenciaInicial: 0, idAdmin: 1 }),
+      (err: unknown) => err instanceof DomainError && err.code === 'REFERENCE_PRICE_INVALID' && err.httpStatus === 400,
+    );
+    assert.equal(llamado, false);
+  });
+
+  it('crear producto: envía el precio de referencia al repositorio cuando es válido', async () => {
+    let recibido: number | undefined;
+    const handler = new CreateProductCommandHandler(
+      asCatalogRepo({
+        createProductWithVariant: async dto => {
+          recibido = dto.precioReferencia;
+          return { IDProducto: 1, IDVariante: 1 };
+        },
+      }),
+      new FakePublisher(),
+    );
+    await handler.handle({ idCategoria: 1, nombre: 'Botín', sku: 'BOT-01', precio: 160, precioReferencia: 200, existenciaInicial: 0, idAdmin: 1 });
+    assert.equal(recibido, 200);
   });
 
   it('permite quitar el precio de referencia con null y delega al repositorio', async () => {
