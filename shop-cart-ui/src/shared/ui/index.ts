@@ -26,6 +26,7 @@ export * from './NumberedPagination';
 export * from './FreeShippingProgress';
 export * from './SafeImage';
 export * from './BrandMark';
+export * from './BrandLoader';
 export * from './ReservationCountdown';
 export * from './Drawer';
 export * from './SortableHead';

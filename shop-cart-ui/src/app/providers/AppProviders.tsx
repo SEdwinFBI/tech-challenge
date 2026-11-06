@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastContainer } from '@/shared/ui/Toast';
 import { useAuth } from '@/features/auth';
 import { errorCode } from '@/shared/lib/apiErrors';
+import { BrandLoader } from '@/shared/ui/BrandLoader';
 import { ConnectionLayer } from './ConnectionLayer';
 
 const queryClient = new QueryClient({
@@ -46,11 +47,8 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children
 
   if (!initialized) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 space-y-4">
-        <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-200 animate-pulse">
-          SC
-        </div>
-        <p className="text-sm font-medium text-slate-500 animate-pulse">Cargando…</p>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <BrandLoader size={200} label="Cargando…" showLabel />
       </div>
     );
   }

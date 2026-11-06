@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router';
-import { BrandMark } from '@/shared/ui/BrandMark';
+import { BrandLogo, BrandMark } from '@/shared/ui/BrandMark';
 
 export interface AuthShellProps {
   title: string;
@@ -22,8 +22,8 @@ export const AuthShell: React.FC<AuthShellProps> = ({ title, subtitle, children,
 
     <main className="flex items-center justify-center px-5 py-10 sm:px-10">
       <div className="w-full max-w-md animate-fade-up">
-        <Link to="/" className="mb-8 inline-block lg:hidden" aria-label="Inicio">
-          <BrandMark light={false} />
+        <Link to="/" className="mb-6 block w-fit" aria-label="Inicio">
+          <BrandLogo width={132} />
         </Link>
         <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{title}</h1>
         {subtitle && <p className="mt-1.5 text-sm text-slate-500">{subtitle}</p>}

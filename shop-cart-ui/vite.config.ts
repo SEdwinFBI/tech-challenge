@@ -11,7 +11,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.ico', 'brand/*', 'shopCart-loading-2.svg'],
       manifest: {
         name: 'ShopCart · Don Arturo',
         short_name: 'ShopCart',
@@ -23,13 +23,14 @@ export default defineConfig({
         theme_color: '#0e7c66',
         background_color: '#fafaf9',
         icons: [
-          { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/brand/pwa-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/brand/pwa-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/brand/pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,webp,ico,woff2}'],
+        globIgnores: ['shopCart.png', 'shopCart-icon.png', 'shopcart-svg.svg', 'shopCart-loading.gif'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,

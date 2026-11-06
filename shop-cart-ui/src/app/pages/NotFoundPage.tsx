@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router';
-import { Illustration } from '@/shared/ui';
+import { BrandLogo } from '@/shared/ui/BrandMark';
 
 export const NotFoundPage: React.FC = () => (
   <div className="flex min-h-screen flex-col items-center justify-center bg-white px-6 text-center">
-    <Illustration name="compass" className="w-52" />
+    <BrandLogo variant="mascot" width={176} />
     <p className="mt-4 text-sm font-extrabold uppercase tracking-widest text-brand">Error 404</p>
     <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-900">Página no encontrada</h1>
     <p className="mt-2 max-w-md text-sm text-slate-500">Esta dirección no existe.</p>

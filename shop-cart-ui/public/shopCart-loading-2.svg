@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240" viewBox="0 0 320 240" role="img" aria-labelledby="title desc">
+  <title id="title">ShopCart — cargando</title>
+  <desc id="desc">Carrito de compras minimalista animado en jade y maíz, sin fondo.</desc>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g class="cart">
+      <path d="M91 92h19l17 66h91l17-49H120" stroke="#0e7c66" stroke-width="9"/>
+      <path d="M140 139h65" stroke="#ffc233" stroke-width="8" stroke-linecap="round" class="goods"/>
+      <circle cx="144" cy="176" r="7" fill="#08503f"/>
+      <circle cx="207" cy="176" r="7" fill="#08503f"/>
+    </g>
+    <path class="speed speed-a" d="M69 117h26" stroke="#72d5b8" stroke-width="6"/>
+    <path class="speed speed-b" d="M77 133h22" stroke="#72d5b8" stroke-width="6"/>
+    <path d="M98 204h124" stroke="#d2f4e8" stroke-width="7"/>
+    <path class="progress" d="M98 204h124" stroke="#0e7c66" stroke-width="7" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+  </g>
+  <style>
+    .cart{transform-origin:160px 139px;animation:cart-bob 1.8s ease-in-out infinite}
+    .goods{transform-origin:172px 139px;animation:goods-pulse 1.8s ease-in-out infinite}
+    .speed{animation:speed-fade 1.8s ease-in-out infinite}
+    .speed-b{animation-delay:.16s}
+    .progress{animation:load 1.8s ease-in-out infinite}
+    @keyframes cart-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+    @keyframes goods-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+    @keyframes speed-fade{0%,100%{opacity:0;transform:translateX(7px)}30%,65%{opacity:1;transform:translateX(0)}}
+    @keyframes load{0%{stroke-dashoffset:100}82%,100%{stroke-dashoffset:0}}
+    @media (prefers-reduced-motion:reduce){.cart,.goods,.speed,.progress{animation:none}.progress{stroke-dashoffset:35}.speed{opacity:1}}
+  </style>
+</svg>

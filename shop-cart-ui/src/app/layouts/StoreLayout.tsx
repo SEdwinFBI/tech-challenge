@@ -140,7 +140,7 @@ export const StoreLayout: React.FC = () => {
       <footer className="mt-12 bg-brand-deep text-white/80">
         <div className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
           <div>
-            <BrandMark />
+            <BrandMark priority={false} />
           </div>
           <div>
             <h3 className="mb-3 text-sm font-extrabold text-white">Tienda</h3>
