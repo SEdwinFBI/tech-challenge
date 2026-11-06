@@ -38,7 +38,7 @@ export class JevScoreClient implements IScoreClient {
       if (Object.keys(questions).some(key => !parsed.answers[key])) throw new JevFailure('INVALID_RESPONSE');
       return Object.fromEntries(Object.keys(questions).map(key => [key, parsed.answers[key]!.score]));
     } catch (err) {
-      console.warn('JEV no disponible:', err instanceof JevFailure ? err.code : err instanceof Error ? `${err.name}: ${err.message}` : 'UNKNOWN');
+      console.warn('JEV no disponible:', err instanceof JevFailure ? err.code : err instanceof Error ? `${err.name}: ${this.apiKey ? err.message.replaceAll(this.apiKey, '***') : err.message}` : 'UNKNOWN');
       this.retryAt = Date.now() + BREAKER_SECONDS * 1000;
       await this.breaker.set(BREAKER_KEY, true, BREAKER_SECONDS).catch(() => undefined);
       return null;
