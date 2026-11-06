@@ -26,7 +26,7 @@ export class GetSearchRecommendationQueryHandler implements IQueryHandler<GetSea
     const candidates = RecommendationPolicy.searchCandidates(await this.repo.findSearchCandidates(query));
     const scores = candidates.length ? await this.selector.score(query.q, candidates) : null;
     const result = RecommendationPolicy.bestSearchMatch(candidates, scores);
-    await this.cache.set(key, result, result.item ? 180 : 30);
+    await this.cache.set(key, result, result.item ? 3600 : 30);
     return result;
   }
 }
