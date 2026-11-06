@@ -791,6 +791,368 @@ BEGIN
     DECLARE @DirRodas INT = (SELECT TOP 1 IDDireccion FROM Direcciones WHERE IDUsuario = @IDUserRodas);
     DECLARE @DirLucy INT = (SELECT TOP 1 IDDireccion FROM Direcciones WHERE IDUsuario = @IDUserLucy);
 
+    DECLARE @CategoriasNuevas TABLE (Nombre NVARCHAR(100), Descripcion NVARCHAR(300));
+    INSERT INTO @CategoriasNuevas VALUES
+        (N'Belleza y Cuidado Personal', N'Maquillaje, fragancias y cuidado de la piel para todos los días'),
+        (N'Deportes', N'Balones, raquetas y equipo para jugar en la cancha o en la colonia'),
+        (N'Vestidos y Faldas', N'Vestidos casuales y de salida, frescos para el clima de acá');
+
+    INSERT INTO Categorias (Nombre, Descripcion, Activo)
+    SELECT n.Nombre, n.Descripcion, 1 FROM @CategoriasNuevas n
+    WHERE NOT EXISTS (SELECT 1 FROM Categorias c WHERE c.Nombre = n.Nombre);
+
+    DECLARE @ProductosAmpliados TABLE (Nombre NVARCHAR(150), Categoria NVARCHAR(100), Descripcion NVARCHAR(1000), Destacado BIT, DiasAtras INT);
+    INSERT INTO @ProductosAmpliados VALUES
+        (N'Playera Negra Estampada Aorus', N'Camisas y Blusas', N'Playera de algodón con el logo al frente. Queda algo holgada, si la querés más pegada pedí una talla menos.', 0, 40),
+        (N'Camisa de Franela Estilo Leñador', N'Camisas y Blusas', N'Franela suave a cuadros, ideal para las mañanas frías de Xela. Se siente gruesita pero no pesa.', 1, 75),
+        (N'Chinelas Cómodas Café con Negro', N'Calzado', N'Chinelas de uso diario con plantilla acolchada. Livianas y fáciles de calzar para andar por la casa o salir a la tienda.', 0, 20),
+        (N'Zapatos de Tacón Clásicos para Dama', N'Calzado', N'Zapatos de tacón medio para vestir. Cómodos para una jornada completa, perfectos para una boda o la oficina.', 0, 55),
+        (N'Zapatos Casuales de Diario para Dama', N'Calzado', N'Zapato bajo y versátil que va con jeans o con falda. Aguanta el trajín de la semana sin lastimar.', 0, 100),
+        (N'Zapatos Rojos de Fiesta', N'Calzado', N'Rojo intenso para llamar la atención. Quedan pocos pares, sobre todo en la 37.', 0, 8),
+        (N'Tacos Nike para Béisbol', N'Calzado', N'Tacos con buen agarre para la cancha de béisbol o softbol. Los de la talla 42 se están acabando.', 0, 130),
+        (N'Lentes de Sol Verde con Negro', N'Accesorios', N'Montura combinada en verde y negro con protección UV. Para los que no quieren los lentes de siempre.', 0, 60),
+        (N'Lentes de Sol Sencillos', N'Accesorios', N'Lentes de diseño simple que van con todo. Livianos, ideales para manejar.', 0, 90),
+        (N'Aretes de Cristal Verde', N'Accesorios', N'Aretes con una piedra verde que atrapa la luz. Vienen en su cajita, buenos para regalar.', 0, 15),
+        (N'Aretes Ovalados Verdes', N'Accesorios', N'Forma ovalada, discretos y elegantes. Los últimos que nos quedan.', 0, 33),
+        (N'Aretes Tropicales de Colores', N'Accesorios', N'Aretes alegres con colores de playa, para darle vida a un outfit sencillo.', 0, 110),
+        (N'Reloj de Pulsera para Dama', N'Accesorios', N'Reloj analógico con correa ajustable. Sencillo, liviano y resistente a salpicaduras.', 1, 25),
+        (N'Bocina Inteligente con Alexa', N'Tecnología y Audio', N'Bocina con asistente de voz para poner música, pedir la hora o controlar luces. Necesita wifi y la app en el celular.', 0, 70),
+        (N'Base de Carga Inalámbrica', N'Tecnología y Audio', N'Base para cargar el celular sin cable, solo lo apoyás encima. Agotada por ahora, estamos esperando lote.', 0, 120),
+        (N'Bocina Inteligente Compacta Gris', N'Tecnología y Audio', N'Bocina chiquita pero con buen sonido para la sala o el cuarto. Cabe en cualquier repisa.', 0, 45),
+        (N'Funda de Silicón para iPhone 12 con MagSafe', N'Tecnología y Audio', N'Funda suave al tacto que protege las esquinas y se pega bien a los cargadores magnéticos.', 0, 50),
+        (N'Palo para Selfies Plegable', N'Tecnología y Audio', N'Se extiende y se dobla para guardarlo en la bolsa. Sirve para fotos grupales en las excursiones.', 0, 85),
+        (N'Celular Realme C35', N'Tecnología y Audio', N'Celular de gama accesible con pantalla grande y batería que dura el día completo. Libre para cualquier operador.', 1, 28),
+        (N'Tablet Samsung Galaxy Tab Blanca', N'Tecnología y Audio', N'Tablet para ver series, leer o llevar las clases virtuales. Pantalla nítida y batería de larga duración.', 0, 18),
+        (N'Café Instantáneo Nescafé', N'Hogar y Cafetería', N'Para cuando no hay tiempo de colar. Disuelve rápido en agua caliente o en leche.', 0, 150),
+        (N'Portarretratos Árbol Genealógico', N'Hogar y Cafetería', N'Marco con forma de árbol para colgar varias fotos de la familia. Se luce en la sala o el pasillo.', 0, 95),
+        (N'Maceta Moderna para Plantas', N'Hogar y Cafetería', N'Maceta de líneas limpias para suculentas, helechos o hierbas de cocina. Hay tres tamaños.', 0, 52),
+        (N'Lámpara de Mesa Moderna', N'Hogar y Cafetería', N'Lámpara para la mesa de noche o el escritorio. Luz cálida que no cansa la vista.', 0, 35),
+        (N'Wok de Acero al Carbón', N'Hogar y Cafetería', N'Wok que agarra buen calor para saltear verduras y carne. Hay que curarlo antes del primer uso.', 0, 80),
+        (N'Sartén Antiadherente', N'Hogar y Cafetería', N'Sartén con recubrimiento antiadherente, casi no necesita aceite. Sirve en estufa de gas y eléctrica.', 1, 66),
+        (N'Especiero Organizador de Cocina', N'Hogar y Cafetería', N'Rack para tener a mano los condimentos. Quedan muy pocos.', 0, 140),
+        (N'Bolso de Mano Azul', N'Mochilas y Viaje', N'Bolso espacioso en azul vibrante, le cabe la billetera, el celular y hasta una botella de agua.', 0, 30),
+        (N'Bolso de Mano Elegante de Cuero', N'Mochilas y Viaje', N'Bolso de acabado fino para ocasiones especiales. Viene con bolsa protectora para guardarlo.', 0, 22),
+        (N'Bolso Negro Clásico', N'Mochilas y Viaje', N'Un bolso negro que combina con todo y no pasa de moda.', 0, 105),
+        (N'Lonchera con Compartimentos', N'Mochilas y Viaje', N'Lonchera con divisiones para separar el arroz del guiso. Cierra bien y se lava fácil.', 0, 12),
+        (N'Máscara de Pestañas Volumen', N'Belleza y Cuidado Personal', N'Máscara que alarga y da volumen sin hacer grumos. Se quita bien con desmaquillante.', 0, 48),
+        (N'Labial Rojo Cremoso', N'Belleza y Cuidado Personal', N'Rojo clásico con textura cremosa que dura varias horas. Quedan dos.', 0, 5),
+        (N'Esmalte de Uñas Rojo', N'Belleza y Cuidado Personal', N'Esmalte brillante de secado rápido, con un par de capas queda parejo.', 0, 120),
+        (N'Jabón Líquido de Manos con Hierbas', N'Belleza y Cuidado Personal', N'Jabón de manos con extractos de hojas, deja la piel suave sin resecarla.', 0, 58),
+        (N'Jabón Líquido Corporal con Karité', N'Belleza y Cuidado Personal', N'Jabón para el baño con manteca de karité. Hidrata y deja buen olor todo el día.', 0, 38),
+        (N'Loción Hidratante para Caballero', N'Belleza y Cuidado Personal', N'Loción para cara y cuerpo de absorción rápida, no deja la piel grasosa.', 0, 76),
+        (N'Perfume Dolce Shine', N'Belleza y Cuidado Personal', N'Fragancia frutal con mango y jazmín, fresca para el día a día. Viene en su caja original.', 1, 14),
+        (N'Balón de Básquetbol', N'Deportes', N'Balón tamaño oficial con buen agarre, sirve para cancha de cemento.', 0, 62),
+        (N'Balón de Fútbol', N'Deportes', N'El balón de las chamuscas de domingo. Aguanta bien el golpe en cancha de cemento.', 0, 44),
+        (N'Balón de Voleibol', N'Deportes', N'Balón suave para voleibol de sala o de playa en Monterrico.', 0, 88),
+        (N'Raqueta de Tenis', N'Deportes', N'Raqueta liviana con cuerdas incluidas, buena para empezar a jugar.', 0, 72),
+        (N'Pelotas de Tenis, Tubo de 3', N'Deportes', N'Tubo con tres pelotas con buen rebote.', 0, 100),
+        (N'Aro de Básquetbol con Red', N'Deportes', N'Aro reforzado con red para montar en la pared o en un tablero. Agotado por el momento.', 0, 125),
+        (N'Vestido Azul Casual', N'Vestidos y Faldas', N'Vestido azul de tela fresca y corte cómodo, para salir de paseo o ir a la iglesia.', 0, 26),
+        (N'Vestido de Verano Estampado', N'Vestidos y Faldas', N'Vestido liviano con estampado alegre. Perfecto para Antigua o tierra caliente.', 1, 10),
+        (N'Vestido Gris de Oficina', N'Vestidos y Faldas', N'Gris sobrio que se puede arreglar con un saco o accesorios. De los más pedidos para trabajo.', 0, 57),
+        (N'Vestido Corto Casual', N'Vestidos y Faldas', N'Vestido corto y fresco, para el calor de la costa.', 0, 82),
+        (N'Vestido de Cuadros Escocés', N'Vestidos y Faldas', N'Estampado escocés de siempre, con caída bonita. Se ve bien con botines.', 0, 36),
+        (N'Vestido Casual de Lunares', N'Vestidos y Faldas', N'Lunares sobre fondo claro, tela que no se arruga fácil.', 0, 19);
+
+    DECLARE @VariantesAmpliadas TABLE (SKU NVARCHAR(50), Producto NVARCHAR(150), Talla VARCHAR(30), Color VARCHAR(50), Presentacion VARCHAR(50), Precio DECIMAL(12,2), PrecioReferencia DECIMAL(12,2), Existencia INT);
+    INSERT INTO @VariantesAmpliadas VALUES
+        (N'PLA-AOR-M-NEG', N'Playera Negra Estampada Aorus', N'M', N'Negro', N'Unidad', 125.00, NULL, 18),
+        (N'PLA-AOR-L-NEG', N'Playera Negra Estampada Aorus', N'L', N'Negro', N'Unidad', 125.00, NULL, 22),
+        (N'PLA-AOR-XL-NEG', N'Playera Negra Estampada Aorus', N'XL', N'Negro', N'Unidad', 125.00, NULL, 2),
+        (N'CAM-FRA-M-ROJ', N'Camisa de Franela Estilo Leñador', N'M', N'Rojo y negro', N'Unidad', 215.00, 285.00, 14),
+        (N'CAM-FRA-L-ROJ', N'Camisa de Franela Estilo Leñador', N'L', N'Rojo y negro', N'Unidad', 215.00, 285.00, 11),
+        (N'CAM-FRA-XL-ROJ', N'Camisa de Franela Estilo Leñador', N'XL', N'Rojo y negro', N'Unidad', 225.00, 295.00, 6),
+        (N'CHI-CAF-37', N'Chinelas Cómodas Café con Negro', N'37', N'Café y negro', N'Unidad', 95.00, NULL, 20),
+        (N'CHI-CAF-38', N'Chinelas Cómodas Café con Negro', N'38', N'Café y negro', N'Unidad', 95.00, NULL, 24),
+        (N'CHI-CAF-39', N'Chinelas Cómodas Café con Negro', N'39', N'Café y negro', N'Unidad', 95.00, NULL, 16),
+        (N'TAC-CLA-36-NEG', N'Zapatos de Tacón Clásicos para Dama', N'36', N'Negro', N'Unidad', 345.00, NULL, 6),
+        (N'TAC-CLA-37-NEG', N'Zapatos de Tacón Clásicos para Dama', N'37', N'Negro', N'Unidad', 345.00, NULL, 9),
+        (N'TAC-CLA-38-NEG', N'Zapatos de Tacón Clásicos para Dama', N'38', N'Negro', N'Unidad', 345.00, NULL, 3),
+        (N'ZCA-DIA-37-CAF', N'Zapatos Casuales de Diario para Dama', N'37', N'Café', N'Unidad', 189.00, NULL, 12),
+        (N'ZCA-DIA-38-CAF', N'Zapatos Casuales de Diario para Dama', N'38', N'Café', N'Unidad', 189.00, NULL, 15),
+        (N'ZCA-DIA-39-CAF', N'Zapatos Casuales de Diario para Dama', N'39', N'Café', N'Unidad', 189.00, NULL, 10),
+        (N'ZRO-FIE-37-ROJ', N'Zapatos Rojos de Fiesta', N'37', N'Rojo', N'Unidad', 265.00, NULL, 1),
+        (N'ZRO-FIE-38-ROJ', N'Zapatos Rojos de Fiesta', N'38', N'Rojo', N'Unidad', 265.00, NULL, 8),
+        (N'TAC-NIK-40-NEG', N'Tacos Nike para Béisbol', N'40', N'Negro', N'Unidad', 565.00, NULL, 5),
+        (N'TAC-NIK-42-NEG', N'Tacos Nike para Béisbol', N'42', N'Negro', N'Unidad', 565.00, NULL, 2),
+        (N'TAC-NIK-44-NEG', N'Tacos Nike para Béisbol', N'44', N'Negro', N'Unidad', 575.00, NULL, 7),
+        (N'LEN-VER-NEG', N'Lentes de Sol Verde con Negro', N'Única', N'Verde y negro', N'Unidad', 135.00, NULL, 25),
+        (N'LEN-SEN-NEG', N'Lentes de Sol Sencillos', N'Única', N'Negro', N'Unidad', 99.00, 129.00, 40),
+        (N'ARE-CRI-VER', N'Aretes de Cristal Verde', N'Única', N'Verde', N'Unidad', 85.00, NULL, 30),
+        (N'ARE-OVA-VER', N'Aretes Ovalados Verdes', N'Única', N'Verde', N'Unidad', 75.00, NULL, 3),
+        (N'ARE-TRO-MUL', N'Aretes Tropicales de Colores', N'Única', N'Multicolor', N'Unidad', 65.00, NULL, 18),
+        (N'REL-DAM-PLA', N'Reloj de Pulsera para Dama', N'Ajustable', N'Plateado', N'Unidad', 395.00, NULL, 9),
+        (N'REL-DAM-DOR', N'Reloj de Pulsera para Dama', N'Ajustable', N'Dorado', N'Unidad', 395.00, NULL, 7),
+        (N'BOC-ALE-NEG', N'Bocina Inteligente con Alexa', N'Universal', N'Negro', N'Unidad', 845.00, 1095.00, 8),
+        (N'BAS-CAR-BLA', N'Base de Carga Inalámbrica', N'Universal', N'Blanco', N'Unidad', 595.00, NULL, 0),
+        (N'BOC-COM-GRI', N'Bocina Inteligente Compacta Gris', N'Compacta', N'Gris', N'Unidad', 585.00, NULL, 12),
+        (N'FUN-IP12-CIR', N'Funda de Silicón para iPhone 12 con MagSafe', N'iPhone 12', N'Ciruela', N'Unidad', 125.00, NULL, 22),
+        (N'SEL-PLE-NEG', N'Palo para Selfies Plegable', N'Plegable', N'Negro', N'Unidad', 75.00, NULL, 35),
+        (N'REA-C35-64', N'Celular Realme C35', NULL, NULL, N'64 GB', 1150.00, NULL, 7),
+        (N'REA-C35-128', N'Celular Realme C35', NULL, NULL, N'128 GB', 1350.00, NULL, 5),
+        (N'TAB-SAM-64', N'Tablet Samsung Galaxy Tab Blanca', NULL, N'Blanco', N'64 GB', 2290.00, NULL, 4),
+        (N'TAB-SAM-128', N'Tablet Samsung Galaxy Tab Blanca', NULL, N'Blanco', N'128 GB', 2690.00, NULL, 2),
+        (N'CAF-NES-100', N'Café Instantáneo Nescafé', NULL, NULL, N'100 g', 38.00, NULL, 60),
+        (N'CAF-NES-200', N'Café Instantáneo Nescafé', NULL, NULL, N'200 g', 69.00, NULL, 45),
+        (N'POR-ARB-NAT', N'Portarretratos Árbol Genealógico', N'Única', N'Natural', N'Unidad', 145.00, NULL, 10),
+        (N'MAC-MOD-CHI', N'Maceta Moderna para Plantas', NULL, NULL, N'Chica', 45.00, NULL, 30),
+        (N'MAC-MOD-MED', N'Maceta Moderna para Plantas', NULL, NULL, N'Mediana', 65.00, NULL, 22),
+        (N'MAC-MOD-GRA', N'Maceta Moderna para Plantas', NULL, NULL, N'Grande', 95.00, NULL, 12),
+        (N'LAM-MES-MOD', N'Lámpara de Mesa Moderna', N'Única', NULL, N'Unidad', 235.00, 265.00, 11),
+        (N'WOK-ACE-30', N'Wok de Acero al Carbón', NULL, NULL, N'30 cm', 225.00, NULL, 9),
+        (N'SAR-ANT-24', N'Sartén Antiadherente', NULL, NULL, N'24 cm', 135.00, NULL, 20),
+        (N'SAR-ANT-28', N'Sartén Antiadherente', NULL, NULL, N'28 cm', 165.00, NULL, 14),
+        (N'ESP-ORG-NEG', N'Especiero Organizador de Cocina', N'Única', NULL, N'Unidad', 145.00, NULL, 3),
+        (N'BOL-AZU-MED', N'Bolso de Mano Azul', N'Mediano', N'Azul', N'Unidad', 345.00, NULL, 8),
+        (N'BOL-ELE-NEG', N'Bolso de Mano Elegante de Cuero', N'Mediano', N'Negro', N'Unidad', 1250.00, NULL, 4),
+        (N'BOL-CLA-NEG', N'Bolso Negro Clásico', N'Mediano', N'Negro', N'Unidad', 395.00, NULL, 13),
+        (N'LON-COM-UNI', N'Lonchera con Compartimentos', N'Única', NULL, N'Unidad', 95.00, NULL, 28),
+        (N'MAS-VOL-NEG', N'Máscara de Pestañas Volumen', NULL, N'Negro', N'Unidad', 69.00, NULL, 40),
+        (N'LAB-CRE-ROJ', N'Labial Rojo Cremoso', NULL, N'Rojo', N'Unidad', 59.00, NULL, 2),
+        (N'ESM-UNA-ROJ', N'Esmalte de Uñas Rojo', NULL, N'Rojo', N'Unidad', 39.00, NULL, 36),
+        (N'JAB-MAN-300', N'Jabón Líquido de Manos con Hierbas', NULL, NULL, N'300 ml', 49.00, NULL, 28),
+        (N'JAB-MAN-500', N'Jabón Líquido de Manos con Hierbas', NULL, NULL, N'500 ml', 75.00, NULL, 17),
+        (N'JAB-COR-400', N'Jabón Líquido Corporal con Karité', NULL, NULL, N'400 ml', 79.00, NULL, 20),
+        (N'JAB-COR-700', N'Jabón Líquido Corporal con Karité', NULL, NULL, N'700 ml', 119.00, 149.00, 11),
+        (N'LOC-CAB-200', N'Loción Hidratante para Caballero', NULL, NULL, N'200 ml', 69.00, NULL, 24),
+        (N'LOC-CAB-400', N'Loción Hidratante para Caballero', NULL, NULL, N'400 ml', 109.00, NULL, 15),
+        (N'PER-DOL-30', N'Perfume Dolce Shine', NULL, NULL, N'30 ml', 485.00, NULL, 6),
+        (N'PER-DOL-50', N'Perfume Dolce Shine', NULL, NULL, N'50 ml', 640.00, 855.00, 4),
+        (N'BAL-BAS-7', N'Balón de Básquetbol', N'7', NULL, N'Unidad', 165.00, NULL, 18),
+        (N'BAL-FUT-5', N'Balón de Fútbol', N'5', NULL, N'Unidad', 145.00, NULL, 26),
+        (N'BAL-FUT-4', N'Balón de Fútbol', N'4', NULL, N'Unidad', 135.00, NULL, 14),
+        (N'BAL-VOL-5', N'Balón de Voleibol', N'5', NULL, N'Unidad', 115.00, NULL, 15),
+        (N'RAQ-TEN-ADU', N'Raqueta de Tenis', N'Adulto', NULL, N'Unidad', 395.00, NULL, 7),
+        (N'PEL-TEN-TUB', N'Pelotas de Tenis, Tubo de 3', NULL, NULL, N'Tubo de 3', 55.00, NULL, 33),
+        (N'ARO-BAS-UNI', N'Aro de Básquetbol con Red', N'Único', NULL, N'Unidad', 345.00, NULL, 0),
+        (N'VES-AZU-S', N'Vestido Azul Casual', N'S', N'Azul', N'Unidad', 215.00, NULL, 8),
+        (N'VES-AZU-M', N'Vestido Azul Casual', N'M', N'Azul', N'Unidad', 215.00, NULL, 11),
+        (N'VES-AZU-L', N'Vestido Azul Casual', N'L', N'Azul', N'Unidad', 215.00, NULL, 6),
+        (N'VES-VER-S', N'Vestido de Verano Estampado', N'S', N'Estampado', N'Unidad', 145.00, 240.00, 12),
+        (N'VES-VER-M', N'Vestido de Verano Estampado', N'M', N'Estampado', N'Unidad', 145.00, 240.00, 9),
+        (N'VES-GRI-S', N'Vestido Gris de Oficina', N'S', N'Gris', N'Unidad', 275.00, NULL, 7),
+        (N'VES-GRI-M', N'Vestido Gris de Oficina', N'M', N'Gris', N'Unidad', 275.00, NULL, 10),
+        (N'VES-GRI-L', N'Vestido Gris de Oficina', N'L', N'Gris', N'Unidad', 275.00, NULL, 1),
+        (N'VES-COR-S', N'Vestido Corto Casual', N'S', NULL, N'Unidad', 185.00, NULL, 9),
+        (N'VES-COR-M', N'Vestido Corto Casual', N'M', NULL, N'Unidad', 185.00, NULL, 13),
+        (N'VES-ESC-S', N'Vestido de Cuadros Escocés', N'S', N'Cuadros', N'Unidad', 295.00, 395.00, 5),
+        (N'VES-ESC-M', N'Vestido de Cuadros Escocés', N'M', N'Cuadros', N'Unidad', 295.00, 395.00, 8),
+        (N'VES-ESC-L', N'Vestido de Cuadros Escocés', N'L', N'Cuadros', N'Unidad', 295.00, 395.00, 5),
+        (N'VES-LUN-S', N'Vestido Casual de Lunares', N'S', N'Lunares', N'Unidad', 225.00, NULL, 6),
+        (N'VES-LUN-M', N'Vestido Casual de Lunares', N'M', N'Lunares', N'Unidad', 225.00, NULL, 10);
+
+    DECLARE @ImagenesAmpliadas TABLE (Producto NVARCHAR(150), Orden INT, Url NVARCHAR(500));
+    INSERT INTO @ImagenesAmpliadas VALUES
+        (N'Playera Negra Estampada Aorus', 1, N'https://cdn.dummyjson.com/product-images/mens-shirts/gigabyte-aorus-men-tshirt/1.webp'),
+        (N'Playera Negra Estampada Aorus', 2, N'https://cdn.dummyjson.com/product-images/mens-shirts/gigabyte-aorus-men-tshirt/2.webp'),
+        (N'Playera Negra Estampada Aorus', 3, N'https://cdn.dummyjson.com/product-images/mens-shirts/gigabyte-aorus-men-tshirt/3.webp'),
+        (N'Playera Negra Estampada Aorus', 4, N'https://cdn.dummyjson.com/product-images/mens-shirts/gigabyte-aorus-men-tshirt/4.webp'),
+        (N'Camisa de Franela Estilo Leñador', 1, N'https://cdn.dummyjson.com/product-images/mens-shirts/man-plaid-shirt/1.webp'),
+        (N'Camisa de Franela Estilo Leñador', 2, N'https://cdn.dummyjson.com/product-images/mens-shirts/man-plaid-shirt/2.webp'),
+        (N'Camisa de Franela Estilo Leñador', 3, N'https://cdn.dummyjson.com/product-images/mens-shirts/man-plaid-shirt/3.webp'),
+        (N'Camisa de Franela Estilo Leñador', 4, N'https://cdn.dummyjson.com/product-images/mens-shirts/man-plaid-shirt/4.webp'),
+        (N'Chinelas Cómodas Café con Negro', 1, N'https://cdn.dummyjson.com/product-images/womens-shoes/black-&-brown-slipper/1.webp'),
+        (N'Chinelas Cómodas Café con Negro', 2, N'https://cdn.dummyjson.com/product-images/womens-shoes/black-&-brown-slipper/2.webp'),
+        (N'Chinelas Cómodas Café con Negro', 3, N'https://cdn.dummyjson.com/product-images/womens-shoes/black-&-brown-slipper/3.webp'),
+        (N'Chinelas Cómodas Café con Negro', 4, N'https://cdn.dummyjson.com/product-images/womens-shoes/black-&-brown-slipper/4.webp'),
+        (N'Zapatos de Tacón Clásicos para Dama', 1, N'https://cdn.dummyjson.com/product-images/womens-shoes/calvin-klein-heel-shoes/1.webp'),
+        (N'Zapatos de Tacón Clásicos para Dama', 2, N'https://cdn.dummyjson.com/product-images/womens-shoes/calvin-klein-heel-shoes/2.webp'),
+        (N'Zapatos de Tacón Clásicos para Dama', 3, N'https://cdn.dummyjson.com/product-images/womens-shoes/calvin-klein-heel-shoes/3.webp'),
+        (N'Zapatos de Tacón Clásicos para Dama', 4, N'https://cdn.dummyjson.com/product-images/womens-shoes/calvin-klein-heel-shoes/4.webp'),
+        (N'Zapatos Casuales de Diario para Dama', 1, N'https://cdn.dummyjson.com/product-images/womens-shoes/pampi-shoes/1.webp'),
+        (N'Zapatos Casuales de Diario para Dama', 2, N'https://cdn.dummyjson.com/product-images/womens-shoes/pampi-shoes/2.webp'),
+        (N'Zapatos Casuales de Diario para Dama', 3, N'https://cdn.dummyjson.com/product-images/womens-shoes/pampi-shoes/3.webp'),
+        (N'Zapatos Casuales de Diario para Dama', 4, N'https://cdn.dummyjson.com/product-images/womens-shoes/pampi-shoes/4.webp'),
+        (N'Zapatos Rojos de Fiesta', 1, N'https://cdn.dummyjson.com/product-images/womens-shoes/red-shoes/1.webp'),
+        (N'Zapatos Rojos de Fiesta', 2, N'https://cdn.dummyjson.com/product-images/womens-shoes/red-shoes/2.webp'),
+        (N'Zapatos Rojos de Fiesta', 3, N'https://cdn.dummyjson.com/product-images/womens-shoes/red-shoes/3.webp'),
+        (N'Zapatos Rojos de Fiesta', 4, N'https://cdn.dummyjson.com/product-images/womens-shoes/red-shoes/4.webp'),
+        (N'Tacos Nike para Béisbol', 1, N'https://cdn.dummyjson.com/product-images/mens-shoes/nike-baseball-cleats/1.webp'),
+        (N'Tacos Nike para Béisbol', 2, N'https://cdn.dummyjson.com/product-images/mens-shoes/nike-baseball-cleats/2.webp'),
+        (N'Tacos Nike para Béisbol', 3, N'https://cdn.dummyjson.com/product-images/mens-shoes/nike-baseball-cleats/3.webp'),
+        (N'Tacos Nike para Béisbol', 4, N'https://cdn.dummyjson.com/product-images/mens-shoes/nike-baseball-cleats/4.webp'),
+        (N'Lentes de Sol Verde con Negro', 1, N'https://cdn.dummyjson.com/product-images/sunglasses/green-and-black-glasses/1.webp'),
+        (N'Lentes de Sol Verde con Negro', 2, N'https://cdn.dummyjson.com/product-images/sunglasses/green-and-black-glasses/2.webp'),
+        (N'Lentes de Sol Verde con Negro', 3, N'https://cdn.dummyjson.com/product-images/sunglasses/green-and-black-glasses/3.webp'),
+        (N'Lentes de Sol Sencillos', 1, N'https://cdn.dummyjson.com/product-images/sunglasses/sunglasses/1.webp'),
+        (N'Lentes de Sol Sencillos', 2, N'https://cdn.dummyjson.com/product-images/sunglasses/sunglasses/2.webp'),
+        (N'Lentes de Sol Sencillos', 3, N'https://cdn.dummyjson.com/product-images/sunglasses/sunglasses/3.webp'),
+        (N'Aretes de Cristal Verde', 1, N'https://cdn.dummyjson.com/product-images/womens-jewellery/green-crystal-earring/1.webp'),
+        (N'Aretes de Cristal Verde', 2, N'https://cdn.dummyjson.com/product-images/womens-jewellery/green-crystal-earring/2.webp'),
+        (N'Aretes de Cristal Verde', 3, N'https://cdn.dummyjson.com/product-images/womens-jewellery/green-crystal-earring/3.webp'),
+        (N'Aretes Ovalados Verdes', 1, N'https://cdn.dummyjson.com/product-images/womens-jewellery/green-oval-earring/1.webp'),
+        (N'Aretes Ovalados Verdes', 2, N'https://cdn.dummyjson.com/product-images/womens-jewellery/green-oval-earring/2.webp'),
+        (N'Aretes Ovalados Verdes', 3, N'https://cdn.dummyjson.com/product-images/womens-jewellery/green-oval-earring/3.webp'),
+        (N'Aretes Tropicales de Colores', 1, N'https://cdn.dummyjson.com/product-images/womens-jewellery/tropical-earring/1.webp'),
+        (N'Aretes Tropicales de Colores', 2, N'https://cdn.dummyjson.com/product-images/womens-jewellery/tropical-earring/2.webp'),
+        (N'Aretes Tropicales de Colores', 3, N'https://cdn.dummyjson.com/product-images/womens-jewellery/tropical-earring/3.webp'),
+        (N'Reloj de Pulsera para Dama', 1, N'https://cdn.dummyjson.com/product-images/womens-watches/women%27s-wrist-watch/1.webp'),
+        (N'Reloj de Pulsera para Dama', 2, N'https://cdn.dummyjson.com/product-images/womens-watches/women%27s-wrist-watch/2.webp'),
+        (N'Reloj de Pulsera para Dama', 3, N'https://cdn.dummyjson.com/product-images/womens-watches/women%27s-wrist-watch/3.webp'),
+        (N'Bocina Inteligente con Alexa', 1, N'https://cdn.dummyjson.com/product-images/mobile-accessories/amazon-echo-plus/1.webp'),
+        (N'Bocina Inteligente con Alexa', 2, N'https://cdn.dummyjson.com/product-images/mobile-accessories/amazon-echo-plus/2.webp'),
+        (N'Base de Carga Inalámbrica', 1, N'https://cdn.dummyjson.com/product-images/mobile-accessories/apple-airpower-wireless-charger/1.webp'),
+        (N'Bocina Inteligente Compacta Gris', 1, N'https://cdn.dummyjson.com/product-images/mobile-accessories/apple-homepod-mini-cosmic-grey/1.webp'),
+        (N'Funda de Silicón para iPhone 12 con MagSafe', 1, N'https://cdn.dummyjson.com/product-images/mobile-accessories/iphone-12-silicone-case-with-magsafe-plum/1.webp'),
+        (N'Funda de Silicón para iPhone 12 con MagSafe', 2, N'https://cdn.dummyjson.com/product-images/mobile-accessories/iphone-12-silicone-case-with-magsafe-plum/2.webp'),
+        (N'Funda de Silicón para iPhone 12 con MagSafe', 3, N'https://cdn.dummyjson.com/product-images/mobile-accessories/iphone-12-silicone-case-with-magsafe-plum/3.webp'),
+        (N'Funda de Silicón para iPhone 12 con MagSafe', 4, N'https://cdn.dummyjson.com/product-images/mobile-accessories/iphone-12-silicone-case-with-magsafe-plum/4.webp'),
+        (N'Palo para Selfies Plegable', 1, N'https://cdn.dummyjson.com/product-images/mobile-accessories/selfie-stick-monopod/1.webp'),
+        (N'Celular Realme C35', 1, N'https://cdn.dummyjson.com/product-images/smartphones/realme-c35/1.webp'),
+        (N'Celular Realme C35', 2, N'https://cdn.dummyjson.com/product-images/smartphones/realme-c35/2.webp'),
+        (N'Celular Realme C35', 3, N'https://cdn.dummyjson.com/product-images/smartphones/realme-c35/3.webp'),
+        (N'Tablet Samsung Galaxy Tab Blanca', 1, N'https://cdn.dummyjson.com/product-images/tablets/samsung-galaxy-tab-white/1.webp'),
+        (N'Tablet Samsung Galaxy Tab Blanca', 2, N'https://cdn.dummyjson.com/product-images/tablets/samsung-galaxy-tab-white/2.webp'),
+        (N'Tablet Samsung Galaxy Tab Blanca', 3, N'https://cdn.dummyjson.com/product-images/tablets/samsung-galaxy-tab-white/3.webp'),
+        (N'Tablet Samsung Galaxy Tab Blanca', 4, N'https://cdn.dummyjson.com/product-images/tablets/samsung-galaxy-tab-white/4.webp'),
+        (N'Café Instantáneo Nescafé', 1, N'https://cdn.dummyjson.com/product-images/groceries/nescafe-coffee/1.webp'),
+        (N'Portarretratos Árbol Genealógico', 1, N'https://cdn.dummyjson.com/product-images/home-decoration/family-tree-photo-frame/1.webp'),
+        (N'Maceta Moderna para Plantas', 1, N'https://cdn.dummyjson.com/product-images/home-decoration/plant-pot/1.webp'),
+        (N'Maceta Moderna para Plantas', 2, N'https://cdn.dummyjson.com/product-images/home-decoration/plant-pot/2.webp'),
+        (N'Maceta Moderna para Plantas', 3, N'https://cdn.dummyjson.com/product-images/home-decoration/plant-pot/3.webp'),
+        (N'Maceta Moderna para Plantas', 4, N'https://cdn.dummyjson.com/product-images/home-decoration/plant-pot/4.webp'),
+        (N'Lámpara de Mesa Moderna', 1, N'https://cdn.dummyjson.com/product-images/home-decoration/table-lamp/1.webp'),
+        (N'Wok de Acero al Carbón', 1, N'https://cdn.dummyjson.com/product-images/kitchen-accessories/carbon-steel-wok/1.webp'),
+        (N'Sartén Antiadherente', 1, N'https://cdn.dummyjson.com/product-images/kitchen-accessories/pan/1.webp'),
+        (N'Especiero Organizador de Cocina', 1, N'https://cdn.dummyjson.com/product-images/kitchen-accessories/spice-rack/1.webp'),
+        (N'Bolso de Mano Azul', 1, N'https://cdn.dummyjson.com/product-images/womens-bags/blue-women%27s-handbag/1.webp'),
+        (N'Bolso de Mano Azul', 2, N'https://cdn.dummyjson.com/product-images/womens-bags/blue-women%27s-handbag/2.webp'),
+        (N'Bolso de Mano Azul', 3, N'https://cdn.dummyjson.com/product-images/womens-bags/blue-women%27s-handbag/3.webp'),
+        (N'Bolso de Mano Elegante de Cuero', 1, N'https://cdn.dummyjson.com/product-images/womens-bags/prada-women-bag/1.webp'),
+        (N'Bolso de Mano Elegante de Cuero', 2, N'https://cdn.dummyjson.com/product-images/womens-bags/prada-women-bag/2.webp'),
+        (N'Bolso de Mano Elegante de Cuero', 3, N'https://cdn.dummyjson.com/product-images/womens-bags/prada-women-bag/3.webp'),
+        (N'Bolso Negro Clásico', 1, N'https://cdn.dummyjson.com/product-images/womens-bags/women-handbag-black/1.webp'),
+        (N'Bolso Negro Clásico', 2, N'https://cdn.dummyjson.com/product-images/womens-bags/women-handbag-black/2.webp'),
+        (N'Bolso Negro Clásico', 3, N'https://cdn.dummyjson.com/product-images/womens-bags/women-handbag-black/3.webp'),
+        (N'Lonchera con Compartimentos', 1, N'https://cdn.dummyjson.com/product-images/kitchen-accessories/lunch-box/1.webp'),
+        (N'Máscara de Pestañas Volumen', 1, N'https://cdn.dummyjson.com/product-images/beauty/essence-mascara-lash-princess/1.webp'),
+        (N'Labial Rojo Cremoso', 1, N'https://cdn.dummyjson.com/product-images/beauty/red-lipstick/1.webp'),
+        (N'Esmalte de Uñas Rojo', 1, N'https://cdn.dummyjson.com/product-images/beauty/red-nail-polish/1.webp'),
+        (N'Jabón Líquido de Manos con Hierbas', 1, N'https://cdn.dummyjson.com/product-images/skin-care/attitude-super-leaves-hand-soap/1.webp'),
+        (N'Jabón Líquido de Manos con Hierbas', 2, N'https://cdn.dummyjson.com/product-images/skin-care/attitude-super-leaves-hand-soap/2.webp'),
+        (N'Jabón Líquido de Manos con Hierbas', 3, N'https://cdn.dummyjson.com/product-images/skin-care/attitude-super-leaves-hand-soap/3.webp'),
+        (N'Jabón Líquido Corporal con Karité', 1, N'https://cdn.dummyjson.com/product-images/skin-care/olay-ultra-moisture-shea-butter-body-wash/1.webp'),
+        (N'Jabón Líquido Corporal con Karité', 2, N'https://cdn.dummyjson.com/product-images/skin-care/olay-ultra-moisture-shea-butter-body-wash/2.webp'),
+        (N'Jabón Líquido Corporal con Karité', 3, N'https://cdn.dummyjson.com/product-images/skin-care/olay-ultra-moisture-shea-butter-body-wash/3.webp'),
+        (N'Loción Hidratante para Caballero', 1, N'https://cdn.dummyjson.com/product-images/skin-care/vaseline-men-body-and-face-lotion/1.webp'),
+        (N'Loción Hidratante para Caballero', 2, N'https://cdn.dummyjson.com/product-images/skin-care/vaseline-men-body-and-face-lotion/2.webp'),
+        (N'Loción Hidratante para Caballero', 3, N'https://cdn.dummyjson.com/product-images/skin-care/vaseline-men-body-and-face-lotion/3.webp'),
+        (N'Perfume Dolce Shine', 1, N'https://cdn.dummyjson.com/product-images/fragrances/dolce-shine-eau-de/1.webp'),
+        (N'Perfume Dolce Shine', 2, N'https://cdn.dummyjson.com/product-images/fragrances/dolce-shine-eau-de/2.webp'),
+        (N'Perfume Dolce Shine', 3, N'https://cdn.dummyjson.com/product-images/fragrances/dolce-shine-eau-de/3.webp'),
+        (N'Balón de Básquetbol', 1, N'https://cdn.dummyjson.com/product-images/sports-accessories/basketball/1.webp'),
+        (N'Balón de Fútbol', 1, N'https://cdn.dummyjson.com/product-images/sports-accessories/football/1.webp'),
+        (N'Balón de Voleibol', 1, N'https://cdn.dummyjson.com/product-images/sports-accessories/volleyball/1.webp'),
+        (N'Raqueta de Tenis', 1, N'https://cdn.dummyjson.com/product-images/sports-accessories/tennis-racket/1.webp'),
+        (N'Pelotas de Tenis, Tubo de 3', 1, N'https://cdn.dummyjson.com/product-images/sports-accessories/tennis-ball/1.webp'),
+        (N'Aro de Básquetbol con Red', 1, N'https://cdn.dummyjson.com/product-images/sports-accessories/basketball-rim/1.webp'),
+        (N'Vestido Azul Casual', 1, N'https://cdn.dummyjson.com/product-images/tops/blue-frock/1.webp'),
+        (N'Vestido Azul Casual', 2, N'https://cdn.dummyjson.com/product-images/tops/blue-frock/2.webp'),
+        (N'Vestido Azul Casual', 3, N'https://cdn.dummyjson.com/product-images/tops/blue-frock/3.webp'),
+        (N'Vestido Azul Casual', 4, N'https://cdn.dummyjson.com/product-images/tops/blue-frock/4.webp'),
+        (N'Vestido de Verano Estampado', 1, N'https://cdn.dummyjson.com/product-images/tops/girl-summer-dress/1.webp'),
+        (N'Vestido de Verano Estampado', 2, N'https://cdn.dummyjson.com/product-images/tops/girl-summer-dress/2.webp'),
+        (N'Vestido de Verano Estampado', 3, N'https://cdn.dummyjson.com/product-images/tops/girl-summer-dress/3.webp'),
+        (N'Vestido de Verano Estampado', 4, N'https://cdn.dummyjson.com/product-images/tops/girl-summer-dress/4.webp'),
+        (N'Vestido Gris de Oficina', 1, N'https://cdn.dummyjson.com/product-images/tops/gray-dress/1.webp'),
+        (N'Vestido Gris de Oficina', 2, N'https://cdn.dummyjson.com/product-images/tops/gray-dress/2.webp'),
+        (N'Vestido Gris de Oficina', 3, N'https://cdn.dummyjson.com/product-images/tops/gray-dress/3.webp'),
+        (N'Vestido Gris de Oficina', 4, N'https://cdn.dummyjson.com/product-images/tops/gray-dress/4.webp'),
+        (N'Vestido Corto Casual', 1, N'https://cdn.dummyjson.com/product-images/tops/short-frock/1.webp'),
+        (N'Vestido Corto Casual', 2, N'https://cdn.dummyjson.com/product-images/tops/short-frock/2.webp'),
+        (N'Vestido Corto Casual', 3, N'https://cdn.dummyjson.com/product-images/tops/short-frock/3.webp'),
+        (N'Vestido Corto Casual', 4, N'https://cdn.dummyjson.com/product-images/tops/short-frock/4.webp'),
+        (N'Vestido de Cuadros Escocés', 1, N'https://cdn.dummyjson.com/product-images/tops/tartan-dress/1.webp'),
+        (N'Vestido de Cuadros Escocés', 2, N'https://cdn.dummyjson.com/product-images/tops/tartan-dress/2.webp'),
+        (N'Vestido de Cuadros Escocés', 3, N'https://cdn.dummyjson.com/product-images/tops/tartan-dress/3.webp'),
+        (N'Vestido de Cuadros Escocés', 4, N'https://cdn.dummyjson.com/product-images/tops/tartan-dress/4.webp'),
+        (N'Vestido Casual de Lunares', 1, N'https://cdn.dummyjson.com/product-images/womens-dresses/dress-pea/1.webp'),
+        (N'Vestido Casual de Lunares', 2, N'https://cdn.dummyjson.com/product-images/womens-dresses/dress-pea/2.webp'),
+        (N'Vestido Casual de Lunares', 3, N'https://cdn.dummyjson.com/product-images/womens-dresses/dress-pea/3.webp'),
+        (N'Vestido Casual de Lunares', 4, N'https://cdn.dummyjson.com/product-images/womens-dresses/dress-pea/4.webp');
+
+    DECLARE @VentasAmpliadas TABLE (Clave VARCHAR(50), SKU NVARCHAR(50), Cantidad INT, Correo NVARCHAR(150), DiasAtras INT);
+    INSERT INTO @VentasAmpliadas VALUES
+        ('ORDER-SEED-2026-101', N'PLA-AOR-M-NEG', 3, N'cmorales94@gmail.com', 12),
+        ('ORDER-SEED-2026-102', N'BAL-FUT-5', 4, N'j_rodas@gmail.com', 9),
+        ('ORDER-SEED-2026-103', N'CAF-NES-100', 5, N'mafer.arq@gmail.com', 20),
+        ('ORDER-SEED-2026-104', N'BAS-CAR-BLA', 3, N'lucyfuentes89@gmail.com', 6),
+        ('ORDER-SEED-2026-105', N'LAB-CRE-ROJ', 2, N'luisacastillo91@hotmail.com', 4),
+        ('ORDER-SEED-2026-106', N'JAB-COR-700', 2, N'sofia.arriola@outlook.com', 15),
+        ('ORDER-SEED-2026-107', N'VES-VER-M', 3, N'clau_quinonez@hotmail.com', 3),
+        ('ORDER-SEED-2026-108', N'LON-COM-UNI', 2, N'ing_xicara@gmail.com', 5),
+        ('ORDER-SEED-2026-109', N'SAR-ANT-24', 2, N'mendoza92@gmail.com', 11),
+        ('ORDER-SEED-2026-110', N'BAL-VOL-5', 2, N'lic.mazariegos@yahoo.com', 7),
+        ('ORDER-SEED-2026-111', N'REA-C35-64', 1, N'cliente@shopcart.gt', 7);
+
+    DECLARE @ProductosNuevosIds TABLE (IDProducto INT, Nombre NVARCHAR(150));
+    INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo, Destacado, FechaCreacion)
+    OUTPUT inserted.IDProducto, inserted.Nombre INTO @ProductosNuevosIds
+    SELECT c.IDCategoria, d.Nombre, d.Descripcion, i.Url, 1, d.Destacado, DATEADD(DAY, -d.DiasAtras, SYSDATETIME())
+    FROM @ProductosAmpliados d
+    INNER JOIN Categorias c ON c.Nombre = d.Categoria
+    INNER JOIN @ImagenesAmpliadas i ON i.Producto = d.Nombre AND i.Orden = 1
+    WHERE NOT EXISTS (SELECT 1 FROM Productos p WHERE p.Nombre = d.Nombre);
+
+    INSERT INTO ProductoImagenes (IDProducto, Url, Orden)
+    SELECT n.IDProducto, i.Url, i.Orden
+    FROM @ProductosNuevosIds n INNER JOIN @ImagenesAmpliadas i ON i.Producto = n.Nombre;
+
+    DECLARE @VariantesNuevasIds TABLE (IDVariante INT, SKU VARCHAR(50), Existencia INT);
+    INSERT INTO Variantes (IDProducto, SKU, Talla, Color, Presentacion, Precio, PrecioReferencia, ExistenciaFisica, Activo)
+    OUTPUT inserted.IDVariante, inserted.SKU, inserted.ExistenciaFisica INTO @VariantesNuevasIds
+    SELECT p.IDProducto, v.SKU, v.Talla, v.Color, v.Presentacion, v.Precio, v.PrecioReferencia, v.Existencia, 1
+    FROM @VariantesAmpliadas v INNER JOIN Productos p ON p.Nombre = v.Producto
+    WHERE NOT EXISTS (SELECT 1 FROM Variantes x WHERE x.SKU = v.SKU);
+
+    INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, FechaMovimiento)
+    SELECT n.IDVariante, @IDUserAdmin, m.IDTipoMovimiento, n.Existencia + ISNULL(s.Cantidad, 0), n.Existencia + ISNULL(s.Cantidad, 0), N'Inventario inicial catálogo ampliado', p.FechaCreacion
+    FROM @VariantesNuevasIds n
+    INNER JOIN Variantes v ON v.IDVariante = n.IDVariante
+    INNER JOIN Productos p ON p.IDProducto = v.IDProducto
+    LEFT JOIN @VentasAmpliadas s ON s.SKU = n.SKU
+    CROSS JOIN TipoMovimiento m
+    WHERE m.Codigo = 'ENTRADA_COMPRA' AND n.Existencia + ISNULL(s.Cantidad, 0) > 0;
+
+    DECLARE @PedidosNuevosIds TABLE (IDPedido INT, Clave VARCHAR(50));
+    INSERT INTO Pedidos (IDUsuario, IDDireccion, IDCupon, IDEstadoPedido, ClaveIdempotencia, Subtotal, Descuento, CostoEnvio, MontoReembolsado, Total, FechaCreacion)
+    OUTPUT inserted.IDPedido, inserted.ClaveIdempotencia INTO @PedidosNuevosIds
+    SELECT u.IDUsuario, (SELECT TOP 1 d.IDDireccion FROM Direcciones d WHERE d.IDUsuario = u.IDUsuario), NULL, @EstEntregado, s.Clave,
+           v.Precio * s.Cantidad, 0.00, CASE WHEN v.Precio * s.Cantidad < 300 THEN 25.00 ELSE 0.00 END, 0.00,
+           v.Precio * s.Cantidad + CASE WHEN v.Precio * s.Cantidad < 300 THEN 25.00 ELSE 0.00 END, DATEADD(DAY, -s.DiasAtras, SYSDATETIME())
+    FROM @VentasAmpliadas s
+    INNER JOIN Variantes v ON v.SKU = s.SKU
+    INNER JOIN Usuarios u ON u.Correo = s.Correo
+    WHERE NOT EXISTS (SELECT 1 FROM Pedidos x WHERE x.ClaveIdempotencia = s.Clave);
+
+    INSERT INTO PedidoDetalles (IDPedido, IDVariante, CantidadComprada, CantidadDevuelta, PrecioUnitarioCongelado, DescuentoUnitarioProrrateado, PrecioNetoUnitario, SubtotalLinea)
+    SELECT p.IDPedido, v.IDVariante, s.Cantidad, 0, v.Precio, 0.00, v.Precio, v.Precio * s.Cantidad
+    FROM @PedidosNuevosIds p
+    INNER JOIN @VentasAmpliadas s ON s.Clave = p.Clave
+    INNER JOIN Variantes v ON v.SKU = s.SKU;
+
+    INSERT INTO PedidoHistorialEstados (IDPedido, IDUsuario, IDEstadoAnterior, IDEstadoNuevo, Comentario, FechaCambio)
+    SELECT p.IDPedido, h.IDUsuario, h.IDEstadoAnterior, h.IDEstadoNuevo, h.Comentario, DATEADD(DAY, -(s.DiasAtras - h.Avance), SYSDATETIME())
+    FROM @PedidosNuevosIds p
+    INNER JOIN @VentasAmpliadas s ON s.Clave = p.Clave
+    INNER JOIN Usuarios c ON c.Correo = s.Correo
+    CROSS APPLY (VALUES
+        (c.IDUsuario, CAST(NULL AS INT), @EstPagado, N'Pago aprobado por la pasarela', 0),
+        (@IDUserOperador, @EstPagado, @EstPrep, N'Pedido alistado y empacado', 1),
+        (@IDUserOperador, @EstPrep, @EstDesp, N'Entregado a la mensajería para su ruta', 1),
+        (@IDUserOperador, @EstDesp, @EstEntregado, N'Recibido por el cliente', 2)
+    ) AS h (IDUsuario, IDEstadoAnterior, IDEstadoNuevo, Comentario, Avance);
+
+    INSERT INTO Kardex (IDVariante, IDUsuario, IDTipoMovimiento, Cantidad, SaldoPosterior, Motivo, IDPedidoReferencia, FechaMovimiento)
+    SELECT v.IDVariante, @IDUserOperador, m.IDTipoMovimiento, -s.Cantidad, n.Existencia,
+           N'Salida por venta en Pedido #' + CAST(p.IDPedido AS NVARCHAR(20)) + N' (' + s.SKU + N')', p.IDPedido, DATEADD(DAY, -s.DiasAtras, SYSDATETIME())
+    FROM @PedidosNuevosIds p
+    INNER JOIN @VentasAmpliadas s ON s.Clave = p.Clave
+    INNER JOIN Variantes v ON v.SKU = s.SKU
+    INNER JOIN @VariantesNuevasIds n ON n.IDVariante = v.IDVariante
+    CROSS JOIN TipoMovimiento m
+    WHERE m.Codigo = 'SALIDA_VENTA';
+
     -- Todas las Variantes declaradas
     DECLARE @V_BOT40 INT = (SELECT IDVariante FROM Variantes WHERE SKU = 'BOT-CUE-40-CAF');
     DECLARE @V_BOT41 INT = (SELECT IDVariante FROM Variantes WHERE SKU = 'BOT-CUE-41-CAF');
@@ -1406,4 +1768,11 @@ BEGIN
     INSERT INTO dbo.ConfiguracionSistema (Clave, Valor, Descripcion)
     VALUES ('UmbralExistenciasBajas', '5', N'Una variante activa con existencia disponible menor o igual a este valor aparece en el reporte de existencias bajas');
 END
+GO
+
+UPDATE c SET ImagenUrl = (SELECT TOP 1 p.ImagenUrl FROM Productos p
+                          WHERE p.IDCategoria = c.IDCategoria AND p.ImagenUrl IS NOT NULL
+                          ORDER BY p.IDProducto ASC)
+FROM Categorias c
+WHERE c.ImagenUrl IS NULL;
 GO
