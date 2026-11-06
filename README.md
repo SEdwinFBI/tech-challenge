@@ -198,7 +198,7 @@ Los contratos de las peticiones y respuestas estan en OpenAPI.
 
 ![Diagrama ER](docs/imagenes/modelo-er.svg)
 
-La base tiene 29 tablas en seis áreas: acceso y auditoría, catálogo, inventario, carrito y cupones, pedidos, y envío. Las llaves primarias siguen el formato `IDProducto` y todo el acceso a datos pasa por procedimientos almacenados. Los montos usan `DECIMAL`.
+La base tiene 32 tablas en seis áreas: acceso y auditoría, catálogo, inventario, carrito y cupones, pedidos, y envío. Las llaves primarias siguen el formato `IDProducto` y todo el acceso a datos pasa por procedimientos almacenados. Los montos usan `DECIMAL`.
 
 ## Estados del pedido
 
@@ -255,6 +255,7 @@ Extras del reto: dashboard en vivo con SSE, exportación a Excel, caché del res
 - El ordenamiento se hace en el servidor .
 - La primera dirección activa de un cliente queda como predeterminada
 - Las Estadisticas cuentan como completados los pedidos entregados y descuentan las devoluciones. 
+- Las imágenes se optimizan en el navegador y se suben directo a S3 con una URL firmada. La base guarda la llave del archivo, no la URL; la URL de la CDN se arma al leer con `CDN_BASE_URL`. Al cambiar la portada o borrar un producto, el archivo viejo se borra del bucket.
 - La IA solo recibe nombres de productos, categorías, precios y el texto de búsqueda, nunca ids de usuario ni correos, y tiene un presupuesto de 30 llamadas por minuto compartido entre réplicas.
 
 
@@ -292,21 +293,22 @@ npm run test:concurrency:http
 
 | Endpoint | p50 (ms) | p95 (ms) |
 | --- | --- | --- |
-| Catálogo | 17.7 | 29.1 |
-| Catálogo con filtros y orden | 24.3 | 33.2 |
-| Detalle de producto | 14.3 | 25.5 |
-| Carrito | 17.7 | 38.5 |
-| Mis pedidos | 26.4 | 37.4 |
-| Pedidos (admin) con filtros | 23.8 | 34.8 |
-| Kardex | 30.4 | 43.0 |
-| Existencias bajas | 27.8 | 38.6 |
-| Cupones | 23.1 | 33.7 |
-| Usuarios | 26.4 | 39.0 |
-| Bitácora | 27.3 | 36.0 |
-| Resumen del dashboard | 20.2 | 33.7 |
-| Exportación a Excel | 43.4 | 69.7 |
+| Catálogo | 27.8 | 41.5 |
+| Catálogo con filtros y orden | 31.1 | 39.1 |
+| Detalle de producto | 15.7 | 22.6 |
+| Carrito | 16.9 | 31.1 |
+| Mis pedidos | 24.1 | 35.8 |
+| Pedidos (admin) con filtros | 15.7 | 19.3 |
+| Kardex | 32.7 | 39.0 |
+| Existencias bajas | 15.7 | 17.5 |
+| Cupones | 15.4 | 25.6 |
+| Usuarios | 15.8 | 24.2 |
+| Bitácora | 15.3 | 31.3 |
+| Resumen del dashboard, sin caché | 15.8 | 68.6 |
+| Resumen del dashboard, con caché | 15.7 | 18.2 |
+| Exportación a Excel | 32.2 | 51.6 |
 
-Todo queda por debajo de 1 segundo. Son pocos datos (12 productos, 11 pedidos), así que sirve para ver que no hay consultas pesadas, no como prueba de carga.
+Todo queda por debajo de 1 segundo. Se midió con los datos de ejemplo (82 productos, 22 pedidos, 171 movimientos de kardex), así que sirve para ver que no hay consultas pesadas, no como prueba de carga.
 
 `npm run test:concurrency` ejecuta una demostración adicional de concurrencia. Su implementación está en [`tests/concurrency-demo.ts`](shop-cart-backend/tests/concurrency-demo.ts).
 
