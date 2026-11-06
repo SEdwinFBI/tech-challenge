@@ -29,6 +29,7 @@ const envSchema = z.object({
   INSTANCE_ID: z.string().optional(),
   TYPESAFE_API_KEY: z.string().optional().transform(v => v || undefined),
   JEV_MODEL: z.string().default('jev-latest'),
+  JEV_URL: z.string().optional().transform(v => v || undefined),
   JEV_TIMEOUT_MS: z.coerce.number().int().min(100).max(10000).default(2000),
   TRUST_PROXY: z.string().optional()
 });

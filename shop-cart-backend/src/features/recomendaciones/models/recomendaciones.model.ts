@@ -21,6 +21,10 @@ export interface RecommendationResult {
   origen: 'jev' | 'preferencias';
 }
 
+export interface SearchRecommendationResult {
+  item: ProductDTO | null;
+}
+
 export type RecommendationPlacement = 'producto' | 'carrito' | 'inicio' | 'favoritos' | 'ofertas';
 
 export interface RecommendationFilters {
@@ -35,4 +39,3 @@ export interface RecommendationOwner {
   idUsuario?: number;
   tokenInvitado?: string;
 }
-

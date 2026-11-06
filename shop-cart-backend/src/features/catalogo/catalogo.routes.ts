@@ -1,6 +1,4 @@
 import { Router } from 'express';
-import { ReviewCatalogProductSchema } from './models/catalog-review.schema';
-import { reviewCatalog } from './catalog-review.dependencies';
 import { recommendationRateLimiter } from '@/core/middlewares/rate-limit.middleware';
 import { optionalAuthLenient, requireAuth, requireRoles } from '@/core/middlewares/auth.middleware';
 import { requireNumericId } from '@/core/middlewares/validate-param.middleware';
@@ -23,6 +21,7 @@ import { GetProductImagesQueryHandler } from './queries/get-product-images.query
 import { SetCategoryImageCommandHandler } from './commands/set-category-image.command';
 import { GetProductAdminQueryHandler } from './queries/get-product-admin.query';
 import { GetProductInventoryQueryHandler } from './queries/get-product-inventory.query';
+import { ReviewCatalogProductQueryHandler } from './queries/review-catalog-product.query';
 import {
   CreateProductSchema,
   CreateVariantSchema,
@@ -36,18 +35,12 @@ import {
   SetFeaturedSchema,
   SetReferencePriceSchema,
   SetCategoryImageSchema,
+  ReviewCatalogProductSchema,
 } from './models/catalogo.schema';
 
 export const catalogoRouter = Router();
 
-catalogoRouter.post('/revision', requireAuth, requireRoles('ADMINISTRADOR'), recommendationRateLimiter, async (req, res, next) => {
-  try {
-    const result = await reviewCatalog.handle(ReviewCatalogProductSchema.parse(req.body));
-    res.setHeader('Cache-Control', 'private, no-store');
-    res.json({ ok: true, ...result });
-  } catch (err) { next(err); }
-});
-
+const reviewCatalogProductQueryHandler = new ReviewCatalogProductQueryHandler();
 const getCategoriesQueryHandler = new GetCategoriesQueryHandler();
 const getProductsQueryHandler = new GetProductsQueryHandler();
 const getProductByIdQueryHandler = new GetProductByIdQueryHandler();
@@ -58,6 +51,15 @@ const deleteProductCommandHandler = new DeleteProductCommandHandler();
 const createVariantCommandHandler = new CreateVariantCommandHandler();
 const updateVariantCommandHandler = new UpdateVariantCommandHandler();
 const updatePriceCommandHandler = new UpdatePriceCommandHandler();
+
+catalogoRouter.post('/revision', requireAuth, requireRoles('ADMINISTRADOR'), recommendationRateLimiter, async (req, res, next) => {
+  try {
+    const dto = ReviewCatalogProductSchema.parse(req.body);
+    const result = await reviewCatalogProductQueryHandler.handle(dto);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json({ ok: true, ...result });
+  } catch (err) { next(err); }
+});
 
 catalogoRouter.get('/categorias', optionalAuthLenient, async (req, res, next) => {
   try {

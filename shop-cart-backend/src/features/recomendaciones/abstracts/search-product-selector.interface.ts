@@ -1,5 +1,5 @@
 import type { ProductDTO } from '@/features/catalogo/models/catalogo.model';
 
 export interface ISearchProductSelector {
-  select(query: string, candidates: ProductDTO[]): Promise<ProductDTO | null>;
+  score(query: string, candidates: ProductDTO[]): Promise<Map<number, number> | null>;
 }

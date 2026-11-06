@@ -1,43 +1,44 @@
 import { createHash } from 'node:crypto';
+import type { IQueryHandler } from '@/core/cqrs/index';
 import type { ICache } from '@/core/cache/cache.interface';
-import type { RecommendationOwner, RecommendationPlacement, RecommendationFilters, RecommendationResult } from '../models/recomendaciones.model';
+import { obtenerCache } from '@/core/cache/cache.factory';
+import type { IRecommendationsRepository } from '../abstracts/recomendaciones.repository.interface';
 import type { IRecommendationRanker } from '../abstracts/recommendation-ranker.interface';
-import type { IRecommendationContextRepository } from '../abstracts/recommendation-context.repository.interface';
-import { recommendationPolicies } from '../domain/recommendation-policies';
+import { RecommendationOwnerPolicy } from '../domain/recommendation-owner';
+import { RecommendationPolicy } from '../domain/recommendation.policy';
+import { JevRecommendationRanker } from '../infrastructure/jev-recommendation.ranker';
+import type { GetRecommendationsQuery, RecommendationFilters, RecommendationOwner, RecommendationResult } from '../models/recomendaciones.schema';
+import { RecommendationsRepository } from '../repository/recomendaciones.repository';
 
-export class GetRecommendationsQueryHandler {
+export class GetRecommendationsQueryHandler implements IQueryHandler<GetRecommendationsQuery, RecommendationResult> {
   private readonly pending = new Map<string, Promise<RecommendationResult>>();
 
   constructor(
-    private readonly repo: IRecommendationContextRepository,
-    private readonly ranker: IRecommendationRanker,
-    private readonly cache: ICache,
+    private readonly repo: IRecommendationsRepository = new RecommendationsRepository(),
+    private readonly ranker: IRecommendationRanker = new JevRecommendationRanker(),
+    private readonly cache: ICache = obtenerCache(),
   ) {}
 
-  async handle(owner: RecommendationOwner, idProducto?: number, placement: RecommendationPlacement = 'producto', filters: RecommendationFilters = {}): Promise<RecommendationResult> {
-    const context = await this.repo.context(owner, idProducto, placement, filters);
-    const policy = recommendationPolicies[placement];
-    const excluded = new Set(context.signals.filter(s => s.Tipo === 'CARRITO').map(s => s.IDProducto));
-    if (policy.excludesFavorites) context.signals.filter(s => s.Tipo === 'FAVORITO').forEach(s => excluded.add(s.IDProducto));
-    context.signals = policy.signals(context);
-    if (placement === 'favoritos' && !context.signals.length) return { items: [], origen: 'preferencias' };
-    context.candidates = context.candidates.filter((p, index, all) => p.Activo && (p.StockTotalDisponible ?? 0) > 0
-      && p.IDProducto !== idProducto && !excluded.has(p.IDProducto) && all.findIndex(x => x.IDProducto === p.IDProducto) === index
-      && (placement !== 'ofertas' || (p.PorcentajeDescuento ?? 0) >= 1));
-    const key = 'recs_v2_' + createHash('sha256').update(JSON.stringify([owner.propietario, placement, filters, context])).digest('hex');
+  async handle(query: GetRecommendationsQuery): Promise<RecommendationResult> {
+    const owner = RecommendationOwnerPolicy.resolve(query);
+    const filters: RecommendationFilters = { idCategoria: query.idCategoria, precioMin: query.precioMin, precioMax: query.precioMax, q: query.q };
+    const key = 'recs_v3_' + createHash('sha256').update(JSON.stringify([owner.propietario, query.contexto, query.idProducto ?? null, filters])).digest('hex');
     const cached = await this.cache.get<RecommendationResult>(key);
     if (cached) return cached;
     const existing = this.pending.get(key);
     if (existing) return existing;
-    const work = (async () => {
-      const ids = await this.ranker.rank(context, placement);
-      const positions = new Map(ids?.map((id, i) => [id, i]));
-      const items = [...context.candidates].sort((a, b) => (positions.get(a.IDProducto) ?? 100) - (positions.get(b.IDProducto) ?? 100)).slice(0, 10);
-      const result: RecommendationResult = { items, origen: ids ? 'jev' : 'preferencias' };
-      await this.cache.set(key, result, ids ? 180 : 30);
-      return result;
-    })();
+    const work = this.build(owner, query, filters, key);
     this.pending.set(key, work);
     try { return await work; } finally { this.pending.delete(key); }
+  }
+
+  private async build(owner: RecommendationOwner, query: GetRecommendationsQuery, filters: RecommendationFilters, key: string): Promise<RecommendationResult> {
+    const placement = query.contexto;
+    const context = RecommendationPolicy.prepare(await this.repo.getContext(owner, query.idProducto, placement, filters), placement, query.idProducto);
+    if (RecommendationPolicy.hasNothingToRecommend(context, placement)) return { items: [], origen: 'preferencias' };
+    const ids = await this.ranker.rank(context, placement);
+    const result: RecommendationResult = { items: RecommendationPolicy.arrange(context.candidates, ids), origen: ids ? 'jev' : 'preferencias' };
+    await this.cache.set(key, result, ids ? 180 : 30);
+    return result;
   }
 }

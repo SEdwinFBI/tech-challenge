@@ -15,6 +15,7 @@ import { globalErrorHandler } from '@/core/middlewares/error.middleware';
 import { openApiSpec } from '@/core/http/openapi.spec';
 import apiRouter from '@/features';
 import { ReconcilePaymentsCommandHandler } from '@/features/checkout/commands/reconcile-payments.command';
+import { PurgeViewsCommandHandler } from '@/features/recomendaciones/commands/purge-views.command';
 
 const app = express();
 
@@ -113,6 +114,15 @@ cron.schedule('* * * * *', async () => {
     });
   } catch (err) {
     console.error('Error al limpiar reservas vencidas:', err);
+  }
+});
+
+const purgeViews = new PurgeViewsCommandHandler();
+cron.schedule('17 3 * * *', async () => {
+  try {
+    await ejecutarConLock('purgar-vistas', 3_600_000, () => purgeViews.handle());
+  } catch (err) {
+    console.error('Error al purgar vistas de recomendaciones:', err);
   }
 });
 

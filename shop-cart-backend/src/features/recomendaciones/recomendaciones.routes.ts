@@ -1,34 +1,47 @@
 import { Router } from 'express';
-import { optionalAuth } from '@/core/middlewares/auth.middleware';
+import { optionalAuthLenient } from '@/core/middlewares/auth.middleware';
 import { recommendationRateLimiter } from '@/core/middlewares/rate-limit.middleware';
 import { GetRecommendationsSchema, GetSearchRecommendationSchema, RecordRecommendationViewSchema } from './models/recomendaciones.schema';
-import { resolveRecommendationOwner } from './http/recommendation-owner';
-import { getRecommendations, getSearchRecommendation, recordRecommendationView } from './recomendaciones.dependencies';
+import { GetRecommendationsQueryHandler } from './queries/get-recommendations.query';
+import { GetSearchRecommendationQueryHandler } from './queries/get-search-recommendation.query';
+import { RecordViewCommandHandler } from './commands/record-view.command';
 
 export const recomendacionesRouter = Router();
+const getRecommendationsQueryHandler = new GetRecommendationsQueryHandler();
+const getSearchRecommendationQueryHandler = new GetSearchRecommendationQueryHandler();
+const recordViewCommandHandler = new RecordViewCommandHandler();
 
-recomendacionesRouter.use(optionalAuth);
-recomendacionesRouter.use(recommendationRateLimiter);
-recomendacionesRouter.use((_req, res, next) => { res.setHeader('Cache-Control', 'private, no-store'); next(); });
-recomendacionesRouter.post('/vistas', async (req, res, next) => {
+recomendacionesRouter.post('/vistas', optionalAuthLenient, recommendationRateLimiter, async (req, res, next) => {
   try {
-    const { idProducto } = RecordRecommendationViewSchema.parse(req.body);
-    await recordRecommendationView.handle(resolveRecommendationOwner(req), idProducto);
+    res.setHeader('Cache-Control', 'private, no-store');
+    const dto = RecordRecommendationViewSchema.parse(req.body);
+    await recordViewCommandHandler.handle({
+      ...dto,
+      idUsuario: req.user?.idUsuario,
+      tokenInvitado: req.headers['x-guest-token'] as string | undefined,
+    });
     res.status(204).end();
   } catch (err) { next(err); }
 });
-recomendacionesRouter.get('/', async (req, res, next) => {
+
+recomendacionesRouter.get('/', optionalAuthLenient, recommendationRateLimiter, async (req, res, next) => {
   try {
-    const query = GetRecommendationsSchema.parse(req.query);
-    const { idCategoria, precioMin, precioMax, q } = query;
-    const result = await getRecommendations.handle(resolveRecommendationOwner(req), query.idProducto, query.contexto, { idCategoria, precioMin, precioMax, q });
+    res.setHeader('Cache-Control', 'private, no-store');
+    const dto = GetRecommendationsSchema.parse(req.query);
+    const result = await getRecommendationsQueryHandler.handle({
+      ...dto,
+      idUsuario: req.user?.idUsuario,
+      tokenInvitado: req.headers['x-guest-token'] as string | undefined,
+    });
     res.json({ ok: true, ...result });
   } catch (err) { next(err); }
 });
 
-recomendacionesRouter.get('/busqueda', async (req, res, next) => {
+recomendacionesRouter.get('/busqueda', optionalAuthLenient, recommendationRateLimiter, async (req, res, next) => {
   try {
-    const result = await getSearchRecommendation.handle(GetSearchRecommendationSchema.parse(req.query));
+    res.setHeader('Cache-Control', 'private, no-store');
+    const dto = GetSearchRecommendationSchema.parse(req.query);
+    const result = await getSearchRecommendationQueryHandler.handle(dto);
     res.json({ ok: true, ...result });
   } catch (err) { next(err); }
 });

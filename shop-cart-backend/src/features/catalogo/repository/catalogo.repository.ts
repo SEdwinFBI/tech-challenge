@@ -1,6 +1,7 @@
 import { getDbPool, sql } from '@/core/config/db';
 import { ICatalogRepository } from '../abstracts/catalogo.repository.interface';
 import {
+  CatalogReviewContext,
   CategoryDTO,
   CreateProductResult,
   CreateProductWithVariantParams,
@@ -20,6 +21,7 @@ import {
   UpdateVariantResult,
   VariantDTO,
 } from '../models/catalogo.model';
+import type { ReviewCatalogProductQuery } from '../models/catalogo.schema';
 
 export class CatalogRepository implements ICatalogRepository {
   async getCategories(soloActivas: boolean): Promise<CategoryDTO[]> {
@@ -243,5 +245,16 @@ export class CatalogRepository implements ICatalogRepository {
       variantes: sets[1] || [],
       imagenes: sets[2] || [],
     };
+  }
+
+  async getReviewContext(query: ReviewCatalogProductQuery): Promise<CatalogReviewContext> {
+    const pool = await getDbPool();
+    const res = await pool
+      .request()
+      .input('Nombre', sql.NVarChar(150), query.nombre)
+      .input('IDProducto', sql.Int, query.idProducto ?? null)
+      .execute('SP_Catalogo_ContextoRevision');
+    const sets = res.recordsets as [sql.IRecordSet<CatalogReviewContext['categories'][number]>, sql.IRecordSet<CatalogReviewContext['products'][number]>];
+    return { categories: sets[0] ?? [], products: sets[1] ?? [] };
   }
 }

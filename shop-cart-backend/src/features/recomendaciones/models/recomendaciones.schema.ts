@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export * from './recomendaciones.model';
+
 const positiveId = z.coerce.number().int().positive();
 
 export const GetRecommendationsSchema = z.object({
@@ -12,9 +14,10 @@ export const GetRecommendationsSchema = z.object({
 }).refine(q => q.precioMin === undefined || q.precioMax === undefined || q.precioMin <= q.precioMax, {
   message: 'Rango de precios invalido.', path: ['precioMax'],
 });
+export type GetRecommendationsDTO = z.infer<typeof GetRecommendationsSchema>;
 
 export const RecordRecommendationViewSchema = z.object({ idProducto: positiveId });
-export const RecommendationGuestTokenSchema = z.string().min(16).max(100);
+export type RecordViewDTO = z.infer<typeof RecordRecommendationViewSchema>;
 
 export const GetSearchRecommendationSchema = z.object({
   q: z.string().trim().min(2).max(150),
@@ -25,3 +28,12 @@ export const GetSearchRecommendationSchema = z.object({
 }).refine(q => q.precioMin === undefined || q.precioMax === undefined || q.precioMin <= q.precioMax, {
   message: 'Rango de precios invalido.', path: ['precioMax'],
 });
+export type GetSearchRecommendationQuery = z.infer<typeof GetSearchRecommendationSchema>;
+
+export interface RecommendationIdentity {
+  idUsuario?: number;
+  tokenInvitado?: string;
+}
+
+export type GetRecommendationsQuery = GetRecommendationsDTO & RecommendationIdentity;
+export type RecordViewCommand = RecordViewDTO & RecommendationIdentity;

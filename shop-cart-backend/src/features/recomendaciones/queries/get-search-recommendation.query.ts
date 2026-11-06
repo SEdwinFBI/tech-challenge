@@ -1,22 +1,31 @@
 import { createHash } from 'node:crypto';
+import type { IQueryHandler } from '@/core/cqrs/index';
 import type { ICache } from '@/core/cache/cache.interface';
-import type { ProductDTO } from '@/features/catalogo/models/catalogo.model';
-import type { SearchRecommendationInput } from '../models/search-recommendation.model';
-import type { ISearchCandidateRepository } from '../abstracts/search-candidate.repository.interface';
+import { obtenerCache } from '@/core/cache/cache.factory';
+import type { IRecommendationsRepository } from '../abstracts/recomendaciones.repository.interface';
 import type { ISearchProductSelector } from '../abstracts/search-product-selector.interface';
+import { RecommendationPolicy } from '../domain/recommendation.policy';
+import { JevSearchProductSelector } from '../infrastructure/jev-search-product.selector';
+import type { GetSearchRecommendationQuery, SearchRecommendationResult } from '../models/recomendaciones.schema';
+import { RecommendationsRepository } from '../repository/recomendaciones.repository';
 
-export class GetSearchRecommendationQueryHandler {
-  constructor(private readonly repo: ISearchCandidateRepository, private readonly selector: ISearchProductSelector, private readonly cache: ICache) {}
+export class GetSearchRecommendationQueryHandler implements IQueryHandler<GetSearchRecommendationQuery, SearchRecommendationResult> {
+  constructor(
+    private readonly repo: IRecommendationsRepository = new RecommendationsRepository(),
+    private readonly selector: ISearchProductSelector = new JevSearchProductSelector(),
+    private readonly cache: ICache = obtenerCache(),
+  ) {}
 
-  async handle(input: SearchRecommendationInput): Promise<{ item: ProductDTO | null }> {
-    const candidates = (await this.repo.candidates(input)).filter((p, i, all) => p.Activo && (p.StockTotalDisponible ?? 0) > 0
-      && all.findIndex(other => other.IDProducto === p.IDProducto) === i).slice(0, 20);
-    if (!candidates.length) return { item: null };
-    const key = 'search_rec_' + createHash('sha256').update(JSON.stringify([input, candidates])).digest('hex');
-    const cached = await this.cache.get<{ item: ProductDTO | null }>(key);
+  async handle(query: GetSearchRecommendationQuery): Promise<SearchRecommendationResult> {
+    if (!RecommendationPolicy.canUseAi(query.q)) return { item: null };
+    const normalized = query.q.trim().toLowerCase().replace(/\s+/g, ' ');
+    const key = 'search_rec_v2_' + createHash('sha256')
+      .update(JSON.stringify([normalized, query.idCategoria ?? null, query.precioMin ?? null, query.precioMax ?? null, query.soloOfertas])).digest('hex');
+    const cached = await this.cache.get<SearchRecommendationResult>(key);
     if (cached) return cached;
-    const item = await this.selector.select(input.q, candidates);
-    const result = { item: item && candidates.some(p => p.IDProducto === item.IDProducto) ? item : null };
+    const candidates = RecommendationPolicy.searchCandidates(await this.repo.findSearchCandidates(query));
+    const scores = candidates.length ? await this.selector.score(query.q, candidates) : null;
+    const result: SearchRecommendationResult = { item: RecommendationPolicy.bestSearchMatch(candidates, scores) };
     await this.cache.set(key, result, result.item ? 180 : 30);
     return result;
   }

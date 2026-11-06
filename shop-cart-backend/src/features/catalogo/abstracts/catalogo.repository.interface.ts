@@ -1,4 +1,5 @@
 import {
+  CatalogReviewContext,
   CategoryDTO,
   CreateProductResult,
   CreateProductWithVariantParams,
@@ -16,6 +17,7 @@ import {
   UpdateVariantParams,
   UpdateVariantResult,
 } from '../models/catalogo.model';
+import type { ReviewCatalogProductQuery } from '../models/catalogo.schema';
 
 export interface ICatalogRepository {
   getCategories(soloActivas: boolean): Promise<CategoryDTO[]>;
@@ -35,4 +37,5 @@ export interface ICatalogRepository {
   setFeatured(idProducto: number, destacado: boolean, idAdmin: number): Promise<void>;
   updateCategoryImage(idCategoria: number, imagenUrl: string | null, idAdmin: number): Promise<void>;
   getProductByIdAdmin(idProducto: number): Promise<ProductDetailResult>;
+  getReviewContext(query: ReviewCatalogProductQuery): Promise<CatalogReviewContext>;
 }
