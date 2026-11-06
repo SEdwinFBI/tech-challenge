@@ -94,7 +94,7 @@ test('SQL y HTTP de recomendaciones: vistas, favoritos, carrito y aislamiento', 
     assert.equal(response.headers.get('Cache-Control'), 'private, no-store');
     const result = await response.json() as { items: Array<{ IDProducto: number; StockTotalDisponible: number }> };
     assert.equal(result.items.length, 10);
-    assert.ok(result.items.every((p: { IDProducto: number; StockTotalDisponible: number }) => p.IDProducto !== product.IDProducto && p.StockTotalDisponible > 0));
+    assert.ok(result.items.every((p: { IDProducto: number; StockTotalDisponible: number }) => p.IDProducto !== product.IDProducto && (p.StockTotalDisponible ?? 0) > 0));
     const offers = await repo.getContext(owner, undefined, 'ofertas', { precioMin: 50, precioMax: 500 });
     assert.ok(offers.candidates.length > 0);
     assert.ok(offers.candidates.every(p => (p.PorcentajeDescuento ?? 0) >= 1 && (p.PrecioOferta ?? 0) >= 50 && (p.PrecioOferta ?? 0) <= 500));
@@ -103,11 +103,18 @@ test('SQL y HTTP de recomendaciones: vistas, favoritos, carrito y aislamiento', 
     const searchRepo = repo;
     for (const q of ['camisa', 'camisa azul', 'audifonos bluetooth', 'tenis deportivos']) {
       const candidates = await searchRepo.findSearchCandidates({ q, soloOfertas: false });
-      assert.ok(candidates.length <= 20);
-      const normal = await catalog.getProducts({ q, pagina: 1, tamanoPagina: 100, orden: 'RECIENTES', soloDisponibles: true, incluirInactivos: false });
-      const normalIds = new Set(normal.items.map(p => p.IDProducto));
-      assert.ok(candidates.every(p => !normalIds.has(p.IDProducto)));
+      assert.ok(candidates.length > 0 && candidates.length <= 25);
+      assert.ok(candidates.every(p => p.Activo && (p.StockTotalDisponible ?? 0) > 0));
     }
+    const hostile = ["'; DROP TABLE Productos;--", '%_[]', "' OR 1=1 --", '/* x */ \ "quote" ;', '😀💥 café 日本', 'zzzz qqqq xxxx'];
+    for (const q of hostile) {
+      const candidates = await searchRepo.findSearchCandidates({ q, soloOfertas: false });
+      assert.ok(candidates.length <= 25);
+      const response = await fetch(`http://127.0.0.1:${address.port}/recomendaciones/busqueda?q=${encodeURIComponent(q)}`, { headers });
+      assert.equal(response.status, 200);
+    }
+    assert.equal((await fetch(`http://127.0.0.1:${address.port}/recomendaciones/busqueda?q=${'a'.repeat(1000)}`, { headers })).status, 400);
+    assert.ok((await pool.request().query('SELECT COUNT(*) AS Total FROM Productos')).recordset[0].Total > 0);
     assert.ok((await searchRepo.findSearchCandidates({ q: 'camisa azul', soloOfertas: false })).length > 0);
     const reviewContext = await catalog.getReviewContext({ nombre: 'Camisa de cuadros azul y negro' });
     assert.ok(reviewContext.categories.length > 0);
@@ -124,8 +131,6 @@ test('SQL y HTTP de recomendaciones: vistas, favoritos, carrito y aislamiento', 
     const reviewResult = await review.json() as { posiblesDuplicados: Array<{ Nombre: string }>; evaluacionDisponible: boolean };
     assert.equal(reviewResult.evaluacionDisponible, false);
     assert.ok(reviewResult.posiblesDuplicados.some(p => p.Nombre === 'Camisa de cuadros azul y negro'));
-    const synonyms = await pool.request().query('SELECT COUNT(*) AS Total FROM SinonimosBusqueda');
-    assert.ok(synonyms.recordset[0].Total >= 16);
     const activeProducts = await pool.request().query('SELECT IDProducto FROM Productos WHERE Activo = 1 ORDER BY IDProducto');
     const viewIds: number[] = activeProducts.recordset.map((r: { IDProducto: number }) => r.IDProducto);
     for (let i = viewIds.length; i < 55; i++) {

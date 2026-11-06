@@ -20,7 +20,7 @@ export const RecordRecommendationViewSchema = z.object({ idProducto: positiveId 
 export type RecordViewDTO = z.infer<typeof RecordRecommendationViewSchema>;
 
 export const GetSearchRecommendationSchema = z.object({
-  q: z.string().trim().min(2).max(150),
+  q: z.string().max(150).transform(v => v.replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ')).pipe(z.string().trim().min(2)),
   idCategoria: positiveId.optional(),
   precioMin: z.coerce.number().min(0).optional(),
   precioMax: z.coerce.number().min(0).optional(),

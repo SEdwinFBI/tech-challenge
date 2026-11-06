@@ -19,13 +19,13 @@ export class GetSearchRecommendationQueryHandler implements IQueryHandler<GetSea
   async handle(query: GetSearchRecommendationQuery): Promise<SearchRecommendationResult> {
     if (!RecommendationPolicy.canUseAi(query.q)) return { item: null };
     const normalized = query.q.trim().toLowerCase().replace(/\s+/g, ' ');
-    const key = 'search_rec_v2_' + createHash('sha256')
+    const key = 'search_rec_v3_' + createHash('sha256')
       .update(JSON.stringify([normalized, query.idCategoria ?? null, query.precioMin ?? null, query.precioMax ?? null, query.soloOfertas])).digest('hex');
     const cached = await this.cache.get<SearchRecommendationResult>(key);
     if (cached) return cached;
     const candidates = RecommendationPolicy.searchCandidates(await this.repo.findSearchCandidates(query));
     const scores = candidates.length ? await this.selector.score(query.q, candidates) : null;
-    const result: SearchRecommendationResult = { item: RecommendationPolicy.bestSearchMatch(candidates, scores) };
+    const result = RecommendationPolicy.bestSearchMatch(candidates, scores);
     await this.cache.set(key, result, result.item ? 180 : 30);
     return result;
   }

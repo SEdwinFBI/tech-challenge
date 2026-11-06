@@ -1,10 +1,11 @@
 import type { ProductDTO } from '@/features/catalogo/models/catalogo.model';
-import type { RecommendationContext, RecommendationPlacement } from '../models/recomendaciones.model';
+import type { RecommendationContext, RecommendationPlacement, SearchRecommendationResult } from '../models/recomendaciones.model';
 
 export const RECOMMENDATION_LIMIT = 10;
-export const SEARCH_CANDIDATE_LIMIT = 20;
+export const SEARCH_CANDIDATE_LIMIT = 25;
 export const SEARCH_MIN_LENGTH = 3;
-export const SEARCH_SCORE_THRESHOLD = 1.7;
+export const SEARCH_SUGGESTION_MIN = 1.2;
+export const SEARCH_HIGH_CONFIDENCE = 1.7;
 
 const isAvailable = (p: ProductDTO) => p.Activo && (p.StockTotalDisponible ?? 0) > 0;
 const isFirst = (p: ProductDTO, index: number, all: ProductDTO[]) => all.findIndex(other => other.IDProducto === p.IDProducto) === index;
@@ -33,9 +34,11 @@ export const RecommendationPolicy = {
     return query.trim().length >= SEARCH_MIN_LENGTH;
   },
 
-  bestSearchMatch(candidates: ProductDTO[], scores: Map<number, number> | null): ProductDTO | null {
-    if (!scores) return null;
+  bestSearchMatch(candidates: ProductDTO[], scores: Map<number, number> | null): SearchRecommendationResult {
+    if (!scores) return { item: null };
     const best = [...candidates].sort((a, b) => (scores.get(b.IDProducto) ?? 0) - (scores.get(a.IDProducto) ?? 0))[0];
-    return best && (scores.get(best.IDProducto) ?? 0) >= SEARCH_SCORE_THRESHOLD ? best : null;
+    const score = best ? scores.get(best.IDProducto) ?? 0 : 0;
+    if (!best || score < SEARCH_SUGGESTION_MIN) return { item: null };
+    return { item: best, confianza: score >= SEARCH_HIGH_CONFIDENCE ? 'alta' : 'media' };
   },
 };

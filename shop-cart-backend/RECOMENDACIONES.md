@@ -26,12 +26,12 @@ Se configura con `TYPESAFE_API_KEY`, `JEV_MODEL`, `JEV_TIMEOUT_MS` y `JEV_URL`, 
 - Un fallo pausa las llamadas 30 segundos (compartido por la caché cuando hay Redis). Solo se registra el código HTTP o el tipo de error.
 - Presupuesto: 30 llamadas por minuto en total entre réplicas (contador en Redis o en memoria). Agotado, se usa el orden local.
 - Las recomendaciones se guardan en la caché antes de consultar SQL: 180 s si las ordenó la IA, 30 s si es el orden local. La clave depende del propietario, el contexto, el producto y los filtros, así que un cambio de favoritos o carrito puede tardar hasta ese tiempo en notarse.
-- La búsqueda usa hasta 20 candidatos por palabras clave y la tabla `SinonimosBusqueda`. Excluye lo que ya devuelve la búsqueda normal. Solo consulta a la IA con 3 o más caracteres y solo devuelve un producto si su puntuación llega a 1.7 de 2.
+- La búsqueda de sugerencia limpia el texto (solo letras, números y espacios), usa hasta 8 palabras de 2 a 40 caracteres y las compara con nombre, descripción y categoría. Suma productos de las mismas categorías y, si nada coincide, usa el catálogo disponible. Envía hasta 25 candidatos a la IA y devuelve el mejor desde 1.2 de 2 (`confianza`: `alta` desde 1.7, `media` en otro caso). Sin IA o ante un fallo devuelve `item: null`. Solo consulta con 3 o más caracteres. El front la muestra cuando la búsqueda normal no tiene resultados o, con resultados, si el producto no está entre ellos.
 - La revisión propone una categoría (desde 1.5) y duplicados (desde 1.7, máximo 5). Sin IA, solo marca nombres exactamente iguales.
 
 ## Base de datos
 
-`npm run db:setup` crea las tablas `RecomendacionVistas` y `SinonimosBusqueda` (con sus sinónimos base) en `scrips/01_tablas_y_semilla_base.sql` y los procedimientos en `scrips/04_stored_procedures.sql`. El script 01 solo se ejecuta si la base no tiene tablas; una base existente necesita aplicar a mano `SinonimosBusqueda` y el índice `IX_RecomendacionVistas_UltimaVista`.
+`npm run db:setup` crea la tabla `RecomendacionVistas` en `scrips/01_tablas_y_semilla_base.sql` y los procedimientos en `scrips/04_stored_procedures.sql`. El script 01 solo se ejecuta si la base no tiene tablas; una base existente necesita aplicar a mano el índice `IX_RecomendacionVistas_UltimaVista`.
 
 ## Estructura
 

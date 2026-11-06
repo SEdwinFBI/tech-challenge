@@ -1345,24 +1345,35 @@ CREATE OR ALTER PROCEDURE SP_Recomendaciones_BuscarCandidatos
 AS
 BEGIN
     SET NOCOUNT ON;
-    DECLARE @Patron NVARCHAR(500) = '%' + REPLACE(REPLACE(REPLACE(@Busqueda, '[', '[[]'), '%', '[%]'), '_', '[_]') + '%';
-    DECLARE @Terminos TABLE (Palabra NVARCHAR(150) COLLATE Latin1_General_CI_AI PRIMARY KEY);
-    INSERT INTO @Terminos SELECT DISTINCT LOWER(value) COLLATE Latin1_General_CI_AI
-    FROM STRING_SPLIT(REPLACE(REPLACE(REPLACE(@Busqueda, ',', ' '), '.', ' '), '-', ' '), ' ')
-    WHERE LEN(value) >= 2 AND LOWER(value) COLLATE Latin1_General_CI_AI NOT IN ('de', 'del', 'la', 'el', 'los', 'las', 'para', 'con', 'un', 'una', 'por', 'en', 'que', 'quiero', 'busco');
-    INSERT INTO @Terminos
-    SELECT DISTINCT s.Sinonimo COLLATE Latin1_General_CI_AI FROM SinonimosBusqueda s
-    WHERE EXISTS (SELECT 1 FROM @Terminos t WHERE t.Palabra = s.Termino COLLATE Latin1_General_CI_AI)
-      AND NOT EXISTS (SELECT 1 FROM @Terminos t WHERE t.Palabra = s.Sinonimo COLLATE Latin1_General_CI_AI);
-    SELECT TOP (20) p.IDProducto, p.Nombre, p.Descripcion, p.ImagenUrl, p.Activo, p.IDCategoria,
-        c.Nombre AS Categoria, MIN(v.Precio) AS PrecioMinimo, MAX(v.Precio) AS PrecioMaximo,
-        SUM(disp.ExistenciaDisponible) AS StockTotalDisponible, ofe.PrecioOferta, ofe.PrecioReferencia, ofe.PorcentajeDescuento
+    DECLARE @Limpio NVARCHAR(150);
+    SELECT @Limpio = STRING_AGG(CASE WHEN x.Caracter LIKE '[a-z0-9]' COLLATE Latin1_General_CI_AI THEN x.Caracter ELSE N' ' END, N'') WITHIN GROUP (ORDER BY x.Posicion)
+    FROM (SELECT t.Posicion, SUBSTRING(@Busqueda, t.Posicion, 1) AS Caracter
+          FROM (SELECT TOP (LEN(@Busqueda)) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS Posicion FROM sys.all_columns) t) x;
+    DECLARE @Terminos TABLE (Palabra NVARCHAR(40) COLLATE Latin1_General_CI_AI PRIMARY KEY);
+    INSERT INTO @Terminos SELECT TOP (8) w.Palabra
+    FROM (SELECT DISTINCT LOWER(value) COLLATE Latin1_General_CI_AI AS Palabra FROM STRING_SPLIT(@Limpio, ' ')
+          WHERE LEN(value) BETWEEN 2 AND 40
+            AND LOWER(value) COLLATE Latin1_General_CI_AI NOT IN ('de', 'del', 'la', 'el', 'los', 'las', 'para', 'con', 'un', 'una', 'por', 'en', 'que', 'quiero', 'busco')) w
+    ORDER BY LEN(w.Palabra) DESC, w.Palabra;
+
+    CREATE TABLE #Base (
+        IDProducto INT PRIMARY KEY, IDCategoria INT, Nombre NVARCHAR(150), Descripcion NVARCHAR(MAX), ImagenUrl NVARCHAR(500),
+        Activo BIT, Categoria NVARCHAR(100), PrecioMinimo DECIMAL(12,2), PrecioMaximo DECIMAL(12,2), StockTotalDisponible INT,
+        PrecioOferta DECIMAL(12,2), PrecioReferencia DECIMAL(12,2), PorcentajeDescuento INT,
+        Destacado BIT, Unidades INT, Coincidencias INT);
+
+    INSERT INTO #Base
+    SELECT p.IDProducto, p.IDCategoria, p.Nombre, p.Descripcion, p.ImagenUrl, p.Activo, c.Nombre,
+        MIN(v.Precio), MAX(v.Precio), SUM(disp.ExistenciaDisponible),
+        ofe.PrecioOferta, ofe.PrecioReferencia, ofe.PorcentajeDescuento,
+        p.Destacado, COALESCE(ven.Unidades, 0), terminos.Coincidencias
     FROM Productos p INNER JOIN Categorias c ON c.IDCategoria = p.IDCategoria AND c.Activo = 1
     INNER JOIN Variantes v ON v.IDProducto = p.IDProducto AND v.Activo = 1
     CROSS APPLY FU_Inventario_ExistenciaDisponible(v.IDVariante) disp
     CROSS APPLY (SELECT COUNT(*) AS Coincidencias FROM @Terminos t
         WHERE CHARINDEX(t.Palabra, p.Nombre COLLATE Latin1_General_CI_AI) > 0
-           OR CHARINDEX(t.Palabra, p.Descripcion COLLATE Latin1_General_CI_AI) > 0) terminos
+           OR CHARINDEX(t.Palabra, COALESCE(p.Descripcion, '') COLLATE Latin1_General_CI_AI) > 0
+           OR CHARINDEX(t.Palabra, c.Nombre COLLATE Latin1_General_CI_AI) > 0) terminos
     OUTER APPLY (
         SELECT TOP (1) vo.Precio AS PrecioOferta, vo.PrecioReferencia,
             CAST(ROUND((vo.PrecioReferencia - vo.Precio) * 100.0 / vo.PrecioReferencia, 0) AS INT) AS PorcentajeDescuento
@@ -1372,15 +1383,28 @@ BEGIN
           AND (@PrecioMin IS NULL OR vo.Precio >= @PrecioMin) AND (@PrecioMax IS NULL OR vo.Precio <= @PrecioMax)
         ORDER BY (vo.PrecioReferencia - vo.Precio) / vo.PrecioReferencia DESC, vo.IDVariante
     ) ofe
-    WHERE p.Activo = 1 AND disp.ExistenciaDisponible > 0 AND terminos.Coincidencias > 0
+    OUTER APPLY (
+        SELECT SUM(pd.CantidadComprada - pd.CantidadDevuelta) AS Unidades
+        FROM PedidoDetalles pd INNER JOIN Variantes vv ON vv.IDVariante = pd.IDVariante
+        INNER JOIN Pedidos pe ON pe.IDPedido = pd.IDPedido
+        INNER JOIN EstadosPedido ep ON ep.IDEstadoPedido = pe.IDEstadoPedido
+        WHERE vv.IDProducto = p.IDProducto AND ep.Codigo IN ('ENTREGADO', 'DEVUELTO_PARCIAL', 'DEVUELTO_TOTAL')
+    ) ven
+    WHERE p.Activo = 1 AND disp.ExistenciaDisponible > 0
       AND (@IDCategoria IS NULL OR p.IDCategoria = @IDCategoria)
       AND (@PrecioMin IS NULL OR v.Precio >= @PrecioMin) AND (@PrecioMax IS NULL OR v.Precio <= @PrecioMax)
       AND (@SoloOfertas = 0 OR ofe.PrecioReferencia IS NOT NULL)
-      AND NOT (p.Nombre LIKE @Patron OR COALESCE(p.Descripcion, '') LIKE @Patron
-          OR EXISTS (SELECT 1 FROM Variantes normal WHERE normal.IDProducto = p.IDProducto AND normal.Activo = 1 AND normal.SKU LIKE @Patron))
-    GROUP BY p.IDProducto, p.Nombre, p.Descripcion, p.ImagenUrl, p.Activo, p.IDCategoria, c.Nombre,
-        terminos.Coincidencias, ofe.PrecioOferta, ofe.PrecioReferencia, ofe.PorcentajeDescuento
-    ORDER BY terminos.Coincidencias DESC, p.IDProducto;
+    GROUP BY p.IDProducto, p.IDCategoria, p.Nombre, p.Descripcion, p.ImagenUrl, p.Activo, c.Nombre, p.Destacado, ven.Unidades,
+        terminos.Coincidencias, ofe.PrecioOferta, ofe.PrecioReferencia, ofe.PorcentajeDescuento;
+
+    DECLARE @HayCoincidencias BIT = CASE WHEN EXISTS (SELECT 1 FROM #Base WHERE Coincidencias > 0) THEN 1 ELSE 0 END;
+
+    SELECT TOP (25) b.IDProducto, b.Nombre, b.Descripcion, b.ImagenUrl, b.Activo, b.IDCategoria, b.Categoria,
+        b.PrecioMinimo, b.PrecioMaximo, b.StockTotalDisponible, b.PrecioOferta, b.PrecioReferencia, b.PorcentajeDescuento
+    FROM #Base b
+    WHERE @HayCoincidencias = 0 OR b.Coincidencias > 0
+       OR EXISTS (SELECT 1 FROM #Base d WHERE d.Coincidencias > 0 AND d.IDCategoria = b.IDCategoria)
+    ORDER BY b.Coincidencias DESC, b.Destacado DESC, b.Unidades DESC, b.IDProducto;
 END;
 GO
 
