@@ -61,6 +61,7 @@ export const RegisterPage: React.FC = () => {
   return (
     <AuthShell
       title="Crea tu cuenta"
+      subtitle="Compra en minutos, con precios en quetzales."
       footer={<>¿Ya tienes cuenta? <Link to="/login" className="font-extrabold text-brand hover:underline">Ingresar</Link></>}
     >
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
@@ -111,7 +112,7 @@ export const RegisterPage: React.FC = () => {
                 type="button"
                 onClick={() => setShowPassword(s => !s)}
                 aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-brand"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>

@@ -59,6 +59,7 @@ export const LoginPage: React.FC = () => {
   return (
     <AuthShell
       title="Inicia sesión"
+      subtitle="Revisa tus pedidos y sigue comprando."
       footer={<>¿Aún no tienes cuenta? <Link to="/registro" className="font-extrabold text-brand hover:underline">Crear cuenta</Link></>}
     >
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
@@ -96,7 +97,7 @@ export const LoginPage: React.FC = () => {
               type="button"
               onClick={() => setShowPassword(s => !s)}
               aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-              className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-brand"
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
@@ -114,7 +115,7 @@ export const LoginPage: React.FC = () => {
         </button>
 
         {import.meta.env.DEV && (
-          <details className="rounded-xl border border-dashed border-slate-300 p-3 text-xs text-slate-600">
+          <details className="rounded-xl border border-dashed border-brand/30 bg-brand-soft/60 p-3 text-xs text-slate-600">
             <summary className="cursor-pointer font-bold text-slate-700">Cuentas de prueba (solo desarrollo)</summary>
             <div className="mt-3 flex flex-wrap gap-2">
               {DEMO.map(d => (
@@ -125,7 +126,7 @@ export const LoginPage: React.FC = () => {
                     setValue('correo', d.correo, { shouldValidate: true });
                     setValue('password', 'Admin123!', { shouldValidate: true });
                   }}
-                  className="rounded-full bg-slate-100 px-3 py-1.5 font-bold text-slate-700 hover:bg-slate-200"
+                  className="rounded-full bg-white px-3 py-1.5 font-bold text-brand-deep ring-1 ring-brand/20 transition hover:bg-brand hover:text-white"
                 >
                   {d.label}
                 </button>
