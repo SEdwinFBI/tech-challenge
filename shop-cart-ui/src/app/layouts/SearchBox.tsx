@@ -28,7 +28,7 @@ const SearchCombobox: React.FC<ComboboxProps> = ({ variant, onDone, onClose }) =
   const recent = useRecentSearches();
   const s = useSearchSuggestions(value, open);
   const ai = useSearchRecommendation({ q: s.term }, { enabled: s.enabled, debounceMs: 0 });
-  const recommendation = s.settled && ai.product && !s.items.some(p => p.IDProducto === ai.product!.IDProducto) ? ai.product : null;
+  const recommendation = s.settled && ai.product && !s.items.some(p => p.IDProducto === ai.product!.IDProducto) && (s.items.length === 0 || ai.confianza === 'alta') ? ai.product : null;
   const closest = Boolean(recommendation) && s.items.length === 0;
   const recommendationLoading = s.active && (!s.settled || ai.isFetching);
 
@@ -152,7 +152,7 @@ const SearchCombobox: React.FC<ComboboxProps> = ({ variant, onDone, onClose }) =
       recommendationLoading={recommendationLoading}
       noResults={noResults}
       closest={closest}
-      mediumConfidence={ai.confianza === 'media'}
+      mediumConfidence={ai.confianza !== 'alta'}
       hint={hint}
       onActivate={setActiveKey}
       onSelect={select}

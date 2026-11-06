@@ -85,7 +85,7 @@ export const SearchSuggestionsPanel: React.FC<Props> = ({
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold text-slate-800"><Highlight text={p.Nombre} query={query} /></span>
         <span className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
-          {o.kind === 'recommendation' && (
+          {o.kind === 'recommendation' && !closest && (
             <Badge size="sm" className="gap-1 !border-brand/20 !bg-brand-soft !text-brand">
               <Sparkles className="h-3 w-3" aria-hidden="true" />Sugerido
             </Badge>

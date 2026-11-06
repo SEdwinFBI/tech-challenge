@@ -17,7 +17,7 @@ export interface SearchRecommendationFilters extends RecommendationFilters {
 
 export interface SearchSuggestion {
   product: ProductListItem;
-  confianza: 'alta' | 'media';
+  confianza: 'alta' | 'media' | 'baja';
 }
 
 export const recommendationsApi = {
@@ -32,7 +32,7 @@ export const recommendationsApi = {
 
   search: async (filters: SearchRecommendationFilters, signal?: AbortSignal): Promise<SearchSuggestion | null> => {
     const q = filters.q.trim().slice(0, 150);
-    const res = await apiClient.get<{ item: ProductListItem | null; confianza?: 'alta' | 'media' }>('/recomendaciones/busqueda', { params: { ...filters, q }, signal });
+    const res = await apiClient.get<{ item: ProductListItem | null; confianza?: 'alta' | 'media' | 'baja' }>('/recomendaciones/busqueda', { params: { ...filters, q }, signal });
     return res.data.item ? { product: res.data.item, confianza: res.data.confianza ?? 'media' } : null;
   },
 };
