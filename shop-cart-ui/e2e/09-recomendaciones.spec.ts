@@ -1,0 +1,29 @@
+import { expect, test } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
+import { login, PASSWORD } from './helpers';
+
+test('top 10: registra vistas y se actualiza con favoritos y carrito', async ({ page, request }) => {
+  const correo = `rec-${randomUUID()}@test.invalid`;
+  const register = await request.post('/api/v1/auth/register', { data: { correo, password: PASSWORD, nombreCompleto: 'Prueba recomendaciones' } });
+  expect(register.status()).toBe(201);
+  await login(page, correo);
+  const view = page.waitForResponse(r => r.url().includes('/recomendaciones/vistas') && r.request().method() === 'POST');
+  await page.goto('/producto/2');
+  expect((await view).status()).toBe(204);
+  const rail = page.getByRole('region', { name: 'Tu top 10 recomendado' }).first();
+  await expect(rail).toBeVisible();
+  await expect(rail.locator('article')).toHaveCount(10);
+  const favoriteRefresh = page.waitForResponse(r => r.url().includes('/recomendaciones?') && r.request().method() === 'GET');
+  await page.getByRole('button', { name: 'Guardar en favoritos', exact: true }).first().click();
+  expect((await favoriteRefresh).status()).toBe(200);
+  const removeFavoriteRefresh = page.waitForResponse(r => r.url().includes('/recomendaciones?') && r.request().method() === 'GET');
+  await page.getByRole('button', { name: 'Quitar de favoritos', exact: true }).first().click();
+  expect((await removeFavoriteRefresh).status()).toBe(200);
+  const cartRefresh = page.waitForResponse(r => r.url().includes('/recomendaciones?') && r.request().method() === 'GET');
+  await page.getByRole('button', { name: /^Agregar al carrito/ }).first().click();
+  const added = await (await cartRefresh).json();
+  expect(added.items.every((p: { IDProducto: number }) => p.IDProducto !== 2)).toBeTruthy();
+  await page.goto('/carrito');
+  await expect(rail).toBeVisible();
+  await expect(rail.locator('article')).toHaveCount(10);
+});

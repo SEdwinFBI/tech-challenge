@@ -31,6 +31,10 @@ export async function clearCart(request: APIRequestContext, token: string) {
     const id = item.IDVariante ?? item.idVariante;
     await request.delete(`/api/v1/carrito/items/${id}`, { headers });
   }
+  if (body.resumen?.CodigoCuponAplicado) {
+    const removed = await request.delete('/api/v1/cupones/aplicar', { headers });
+    expect(removed.ok()).toBeTruthy();
+  }
 }
 
 export async function createCoupon(request: APIRequestContext, token: string, codigo: string, extra: Record<string, unknown> = {}) {
