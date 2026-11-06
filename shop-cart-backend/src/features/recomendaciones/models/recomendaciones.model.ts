@@ -23,7 +23,7 @@ export interface RecommendationResult {
 
 export interface SearchRecommendationResult {
   item: ProductDTO | null;
-  confianza?: 'alta' | 'media';
+  confianza?: 'alta' | 'media' | 'baja';
 }
 
 export type RecommendationPlacement = 'producto' | 'carrito' | 'inicio' | 'favoritos' | 'ofertas';

@@ -309,7 +309,7 @@ export const openApiSpec = {
       get: {
         tags: ['Recomendaciones'],
         summary: 'Producto sugerido por IA para la consulta',
-        description: 'SQL selecciona hasta 25 candidatos por palabras clave en nombre, descripcion y categoria, ampliados con su categoria o con el catalogo disponible, y Jev elige como maximo uno con puntuacion minima 1.2. Devuelve item: null sin candidatos, sin IA o ante fallos del proveedor; confianza es alta desde 1.7 y media en otro caso.',
+        description: 'SQL selecciona hasta 25 candidatos por palabras clave en nombre, descripcion y categoria, ampliados con su categoria o con el catalogo disponible, y Jev siempre elige el mas cercano. Devuelve item: null sin candidatos, sin IA o ante fallos del proveedor; confianza es alta desde 1.7, media desde 1.2 y baja en otro caso.',
         parameters: [
           { name: 'q', in: 'query', required: true, schema: { type: 'string', minLength: 2, maxLength: 150 } },
           { name: 'idCategoria', in: 'query', schema: { type: 'integer', minimum: 1 } },
@@ -317,7 +317,7 @@ export const openApiSpec = {
           { name: 'precioMax', in: 'query', schema: { type: 'number', minimum: 0 } },
           { name: 'soloOfertas', in: 'query', schema: { type: 'string', enum: ['true', 'false'] } },
         ],
-        responses: { 200: { description: 'item: producto o null; confianza: alta o media' }, 400: { description: 'Parametros invalidos' }, 429: { description: 'Limite de solicitudes' } },
+        responses: { 200: { description: 'item: producto o null; confianza: alta, media o baja' }, 400: { description: 'Parametros invalidos' }, 429: { description: 'Limite de solicitudes' } },
       },
     },
     '/catalogo/revision': {

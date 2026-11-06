@@ -38,7 +38,7 @@ export const RecommendationPolicy = {
     if (!scores) return { item: null };
     const best = [...candidates].sort((a, b) => (scores.get(b.IDProducto) ?? 0) - (scores.get(a.IDProducto) ?? 0))[0];
     const score = best ? scores.get(best.IDProducto) ?? 0 : 0;
-    if (!best || score < SEARCH_SUGGESTION_MIN) return { item: null };
-    return { item: best, confianza: score >= SEARCH_HIGH_CONFIDENCE ? 'alta' : 'media' };
+    if (!best || !scores.has(best.IDProducto)) return { item: null };
+    return { item: best, confianza: score >= SEARCH_HIGH_CONFIDENCE ? 'alta' : score >= SEARCH_SUGGESTION_MIN ? 'media' : 'baja' };
   },
 };
