@@ -11,9 +11,10 @@ export interface StickyBuyBarProps {
   loading: boolean;
   onAdd: () => void;
   offline?: boolean;
+  tabs: Array<{ id: string; label: string }>;
 }
 
-export const StickyBuyBar: React.FC<StickyBuyBarProps> = ({ visible, name, price, compareAt, disabled, loading, onAdd, offline }) => (
+export const StickyBuyBar: React.FC<StickyBuyBarProps> = ({ visible, name, price, compareAt, disabled, loading, onAdd, offline, tabs }) => (
   <div
     className={`fixed inset-x-0 bottom-14 z-30 px-3 transition duration-300 lg:bottom-4 ${
       visible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-6 opacity-0'
@@ -21,7 +22,14 @@ export const StickyBuyBar: React.FC<StickyBuyBarProps> = ({ visible, name, price
     aria-hidden={!visible}
   >
     <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 rounded-full bg-white/95 py-2 pl-5 pr-2 shadow-lift ring-1 ring-slate-200 backdrop-blur">
-      <p className="min-w-0 flex-1 truncate text-sm font-bold text-slate-800">{name}</p>
+      <nav className="hidden items-center gap-1 md:flex" aria-label="Secciones del producto">
+        {tabs.map(t => (
+          <a key={t.id} href={`#${t.id}`} tabIndex={visible ? 0 : -1} className="rounded-full px-3 py-1.5 text-sm font-bold text-slate-600 hover:bg-slate-100">
+            {t.label}
+          </a>
+        ))}
+      </nav>
+      <p className="min-w-0 flex-1 truncate text-sm font-bold text-slate-800 md:hidden">{name}</p>
       <div className="flex items-center gap-3">
         <PriceTag amount={price} compareAt={compareAt} tone={compareAt ? 'sale' : 'default'} size="md" />
         <button

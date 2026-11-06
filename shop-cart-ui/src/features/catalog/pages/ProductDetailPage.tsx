@@ -168,6 +168,7 @@ export const ProductDetailPage: React.FC = () => {
   ];
 
   return (
+    <>
     <div className="animate-fade-up">
       <nav aria-label="Ruta de navegación" className="mb-4 flex flex-wrap items-center gap-1 text-xs font-medium text-slate-500">
         <Link to="/" className="hover:text-brand">Inicio</Link>
@@ -313,17 +314,8 @@ export const ProductDetailPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="mt-10">
-        <nav aria-label="Secciones del producto" className="sticky top-[var(--header-h,7rem)] z-30 -mx-4 flex gap-1 overflow-x-auto border-b border-slate-200 bg-white px-4 sm:-mx-6 sm:px-6">
-          {TABS.map(t => (
-            <a key={t.id} href={`#${t.id}`} className="shrink-0 border-b-2 border-transparent px-4 py-3 text-sm font-bold text-slate-600 hover:border-brand hover:text-brand">
-              {t.label}
-            </a>
-          ))}
-        </nav>
-
-        <div className="space-y-12 pt-10">
-        <section id="descripcion" className="scroll-mt-[calc(var(--header-h,7rem)+4rem)]">
+      <div className="mt-14 space-y-12">
+        <section id="descripcion" className="scroll-mt-28">
           <SectionHeader title="Descripción" />
           <div className="max-w-3xl space-y-3 text-sm leading-7 text-slate-700">
             {(producto.Descripcion || 'Sin descripción.')
@@ -332,7 +324,7 @@ export const ProductDetailPage: React.FC = () => {
           </div>
         </section>
 
-        <section id="especificaciones" className="scroll-mt-[calc(var(--header-h,7rem)+4rem)]">
+        <section id="especificaciones" className="scroll-mt-28">
           <SectionHeader title="Especificaciones" />
           <dl className="grid max-w-3xl overflow-hidden rounded-2xl border border-slate-200 text-sm sm:grid-cols-2">
             {specRows.map(([k, v], i) => (
@@ -344,7 +336,7 @@ export const ProductDetailPage: React.FC = () => {
           </dl>
         </section>
 
-        <section id="envio" className="scroll-mt-[calc(var(--header-h,7rem)+4rem)]">
+        <section id="envio" className="scroll-mt-28">
           <SectionHeader title="Compra y envío" />
           <div className="grid max-w-3xl gap-4 sm:grid-cols-2">
             <div className="rounded-2xl bg-canvas p-5">
@@ -360,10 +352,6 @@ export const ProductDetailPage: React.FC = () => {
             </div>
           </div>
         </section>
-        </div>
-      </div>
-
-      <div className="mt-14 space-y-12">
 
         <ProductRail
           title="Te puede interesar"
@@ -387,17 +375,19 @@ export const ProductDetailPage: React.FC = () => {
           </section>
         )}
       </div>
-
-      <StickyBuyBar
-        visible={!ctaVisible}
-        name={producto.Nombre}
-        price={Number(variant.Precio)}
-        compareAt={variant.PrecioReferencia}
-        disabled={soldOut || noMore}
-        loading={isUpserting}
-        onAdd={handleAdd}
-        offline={!online}
-      />
     </div>
+
+    <StickyBuyBar
+      visible={!ctaVisible}
+      name={producto.Nombre}
+      price={Number(variant.Precio)}
+      compareAt={variant.PrecioReferencia}
+      disabled={soldOut || noMore}
+      loading={isUpserting}
+      onAdd={handleAdd}
+      offline={!online}
+      tabs={TABS}
+    />
+    </>
   );
 };
