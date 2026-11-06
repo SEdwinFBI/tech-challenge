@@ -5,6 +5,7 @@ import { Edit3, Plus, Star } from 'lucide-react';
 import { catalogApi, type GetProductsParams } from '../api/catalogApi';
 import { useCategories } from '../hooks/useCatalog';
 import { ProductEditorDrawer, EDIT_DRAFT } from '../components/ProductEditorDrawer';
+import { CatalogReviewPanel } from '../components/CatalogReviewPanel';
 import { formatMoney } from '@/shared/lib/formatters';
 import { useSort } from '@/shared/hooks/useSort';
 import { useColumnFilters } from '@/shared/hooks/useColumnFilters';
@@ -347,6 +348,7 @@ export const AdminCatalogPage: React.FC = () => {
             options={categories.filter(c => c.Activo).map(c => ({ value: c.IDCategoria, label: c.Nombre }))}
           />
           <Input label="Descripción" value={np.descripcion} onChange={e => setNp(s => ({ ...s, descripcion: e.target.value }))}  />
+          <CatalogReviewPanel nombre={np.nombre} descripcion={np.descripcion} onCategory={idCategoria => setNp(s => ({ ...s, idCategoria }))} />
           <Input label="URL de la imagen principal" value={np.imagenUrl} onChange={e => setNp(s => ({ ...s, imagenUrl: e.target.value }))} placeholder="https://…" />
           <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Variante inicial</p>

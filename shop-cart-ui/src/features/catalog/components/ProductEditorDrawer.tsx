@@ -12,6 +12,7 @@ import { readDraft, saveDraft, clearDraft } from '@/shared/lib/draft';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { ImageUploadField } from './ImageUploadField';
+import { CatalogReviewPanel } from './CatalogReviewPanel';
 
 type Tab = 'datos' | 'imagenes' | 'variantes';
 const MAX_IMAGES = 10;
@@ -281,6 +282,7 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
                 <Switch label="Destacado" checked={destacado} onChange={setDestacado} />
               </div>
               <Input label="Nombre" value={nombre} onChange={e => setNombre(e.target.value)} />
+              <CatalogReviewPanel nombre={nombre} descripcion={descripcion} idProducto={producto.IDProducto} onCategory={setIdCategoria} />
               <Select
                 label="Categoría"
                 value={idCategoria}
