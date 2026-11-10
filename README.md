@@ -52,9 +52,9 @@ npm ci
 
 Crear `.env` a partir de [`.env.example`](shop-cart-backend/.env.example).
 
-Completar las credenciales de SQL Server y los secretos de JWT antes de iniciar la aplicación.
+Completar las credenciales de SQL Server, los secretos de JWT y `CORS_ALLOW_ORIGIN` antes de iniciar la aplicación; no tienen valor por defecto.
 
-Para SQL Server con Docker, crear el `.env` de la raíz a partir de [`.env.example`](.env.example). `MSSQL_SA_PASSWORD` debe tener el mismo valor que `DB_PASSWORD` del `.env` del backend. `docker compose up -d mssql-server` levanta solo SQL Server.
+Para SQL Server con Docker, crear el `.env` de la raíz a partir de [`.env.example`](.env.example). `MSSQL_SA_PASSWORD` debe tener el mismo valor que `DB_PASSWORD` del `.env` del backend, con `DB_USER=sa`. `docker compose up -d mssql-server` levanta solo SQL Server.
 
 | Variable | Uso |
 | --- | --- |
@@ -82,6 +82,7 @@ Para SQL Server con Docker, crear el `.env` de la raíz a partir de [`.env.examp
 | `JEV_URL` | URL del servicio de IA; opcional; sin clave se usa el orden local. |
 | `INSTANCE_ID` | Nombre de la instancia que se devuelve en el encabezado `X-Instancia`; por defecto, el hostname. |
 | `GRAFANA_ADMIN_PASSWORD` | Contraseña del administrador de Grafana; va en el `.env` de la raíz, junto a `MSSQL_SA_PASSWORD`. |
+| `GRAFANA_ANONYMOUS_ENABLED` | `true` para abrir el dashboard de Grafana sin iniciar sesión, solo lectura; por defecto, `false`. |
 | `GRAFANA_ROOT_URL`, `GRAFANA_SERVE_FROM_SUB_PATH` | URL pública de Grafana y si se sirve bajo una subruta. Local: `http://localhost:3002/` y `false`; detrás del Nginx del servidor: `https://shop-cart.code-qx.click/grafana/` y `true`. |
 | `TRUST_PROXY` | Número de proxies delante de la API `1` con Nginx del compose, `2` si  hay un Nginx con certificado en el servidor, para que el límite de intentos use la IP del cliente; opcional. |
 
@@ -93,7 +94,7 @@ Con SQL Server disponible y `.env` configurado, ejecutar desde `shop-cart-backen
 npm run db:setup
 ```
 
-El inicializador crea la base indicada en `DB_NAME` si no existe, crea las tablas cuando la base no tiene tablas de usuario y aplica funciones, vistas, procedimientos, datos de ejemplo. El usuario de conexión necesita permisos para estas operaciones.
+El inicializador crea la base indicada en `DB_NAME` si no existe, crea las tablas cuando la base no tiene tablas de usuario y aplica funciones, vistas, procedimientos, datos de ejemplo. El usuario de conexión necesita permisos para estas operaciones. Volver a ejecutarlo reinicia la contraseña de las cuentas de demostración.
 
 Los archivos SQL están en [`scrips/`](shop-cart-backend/scrips/), numerados según su orden de ejecución:
 
@@ -123,7 +124,7 @@ La API queda disponible en `http://localhost:3000/api/v1`. El puerto depende de 
 
 El `docker-compose.yml` también levanta Redis, dos réplicas de la API y Nginx con la interfaz. Estos servicios, junto con SQL Server local, están en el perfil `app`; `docker compose up -d mssql-server` sigue levantando solo la base de datos para desarrollo con `npm run dev`.
 
-Lee las variables del `.env` de la raíz. Compose cambia `DB_HOST`, `REDIS_URL` y `CORS_ALLOW_ORIGIN` para la red interna.
+Lee las variables del `.env` de la raíz. Compose cambia `DB_HOST`, `REDIS_URL` y `CORS_ALLOW_ORIGIN` para la red interna. El `.env` debe tener `DB_USER`, `DB_PASSWORD` (igual a `MSSQL_SA_PASSWORD`), `DB_NAME`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `MSSQL_SA_PASSWORD` y `GRAFANA_ADMIN_PASSWORD`. El servicio `db-init` ejecuta `db:setup` solo, así que no hace falta correrlo a mano.
 
 ```sh
 docker compose --profile app up -d --build
@@ -138,12 +139,12 @@ Puertos del host: 8080 web, 1433 SQL Server, 9090 Prometheus y 3002 Grafana. `GR
 
 El perfil `prod` no levanta SQL Server: usa una base en Azure SQL y las imágenes publicadas.
 
-1. En el servidor, el `.env` de la raíz lleva los valores de producción: `NODE_ENV=production`, `DB_HOST=<servidor>.database.windows.net`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` y `DB_ENCRYPT=true`. El archivo no se sube a git.
+1. En el servidor, el `.env` de la raíz lleva los valores de producción: `NODE_ENV=production`, `DB_HOST=<servidor>.database.windows.net`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_ENCRYPT=true`, `JWT_ACCESS_SECRET` y `JWT_REFRESH_SECRET`. Sin los secretos de JWT las APIs no arrancan. El archivo no se sube a git.
 2. Permitir en el firewall de Azure SQL la IP del servidor.
-3. En el `.env` de la raíz definir `CORS_ALLOW_ORIGIN=https://shop-cart.code-qx.click` y `GRAFANA_ADMIN_PASSWORD`.
-4. `docker compose --profile prod up -d`.
+3. En el `.env` de la raíz definir `CORS_ALLOW_ORIGIN=https://shop-cart.code-qx.click`, `GRAFANA_ADMIN_PASSWORD` y `GRAFANA_ANONYMOUS_ENABLED=true` para que el dashboard de Grafana se abra sin iniciar sesión.
+4. `docker compose --profile prod up -d`. En el servidor se usa Podman: `sudo podman-compose --profile prod up -d`.
 
-la aplicación queda en `http://IP:8080`. Con certificado, poner `WEB_BIND=127.0.0.1` y `TRUST_PROXY=2` en el `.env` para que `web` solo escuche en local. El certificado va en el Nginx del servidor, que hace `proxy_pass http://127.0.0.1:8080` con `proxy_buffering off` y `proxy_read_timeout 1h` para el SSE del dashboard.
+la aplicación queda en `http://IP:8080`. Con certificado, poner `WEB_BIND=127.0.0.1` y `TRUST_PROXY=2` en el `.env` para que `web` solo escuche en local. Después de cambiarlos hay que volver a ejecutar el comando del paso 4. El certificado va en el Nginx del servidor, que hace `proxy_pass http://127.0.0.1:8080` con `proxy_buffering off` y `proxy_read_timeout 1h` para el SSE del dashboard.
 
 ### Nginx del servidor
 
@@ -202,7 +203,7 @@ Para que Grafana funcione en `/grafana/`, el `.env` del servidor necesita `GRAFA
 
 Con `docker compose --profile app up -d --build` también arrancan Prometheus y Grafana.
 
-- Grafana: `http://localhost:3002`, dashboard "ShopCart" con acceso anónimo de solo lectura. El usuario `admin` usa `GRAFANA_ADMIN_PASSWORD`. En el servidor el dashboard es de solo lectura y se abre sin iniciar sesión: `https://shop-cart.code-qx.click/grafana/d/shopcart/shopcart`.
+- Grafana: `http://localhost:3002`, dashboard "ShopCart" con acceso anónimo de solo lectura si `GRAFANA_ANONYMOUS_ENABLED=true` (por defecto es `false`). El usuario `admin` usa `GRAFANA_ADMIN_PASSWORD`. En el servidor el dashboard es de solo lectura y se abre sin iniciar sesión: `https://shop-cart.code-qx.click/grafana/d/shopcart/shopcart`.
 - Prometheus: `http://localhost:9090`. Lee `/metrics` de `api-1` y `api-2` cada 15 segundos.
 - `/metrics` no se publica por Nginx; solo se llega desde la red de Docker.
 
@@ -434,6 +435,7 @@ Para preparar ese entorno, hay que  configurar `DB_NAME` con otra base de datos 
 $env:RUN_AUDIT_INTEGRATION = '1'
 $env:AUDIT_DB_NAME = 'ShopCartAudit_local'
 $env:AUDIT_API_URL = 'http://localhost:3107/api/v1'
+$env:AUDIT_PASSWORD = 'Admin123!'
 npm run test:integration
 npm run test:concurrency:http
 ```
@@ -444,7 +446,7 @@ npm run test:concurrency:http
 
 ### Rendimiento
 
-`npm run test:rendimiento` mide cada listado 20 veces, después de 3 de calentamiento, contra la API de pruebas. Resultado con los datos de ejemplo, en mi laptop con procesador i7-1165G7 con 16 GB:
+`npm run test:rendimiento` mide cada listado 20 veces, después de 3 de calentamiento, contra la API de pruebas, con `AUDIT_API_URL` y `AUDIT_PASSWORD` definidos (`PERF_RUNS`, `PERF_WARMUPS` y `PERF_OUT` son opcionales). Resultado con los datos de ejemplo, en mi laptop con procesador i7-1165G7 con 16 GB:
 
 | Endpoint | p50 (ms) | p95 (ms) |
 | --- | --- | --- |
