@@ -78,6 +78,14 @@ function attachListeners(): void {
   });
 }
 
+const UNAUTHENTICATED_STATE = { user: null, status: 'unauthenticated', reconnecting: false } as const;
+
+function clearLocalSessionData(): void {
+  stopRetries();
+  recordarSesion(false);
+  clearAllDrafts();
+}
+
 function sessionExpired(): void {
   stopRetries();
   const teniaSesion = useAuthStore.getState().status === 'authenticated' || haySesionGuardada();
@@ -149,17 +157,18 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   endLocalSession: () => {
-    stopRetries();
-    recordarSesion(false);
-    clearAllDrafts();
-    set({ user: null, status: 'unauthenticated', reconnecting: false });
+    clearLocalSessionData();
+    set(UNAUTHENTICATED_STATE);
   },
 
   logout: async () => {
+    clearLocalSessionData();
     try {
       await authApi.logout();
+    } catch {
+      /* el estado local ya se cierra en finally aunque el servidor no responda */
     } finally {
-      get().endLocalSession();
+      set(UNAUTHENTICATED_STATE);
     }
   },
 }));

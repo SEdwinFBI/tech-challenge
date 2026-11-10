@@ -61,6 +61,8 @@ export function refreshSession(): Promise<RefreshResult> {
   return refreshPromise;
 }
 
+type RetriableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
+
 function handleRefreshFailure(err: unknown): void {
   if (isAuthUncertain(err)) {
     onUncertainCallback?.();
@@ -81,6 +83,7 @@ apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) =>
       await refreshSession();
     } catch (err) {
       handleRefreshFailure(err);
+      if (!isAuthUncertain(err)) (config as RetriableConfig)._retry = true;
     }
   }
   if (inMemoryAccessToken) {
@@ -96,7 +99,7 @@ apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) =>
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as RetriableConfig;
 
     // Sin reintento para refresh ni login
     if (

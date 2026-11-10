@@ -11,6 +11,8 @@ export interface AuthResponse {
 
 export type UserSortColumn = 'fecha' | 'nombre' | 'correo' | 'rol';
 
+const SESSION_REQUEST_TIMEOUT_MS = 10_000;
+
 export const authApi = {
   login: async (correo: string, password: string): Promise<AuthResponse> => {
     const res = await apiClient.post<AuthResponse>('/auth/login', { correo, password });
@@ -32,7 +34,7 @@ export const authApi = {
 
   logout: async (): Promise<void> => {
     try {
-      await apiClient.post('/auth/logout');
+      await apiClient.post('/auth/logout', undefined, { timeout: SESSION_REQUEST_TIMEOUT_MS });
     } finally {
       setAccessToken(null);
     }
@@ -95,10 +97,6 @@ export const authApi = {
 
   /** Revoca todas las sesiones; hay que volver a entrar. */
   changePassword: async (passwordActual: string, passwordNueva: string): Promise<void> => {
-    try {
-      await apiClient.post('/auth/me/password', { passwordActual, passwordNueva });
-    } finally {
-      // No limpia nada: quien llama decide cuándo cerrar la sesión
-    }
+    await apiClient.post('/auth/me/password', { passwordActual, passwordNueva }, { timeout: SESSION_REQUEST_TIMEOUT_MS });
   },
 };
