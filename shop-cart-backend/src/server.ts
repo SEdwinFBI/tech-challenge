@@ -7,15 +7,13 @@ import { duplicarRedis } from '@/core/config/redis';
 import { suscribirEventos } from '@/core/events/redis-event-publisher';
 import { docsRouter } from '@/core/http/docs.routes';
 import { healthRouter } from '@/core/http/health.routes';
-import { iniciarTareasProgramadas } from '@/core/jobs/scheduler';
 import { globalErrorHandler } from '@/core/middlewares/error.middleware';
 import { instanceHeader } from '@/core/middlewares/instance-header.middleware';
 import { requestId } from '@/core/middlewares/request-id.middleware';
 import { medirHttp } from '@/core/observability/metrics';
 import { metricsRouter } from '@/core/observability/metrics.routes';
 import apiRouter from '@/features';
-import { ReconcilePaymentsCommandHandler } from '@/features/checkout/commands/reconcile-payments.command';
-import { PurgeViewsCommandHandler } from '@/features/recomendaciones/commands/purge-views.command';
+import { registrarTareasProgramadas } from '@/jobs/tareas-programadas';
 
 const app = express();
 
@@ -36,12 +34,7 @@ app.use(docsRouter);
 app.use('/api/v1', apiRouter);
 app.use(globalErrorHandler);
 
-const purgeViews = new PurgeViewsCommandHandler();
-const reconcilePayments = new ReconcilePaymentsCommandHandler();
-iniciarTareasProgramadas({
-  purgarVistas: () => purgeViews.handle(),
-  conciliarPagos: () => reconcilePayments.handle(),
-});
+registrarTareasProgramadas();
 
 const suscriptor = duplicarRedis();
 if (suscriptor) suscribirEventos(suscriptor);
