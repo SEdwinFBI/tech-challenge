@@ -155,7 +155,7 @@ services:
     image: ${DB_INIT_IMAGE:-edwinbaquiax/shop-cart-setup:latest}
     pull_policy: always
     env_file:
-      - ./.env.prod
+      - ./.env
 
   api-1-prod:
     <<: *api
@@ -163,7 +163,7 @@ services:
     image: ${API_IMAGE:-edwinbaquiax/shop-cart-api:latest}
     pull_policy: always
     env_file:
-      - ./.env.prod
+      - ./.env
     environment:
       <<: *api-env
       TRUST_PROXY: "${TRUST_PROXY:-1}"
@@ -185,7 +185,7 @@ services:
     image: ${API_IMAGE:-edwinbaquiax/shop-cart-api:latest}
     pull_policy: always
     env_file:
-      - ./.env.prod
+      - ./.env
     environment:
       <<: *api-env
       TRUST_PROXY: "${TRUST_PROXY:-1}"

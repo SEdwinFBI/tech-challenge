@@ -136,7 +136,7 @@ Puertos del host: 8080 web, 1433 SQL Server, 9090 Prometheus y 3002 Grafana. `GR
 
 El perfil `prod` no levanta SQL Server: usa una base en Azure SQL y las imágenes publicadas.
 
-1. Crear `.env.prod` en la raíz copiando las variables del `.env`, con `DB_HOST=<servidor>.database.windows.net`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` y `DB_ENCRYPT=true`. El archivo no se sube a git.
+1. En el servidor, el `.env` de la raíz lleva los valores de producción: `NODE_ENV=production`, `DB_HOST=<servidor>.database.windows.net`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` y `DB_ENCRYPT=true`. El archivo no se sube a git.
 2. Permitir en el firewall de Azure SQL la IP del servidor.
 3. En el `.env` de la raíz definir `CORS_ALLOW_ORIGIN=https://shop-cart.code-qx.click` y `GRAFANA_ADMIN_PASSWORD`.
 4. `docker compose --profile prod up -d`.
