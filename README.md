@@ -80,6 +80,7 @@ Para SQL Server con Docker, crear el `.env` de la raíz a partir de [`.env.examp
 | `JEV_URL` | URL del servicio de IA; opcional; sin clave se usa el orden local. |
 | `INSTANCE_ID` | Nombre de la instancia que se devuelve en el encabezado `X-Instancia`; por defecto, el hostname. |
 | `GRAFANA_ADMIN_PASSWORD` | Contraseña del administrador de Grafana; va en el `.env` de la raíz, junto a `MSSQL_SA_PASSWORD`. |
+| `GRAFANA_ROOT_URL`, `GRAFANA_SERVE_FROM_SUB_PATH` | URL pública de Grafana y si se sirve bajo una subruta. Local: `http://localhost:3002/` y `false`; detrás del Nginx del servidor: `https://shop-cart.code-qx.click/grafana/` y `true`. |
 | `TRUST_PROXY` | Número de proxies delante de la API `1` con Nginx del compose, `2` si  hay un Nginx con certificado en el servidor, para que el límite de intentos use la IP del cliente; opcional. |
 
 ### Base de datos
@@ -137,16 +138,65 @@ El perfil `prod` no levanta SQL Server: usa una base en Azure SQL y las imágene
 
 1. Crear `.env.prod` en la raíz copiando las variables del `.env`, con `DB_HOST=<servidor>.database.windows.net`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` y `DB_ENCRYPT=true`. El archivo no se sube a git.
 2. Permitir en el firewall de Azure SQL la IP del servidor.
-3. En el `.env` de la raíz definir `CORS_ALLOW_ORIGIN=https://tu-dominio` y `GRAFANA_ADMIN_PASSWORD`.
+3. En el `.env` de la raíz definir `CORS_ALLOW_ORIGIN=https://shop-cart.code-qx.click` y `GRAFANA_ADMIN_PASSWORD`.
 4. `docker compose --profile prod up -d`.
 
 la aplicación queda en `http://IP:8080`. Con certificado, poner `WEB_BIND=127.0.0.1` y `TRUST_PROXY=2` en el `.env` para que `web` solo escuche en local. El certificado va en el Nginx del servidor, que hace `proxy_pass http://127.0.0.1:8080` con `proxy_buffering off` y `proxy_read_timeout 1h` para el SSE del dashboard.
+
+### Nginx del servidor
+
+Archivo `/etc/nginx/conf.d/shop-cart.conf`. Después de crearlo, `sudo certbot --nginx -d shop-cart.code-qx.click` agrega el bloque 443, el certificado y la redirección de HTTP a HTTPS.
+
+```nginx
+server {
+    server_name shop-cart.code-qx.click;
+    listen 80;
+    listen [::]:80;
+
+    client_max_body_size 5m;
+
+    location /grafana/ {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection '';
+    }
+
+    location = /api/v1/dashboard/stream {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection '';
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 1h;
+    }
+}
+```
+
+Para que Grafana funcione en `/grafana/`, el `.env` del servidor necesita `GRAFANA_ROOT_URL=https://shop-cart.code-qx.click/grafana/` y `GRAFANA_SERVE_FROM_SUB_PATH=true`. Después, `sudo nginx -t && sudo systemctl reload nginx` y recrear Grafana con `sudo podman-compose --profile prod up -d --force-recreate grafana`.
 
 ### Observabilidad
 
 Con `docker compose --profile app up -d --build` también arrancan Prometheus y Grafana.
 
-- Grafana: `http://localhost:3002`, dashboard "ShopCart" con acceso anónimo de solo lectura. El usuario `admin` usa `GRAFANA_ADMIN_PASSWORD`.
+- Grafana: `http://localhost:3002`, dashboard "ShopCart" con acceso anónimo de solo lectura. El usuario `admin` usa `GRAFANA_ADMIN_PASSWORD`. En el servidor se entra por `https://shop-cart.code-qx.click/grafana/`.
 - Prometheus: `http://localhost:9090`. Lee `/metrics` de `api-1` y `api-2` cada 15 segundos.
 - `/metrics` no se publica por Nginx; solo se llega desde la red de Docker.
 
