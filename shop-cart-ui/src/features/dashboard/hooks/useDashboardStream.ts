@@ -5,11 +5,15 @@ import { apiClient } from '@/shared/lib/apiClient';
 export function useDashboardStream(onEvent: () => void): boolean {
   const [connected, setConnected] = useState(false);
   const handler = useRef(onEvent);
-  handler.current = onEvent;
+
+  useEffect(() => {
+    handler.current = onEvent;
+  }, [onEvent]);
 
   useEffect(() => {
     let source: EventSource | null = null;
     let stopped = false;
+    let hasConnectedBefore = false;
     let retry: ReturnType<typeof setTimeout> | undefined;
 
     const connect = async () => {
@@ -26,7 +30,11 @@ export function useDashboardStream(onEvent: () => void): boolean {
         return;
       }
       source = new EventSource(`/api/v1/dashboard/stream?ticket=${encodeURIComponent(ticket)}`);
-      source.onopen = () => setConnected(true);
+      source.onopen = () => {
+        setConnected(true);
+        if (hasConnectedBefore) handler.current();
+        hasConnectedBefore = true;
+      };
       source.onmessage = () => handler.current();
       source.onerror = () => {
         setConnected(false);

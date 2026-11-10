@@ -1,10 +1,19 @@
 import { apiClient } from '@/shared/lib/apiClient';
 
+export type Periodo = 'HOY' | 'SEMANA' | 'MES' | 'ANIO';
+
 export interface DashboardKPIs {
-  TotalPedidosCompletados: number;
-  VentasNetasQuetzales: number;
-  TicketPromedioQuetzales: number;
-  CarritosAbandonadosActuales: number;
+  TotalPedidosCompletados?: number;
+  VentasNetasQuetzales?: number;
+  TicketPromedioQuetzales?: number;
+  CarritosAbandonadosActuales?: number;
+  PedidosPorEntregar?: number;
+  ClientesNuevos?: number;
+  VariantesExistenciasBajas?: number;
+  PedidosConCupon?: number;
+  DescuentoCuponesQuetzales?: number;
+  DevolucionesCantidad?: number;
+  DevolucionesMontoQuetzales?: number;
 }
 
 export interface TopProduct {
@@ -30,18 +39,32 @@ export interface TimeSeriesPoint {
   VentasQuetzales: number;
 }
 
+export interface OrderStateCount {
+  Estado: string;
+  TotalPedidos: number;
+  MontoQuetzales: number;
+}
+
+export interface PaymentStateCount {
+  Estado: string;
+  TotalIntentos: number;
+  MontoQuetzales: number;
+}
+
 export interface DashboardSummaryResponse {
   generadoEn?: string;
   ok: boolean;
-  desdeCache: boolean;
-  kpis: DashboardKPIs;
-  top10Productos: TopProduct[];
-  ventasPorCategoria: CategorySales[];
-  serieTemporal: TimeSeriesPoint[];
+  desdeCache?: boolean;
+  kpis?: DashboardKPIs | null;
+  top10Productos?: TopProduct[];
+  ventasPorCategoria?: CategorySales[];
+  pedidosPorEstado?: OrderStateCount[];
+  pagosPorEstado?: PaymentStateCount[];
+  serieTemporal?: TimeSeriesPoint[];
 }
 
 export const dashboardApi = {
-  getSummary: async (params?: { periodo?: 'HOY' | 'SEMANA' | 'MES' | 'ANIO'; fechaInicio?: string; fechaFin?: string }): Promise<DashboardSummaryResponse> => {
+  getSummary: async (params?: { periodo?: Periodo; fechaInicio?: string; fechaFin?: string }): Promise<DashboardSummaryResponse> => {
     const res = await apiClient.get<DashboardSummaryResponse>('/dashboard/resumen', { params });
     return res.data;
   },
