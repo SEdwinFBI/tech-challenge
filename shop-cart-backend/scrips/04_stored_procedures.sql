@@ -2856,7 +2856,7 @@ BEGIN
     SELECT 
         CASE 
             WHEN @Agrupacion = 'DIA' THEN CONVERT(VARCHAR(10), p.FechaCreacion, 23)
-            WHEN @Agrupacion = 'SEMANA' THEN CONCAT(YEAR(p.FechaCreacion), '-W', RIGHT('0' + CAST(DATEPART(ISO_WEEK, p.FechaCreacion) AS VARCHAR(2)), 2))
+            WHEN @Agrupacion = 'SEMANA' THEN CONCAT(YEAR(DATEADD(DAY, 26 - DATEPART(ISO_WEEK, p.FechaCreacion), p.FechaCreacion)), '-W', RIGHT('0' + CAST(DATEPART(ISO_WEEK, p.FechaCreacion) AS VARCHAR(2)), 2))
             ELSE FORMAT(p.FechaCreacion, 'yyyy-MM')
         END AS Periodo,
         COUNT(p.IDPedido) AS NumeroPedidos,
@@ -2868,7 +2868,7 @@ BEGIN
     GROUP BY
         CASE
             WHEN @Agrupacion = 'DIA' THEN CONVERT(VARCHAR(10), p.FechaCreacion, 23)
-            WHEN @Agrupacion = 'SEMANA' THEN CONCAT(YEAR(p.FechaCreacion), '-W', RIGHT('0' + CAST(DATEPART(ISO_WEEK, p.FechaCreacion) AS VARCHAR(2)), 2))
+            WHEN @Agrupacion = 'SEMANA' THEN CONCAT(YEAR(DATEADD(DAY, 26 - DATEPART(ISO_WEEK, p.FechaCreacion), p.FechaCreacion)), '-W', RIGHT('0' + CAST(DATEPART(ISO_WEEK, p.FechaCreacion) AS VARCHAR(2)), 2))
             ELSE FORMAT(p.FechaCreacion, 'yyyy-MM')
         END
     ORDER BY Periodo ASC;
