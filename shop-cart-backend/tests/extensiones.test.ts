@@ -122,14 +122,14 @@ describe('Periodos del dashboard', () => {
     const entries = new Map<string, unknown>();
     const cache: ICache = {
       get: async <T>(key: string) => (entries.get(key) as T | undefined) ?? null,
-      set: async (key, data, ttl) => { assert.equal(ttl, 180); entries.set(key, data); },
+      set: async (key, data, ttl) => { assert.equal(ttl, 60); entries.set(key, data); },
       clear: async () => { entries.clear(); },
     };
     let reads = 0;
     const repo = {
       getMetricsSummary: async () => {
         reads++;
-        return { kpis: {}, top10Productos: [], ventasPorCategoria: [] };
+        return { kpis: {}, top10Productos: [], ventasPorCategoria: [], pedidosPorEstado: [], pagosPorEstado: [] };
       },
       getSalesByPeriod: async () => [],
     } as unknown as IDashboardRepository;
@@ -175,14 +175,42 @@ describe('Periodos del dashboard', () => {
     assert.equal(resolveDashboardRange({}, now).fechaInicio.getTime(), now.getTime() - 30 * 86400 * 1000);
   });
 
-  it('trunca al minuto el fin implícito y comparte rango entre llamadas cercanas', () => {
-    const a = resolveDashboardRange({ periodo: 'HOY' }, new Date('2026-11-04T15:30:05.123Z'));
+  it('usa el instante exacto como fin implícito, sin truncar al minuto', () => {
+    const instante = new Date('2026-11-04T15:30:05.123Z');
+    const a = resolveDashboardRange({ periodo: 'HOY' }, instante);
     const b = resolveDashboardRange({ periodo: 'HOY' }, new Date('2026-11-04T15:30:15.987Z'));
-    assert.equal(a.fechaFin.toISOString(), '2026-11-04T15:30:00.000Z');
-    assert.equal(a.fechaFin.getTime(), b.fechaFin.getTime());
+    assert.equal(a.fechaFin.toISOString(), '2026-11-04T15:30:05.123Z');
+    assert.equal(b.fechaFin.toISOString(), '2026-11-04T15:30:15.987Z');
     assert.equal(a.fechaInicio.getTime(), b.fechaInicio.getTime());
+    assert.notEqual(a.fechaFin, instante);
     const sinPeriodo = resolveDashboardRange({}, new Date('2026-11-04T15:30:59.999Z'));
+    assert.equal(sinPeriodo.fechaFin.toISOString(), '2026-11-04T15:30:59.999Z');
     assert.equal(sinPeriodo.fechaInicio.getTime(), sinPeriodo.fechaFin.getTime() - 30 * 86400 * 1000);
+  });
+
+  it('incluye pedidos y pagos por estado en el resumen y las hojas nuevas en el Excel', async () => {
+    const pedidosPorEstado = [{ Estado: 'PAGADO', TotalPedidos: 2, MontoQuetzales: 250.5 }];
+    const pagosPorEstado = [{ Estado: 'RECHAZADO', TotalIntentos: 1, MontoQuetzales: 80 }];
+    const repo: IDashboardRepository = {
+      getMetricsSummary: async () => ({
+        kpis: { PedidosPorEntregar: 2, DescuentoCuponesQuetzales: 15.25 },
+        top10Productos: [],
+        ventasPorCategoria: [],
+        pedidosPorEstado,
+        pagosPorEstado,
+      }),
+      getSalesByPeriod: async () => [],
+    };
+    const cache: ICache = { get: async () => null, set: async () => undefined, clear: async () => undefined };
+    const resumen = await new GetDashboardSummaryQueryHandler(repo, cache).handle({ periodo: 'HOY' });
+    assert.deepEqual(resumen.pedidosPorEstado, pedidosPorEstado);
+    assert.deepEqual(resumen.pagosPorEstado, pagosPorEstado);
+    assert.equal(resumen.kpis?.PedidosPorEntregar, 2);
+
+    const wb = await new ExportDashboardExcelQueryHandler(repo).handle({ periodo: 'HOY' });
+    assert.equal(wb.getWorksheet('Pedidos por Estado')?.getRow(2).getCell(1).value, 'PAGADO');
+    assert.equal(wb.getWorksheet('Pagos por Estado')?.getRow(2).getCell(2).value, 1);
+    assert.equal(wb.getWorksheet('Indicadores')?.getRow(6).getCell(2).value, 2);
   });
 
   it('no altera fechas explícitas', () => {
@@ -207,7 +235,7 @@ describe('Periodos del dashboard', () => {
     const repo = {
       getMetricsSummary: async (start: Date, end: Date) => {
         ranges.push([start.toISOString(), end.toISOString()]);
-        return { kpis: {}, top10Productos: [], ventasPorCategoria: [] };
+        return { kpis: {}, top10Productos: [], ventasPorCategoria: [], pedidosPorEstado: [], pagosPorEstado: [] };
       },
       getSalesByPeriod: async (_group: string, start: Date, end: Date) => {
         ranges.push([start.toISOString(), end.toISOString()]);

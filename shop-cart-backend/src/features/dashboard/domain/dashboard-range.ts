@@ -7,7 +7,7 @@ export function resolveDashboardRange(
   query: Pick<GetDashboardSummaryQuery, 'periodo' | 'fechaInicio' | 'fechaFin'>,
   now = new Date(),
 ): { fechaInicio: Date; fechaFin: Date } {
-  const fechaFin = query.fechaFin ? new Date(query.fechaFin) : new Date(Math.floor(now.getTime() / 60000) * 60000);
+  const fechaFin = query.fechaFin ? new Date(query.fechaFin) : new Date(now);
   let fechaInicio = query.fechaInicio ? new Date(query.fechaInicio) : undefined;
 
   if (!fechaInicio && query.periodo) {

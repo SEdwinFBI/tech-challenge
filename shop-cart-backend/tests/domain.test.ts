@@ -897,11 +897,13 @@ describe('Handlers CQRS con repositorios mock', () => {
             kpis: { TotalVentas: 15000, TotalPedidos: 45 },
             top10Productos: [{ IDProducto: 1, Nombre: 'Zapato Derby' }],
             ventasPorCategoria: [{ IDCategoria: 1, Categoria: 'Calzado', Total: 15000 }],
+            pedidosPorEstado: [],
+            pagosPorEstado: [],
           };
         },
         getSalesByPeriod: async () => [
-          { Periodo: '2026-10-01', Ventas: 5000 },
-          { Periodo: '2026-10-02', Ventas: 10000 },
+          { Periodo: '2026-10-01', NumeroPedidos: 2, VentasQuetzales: 5000 },
+          { Periodo: '2026-10-02', NumeroPedidos: 3, VentasQuetzales: 10000 },
         ],
       };
 
@@ -992,7 +994,7 @@ describe('Regresiones de autorización y caché de auditoría', () => {
   it('distingue horas dentro del mismo día y reutiliza únicamente el rango idéntico', async () => {
     let calls = 0;
     const handler = new GetDashboardSummaryQueryHandler({
-      getMetricsSummary: async (_start, end) => { calls++; return { kpis: { TotalPedidos: end.getUTCHours() }, top10Productos: [], ventasPorCategoria: [] }; },
+      getMetricsSummary: async (_start, end) => { calls++; return { kpis: { TotalPedidos: end.getUTCHours() }, top10Productos: [], ventasPorCategoria: [], pedidosPorEstado: [], pagosPorEstado: [] }; },
       getSalesByPeriod: async () => [],
     });
     const short = { fechaInicio: new Date('2037-11-01T00:00:00Z'), fechaFin: new Date('2037-11-01T00:01:00Z') };

@@ -5,6 +5,13 @@ export interface DashboardKpisDTO {
   VentasNetasQuetzales?: number;
   TicketPromedioQuetzales?: number;
   CarritosAbandonadosActuales?: number;
+  PedidosPorEntregar?: number;
+  ClientesNuevos?: number;
+  VariantesExistenciasBajas?: number;
+  PedidosConCupon?: number;
+  DescuentoCuponesQuetzales?: number;
+  DevolucionesCantidad?: number;
+  DevolucionesMontoQuetzales?: number;
   TotalVentas?: number;
   TotalPedidos?: number;
   TicketPromedio?: number;
@@ -39,16 +46,29 @@ export interface CategorySalesMetricDTO {
 
 export interface SalesByPeriodItemDTO {
   Periodo: string;
-  TotalVentas?: number;
-  Ventas?: number;
-  CantidadPedidos?: number;
+  NumeroPedidos: number;
+  VentasQuetzales: number;
   [key: string]: unknown;
+}
+
+export interface PedidoPorEstadoDTO {
+  Estado: string;
+  TotalPedidos: number;
+  MontoQuetzales: number;
+}
+
+export interface PagoPorEstadoDTO {
+  Estado: string;
+  TotalIntentos: number;
+  MontoQuetzales: number;
 }
 
 export interface DashboardMetricsSummary {
   kpis: DashboardKpisDTO | null;
   top10Productos: TopProductMetricDTO[];
   ventasPorCategoria: CategorySalesMetricDTO[];
+  pedidosPorEstado: PedidoPorEstadoDTO[];
+  pagosPorEstado: PagoPorEstadoDTO[];
 }
 
 export interface DashboardSummaryData extends DashboardMetricsSummary {

@@ -41,11 +41,13 @@ export class GetDashboardSummaryQueryHandler
       kpis: resumen.kpis,
       top10Productos: resumen.top10Productos,
       ventasPorCategoria: resumen.ventasPorCategoria,
+      pedidosPorEstado: resumen.pedidosPorEstado,
+      pagosPorEstado: resumen.pagosPorEstado,
       serieTemporal,
       generadoEn: new Date().toISOString(),
     };
 
-    await this.cache.set(cacheKey, data, 180);
+    await this.cache.set(cacheKey, data, 60);
     return { desdeCache: false, ...data };
   }
 }

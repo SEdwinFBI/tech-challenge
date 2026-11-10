@@ -135,6 +135,23 @@ describe('Fábrica del publicador de eventos', () => {
     assert.deepEqual(difundidos, [['NUEVO_PEDIDO', { idPedido: 7 }]]);
   });
 
+  it('si limpiar el caché falla igual publica en Redis y no difunde en local', async () => {
+    const redis = new FakeRedis();
+    const cacheRoto = {
+      get: async () => null,
+      set: async () => undefined,
+      clear: async () => { throw new Error('clear fallido'); },
+    };
+    const difundidos: string[] = [];
+    const local = { invalidateAndBroadcast: (e: string) => void difundidos.push(e) };
+    await sinLog(() =>
+      new RedisEventPublisher(redis, cacheRoto, local).publish({ tipo: 'NUEVO_PEDIDO', payload: { idPedido: 9 } })
+    );
+    assert.equal(redis.publicados.length, 1);
+    assert.equal(redis.publicados[0]?.[0], CANAL_EVENTOS);
+    assert.deepEqual(difundidos, []);
+  });
+
   it('si Redis falla difunde solo en local y no lanza', async () => {
     const redis = new FakeRedis();
     redis.caido = true;

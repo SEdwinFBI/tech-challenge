@@ -27,6 +27,10 @@ export class RedisEventPublisher implements IEventPublisher {
   async publish(evento: EventoDominio): Promise<void> {
     try {
       await this.cache.clear();
+    } catch (err) {
+      console.error('No se pudo limpiar el caché antes de publicar el evento:', (err as Error).message);
+    }
+    try {
       await this.redis.publish(CANAL_EVENTOS, JSON.stringify(evento));
     } catch (err) {
       console.error('No se pudo publicar el evento en Redis, se difunde solo en esta instancia:', (err as Error).message);

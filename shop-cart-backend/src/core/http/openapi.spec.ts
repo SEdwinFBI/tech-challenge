@@ -1507,9 +1507,61 @@ export const openApiSpec = {
                   type: 'object',
                   properties: {
                     ok: { type: 'boolean', example: true },
-                    resumen: { type: 'object' },
-                    topProductos: { type: 'array' },
-                    ventasPorCategoria: { type: 'array' },
+                    kpis: {
+                      type: 'object',
+                      nullable: true,
+                      description: 'Indicadores del periodo. Las ventas cuentan todo pedido no cancelado, por fecha de creación y netas de reembolsos. VariantesExistenciasBajas y CarritosAbandonadosActuales no dependen del periodo.',
+                      properties: {
+                        TotalPedidosCompletados: { type: 'integer' },
+                        VentasNetasQuetzales: { type: 'number' },
+                        TicketPromedioQuetzales: { type: 'number' },
+                        CarritosAbandonadosActuales: { type: 'integer' },
+                        PedidosPorEntregar: { type: 'integer', description: 'Pedidos PAGADO, EN_PREPARACION o DESPACHADO del periodo' },
+                        ClientesNuevos: { type: 'integer' },
+                        VariantesExistenciasBajas: { type: 'integer', description: 'Variantes bajo el umbral de ConfiguracionSistema' },
+                        PedidosConCupon: { type: 'integer' },
+                        DescuentoCuponesQuetzales: { type: 'number' },
+                        DevolucionesCantidad: { type: 'integer' },
+                        DevolucionesMontoQuetzales: { type: 'number' },
+                      },
+                    },
+                    top10Productos: { type: 'array', items: { type: 'object' } },
+                    ventasPorCategoria: { type: 'array', items: { type: 'object' } },
+                    pedidosPorEstado: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          Estado: { type: 'string', example: 'PAGADO' },
+                          TotalPedidos: { type: 'integer' },
+                          MontoQuetzales: { type: 'number' },
+                        },
+                      },
+                    },
+                    pagosPorEstado: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          Estado: { type: 'string', example: 'CAPTURADO' },
+                          TotalIntentos: { type: 'integer' },
+                          MontoQuetzales: { type: 'number' },
+                        },
+                      },
+                    },
+                    serieTemporal: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          Periodo: { type: 'string' },
+                          NumeroPedidos: { type: 'integer' },
+                          VentasQuetzales: { type: 'number' },
+                        },
+                      },
+                    },
+                    desdeCache: { type: 'boolean' },
+                    generadoEn: { type: 'string', format: 'date-time' },
                   },
                 },
               },

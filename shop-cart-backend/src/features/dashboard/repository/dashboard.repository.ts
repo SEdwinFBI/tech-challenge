@@ -4,6 +4,8 @@ import {
   CategorySalesMetricDTO,
   DashboardKpisDTO,
   DashboardMetricsSummary,
+  PagoPorEstadoDTO,
+  PedidoPorEstadoDTO,
   SalesByPeriodItemDTO,
   TopProductMetricDTO,
 } from '../models/dashboard.model';
@@ -21,11 +23,15 @@ export class DashboardRepository implements IDashboardRepository {
       sql.IRecordSet<DashboardKpisDTO>?,
       sql.IRecordSet<TopProductMetricDTO>?,
       sql.IRecordSet<CategorySalesMetricDTO>?,
+      sql.IRecordSet<PedidoPorEstadoDTO>?,
+      sql.IRecordSet<PagoPorEstadoDTO>?,
     ];
     return {
       kpis: sets[0]?.[0] || null,
       top10Productos: sets[1] || [],
       ventasPorCategoria: sets[2] || [],
+      pedidosPorEstado: sets[3] ?? [],
+      pagosPorEstado: sets[4] ?? [],
     };
   }
 
