@@ -12,7 +12,6 @@
 <text x="60" y="222" font-size="15" font-weight="700" fill="#0f172a" text-anchor="start">Navegador / PWA</text>
 <text x="60" y="242" font-size="11.5" font-weight="400" fill="#475569" text-anchor="start">Tienda, cuenta y backoffice</text>
 <text x="60" y="258" font-size="11.5" font-weight="400" fill="#475569" text-anchor="start">TanStack Query · rutas con carga diferida</text>
-<text x="60" y="274" font-size="11.5" font-weight="400" fill="#475569" text-anchor="start">Comprime las imágenes antes de subirlas</text>
 <rect x="340" y="110" width="700" height="660" rx="18" fill="#eef2ff" stroke="#a5b4fc" stroke-width="1.5"/>
 <text x="358" y="136" font-size="12.5" font-weight="700" fill="#334155" text-anchor="start">VPS Ubuntu · Podman Compose (perfil prod)</text>
 <rect x="370" y="150" width="640" height="92" rx="14" fill="#ffffff" stroke="#009639" stroke-width="1.6"/>
