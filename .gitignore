@@ -6,3 +6,5 @@ dist/
 .playwright-mcp/
 inf/
 shop-cart-backend/artifacts/
+
+.env.prod

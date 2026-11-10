@@ -62,6 +62,8 @@ Para SQL Server con Docker, crear el `.env` de la raíz a partir de [`.env.examp
 | `NODE_ENV` | Entorno: `development`, `test` o `production`. |
 | `RESERVATION_TTL_MINUTES` | Minutos durante los que se apartan los productos al pasar al pago. |
 | `DB_HOST`, `DB_PORT` | Dirección y puerto de SQL Server. |
+| `DB_ENCRYPT` | `true` para Azure SQL (conexión cifrada); `false` por defecto para SQL Server local. |
+| `DB_ENCRYPT` | `true` para Azure SQL (conexión cifrada); `false` por defecto para SQL Server local. |
 | `DB_USER`, `DB_PASSWORD` | Credenciales de conexión. |
 | `DB_NAME` | Nombre de la base de datos. |
 | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | Secretos de autenticación. |
@@ -81,7 +83,7 @@ Para SQL Server con Docker, crear el `.env` de la raíz a partir de [`.env.examp
 | `JEV_URL` | URL del servicio de IA; opcional; sin clave se usa el orden local. |
 | `INSTANCE_ID` | Nombre de la instancia que se devuelve en el encabezado `X-Instancia`; por defecto, el hostname. |
 | `GRAFANA_ADMIN_PASSWORD` | Contraseña del administrador de Grafana; va en el `.env` de la raíz, junto a `MSSQL_SA_PASSWORD`. |
-| `TRUST_PROXY` | `1` cuando la API está detrás de Nginx, para que el límite de intentos use la IP del cliente; opcional. |
+| `TRUST_PROXY` | Número de proxies delante de la API (`1` con Nginx del compose, `2` si además hay un Nginx con certificado en el servidor), para que el límite de intentos use la IP del cliente; opcional. |
 
 ### Base de datos
 
@@ -119,9 +121,9 @@ La API queda disponible en `http://localhost:3000/api/v1`. El puerto depende de 
 
 ### Docker completo
 
-El `docker-compose.yml` también levanta Redis, dos réplicas de la API y Nginx con la interfaz. Estos servicios están en el perfil `app`, así que `docker compose up -d mssql-server` sigue levantando solo la base de datos.
+El `docker-compose.yml` también levanta Redis, dos réplicas de la API y Nginx con la interfaz. Estos servicios, junto con SQL Server local, están en el perfil `app`; `docker compose up -d mssql-server` sigue levantando solo la base de datos para desarrollo con `npm run dev`.
 
-Necesita `shop-cart-backend/.env` con las credenciales. Compose cambia `DB_HOST`, `REDIS_URL` y `CORS_ALLOW_ORIGIN` para la red interna.
+Lee las variables del `.env` de la raíz. Compose cambia `DB_HOST`, `REDIS_URL` y `CORS_ALLOW_ORIGIN` para la red interna.
 
 ```sh
 docker compose --profile app up -d --build
@@ -132,6 +134,16 @@ La aplicación queda en `http://localhost:8080`. El encabezado `X-Instancia` ind
 Puertos del host: 8080 web, 1433 SQL Server, 9090 Prometheus y 3002 Grafana. `GRAFANA_ADMIN_PASSWORD` es obligatoria en el `.env` de la raíz. Los puertos se pueden cambiar con `WEB_PORT`, `MSSQL_PORT`, `PROMETHEUS_PORT` y `GRAFANA_PORT`.
 
 
+### Producción con Azure SQL
+
+El perfil `prod` no levanta SQL Server: usa una base en Azure SQL y las imágenes publicadas.
+
+1. Crear `.env.prod` en la raíz copiando las variables del `.env`, con `DB_HOST=<servidor>.database.windows.net`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` y `DB_ENCRYPT=true`. El archivo no se sube a git.
+2. Permitir en el firewall de Azure SQL la IP del servidor.
+3. En el `.env` de la raíz definir `CORS_ALLOW_ORIGIN=https://tu-dominio` y `GRAFANA_ADMIN_PASSWORD`.
+4. `docker compose --profile prod up -d`.
+
+Mientras pruebas, la aplicación queda en `http://IP-DEL-SERVIDOR:8080`. Con certificado, poner `WEB_BIND=127.0.0.1` y `TRUST_PROXY=2` en el `.env` para que `web` solo escuche en local. El certificado va en el Nginx del servidor, que hace `proxy_pass http://127.0.0.1:8080` con `proxy_buffering off` y `proxy_read_timeout 1h` para el SSE del dashboard.
 
 ### Observabilidad
 

@@ -19,7 +19,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-FROM node:24-alpine AS runtime
+FROM node:24-alpine AS api
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=prod-deps /app/node_modules ./node_modules
