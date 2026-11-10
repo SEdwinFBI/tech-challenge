@@ -155,6 +155,10 @@ server {
 
     client_max_body_size 5m;
 
+    location = /grafana {
+        return 301 /grafana/;
+    }
+
     location /grafana/ {
         proxy_pass http://127.0.0.1:3002;
         proxy_set_header Host $host;
