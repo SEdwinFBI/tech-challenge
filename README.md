@@ -28,6 +28,8 @@ Arquitectura Vertical Slice, con DDD y CQRS ligeros.
 
 ![Arquitectura vertical de ShopCart](docs/imagenes/arquitectura-vertical.svg)
 
+![Arquitectura de despliegue de ShopCart](docs/imagenes/arquitectura-despliegue.svg)
+
 ### Por qué esta arquitectura
 
 - Slices verticales: Se seleccionó esta arquitectura porque permite organizar el código en función de lo que la aplicación hace. Este modelo agrupa todos los componentes necesarios para resolver una función específica. Esto reduce el tiempo de desarrollo y facilita la búsqueda de archivos.
