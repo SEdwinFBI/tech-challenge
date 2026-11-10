@@ -30,6 +30,7 @@ import {
 } from '@/shared/ui';
 import { toast } from '@/shared/ui/toastStore';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
+import { invalidateStock, mutationKeys, queryKeys } from '@/shared/lib/queryKeys';
 
 type Tab = 'kardex' | 'bajas';
 type Tipo = 'ENTRADA_COMPRA' | 'AJUSTE';
@@ -68,7 +69,7 @@ export const AdminInventoryPage: React.FC = () => {
   const { values: kf, patch: patchKardex, clearAll: clearKardex } = useColumnFilters(KARDEX_FILTROS, resetKardexPage);
   const { sort, toggle } = useSort<KardexSortColumn>({ orden: 'fecha', direccion: 'desc' }, resetKardexPage);
   const kardex = useQuery({
-    queryKey: ['kardex', page, filterVariant?.idVariante ?? null, kf, sort.orden, sort.direccion],
+    queryKey: queryKeys.inventory.kardex({ page, idVariante: filterVariant?.idVariante ?? null, kf, orden: sort.orden, direccion: sort.direccion }),
     placeholderData: keepPreviousData,
     queryFn: () =>
       inventoryApi.getKardex({
@@ -89,7 +90,7 @@ export const AdminInventoryPage: React.FC = () => {
   const { values: lf, patch: patchLow, clearAll: clearLow } = useColumnFilters(BAJAS_FILTROS, resetLowPage);
   const { sort: lowSort, toggle: toggleLowSort } = useSort<LowStockSortColumn>({ orden: 'existencia', direccion: 'asc' }, resetLowPage);
   const low = useQuery({
-    queryKey: ['low-stock', lowPage, lf, lowSort.orden, lowSort.direccion],
+    queryKey: queryKeys.inventory.lowStock({ page: lowPage, lf, orden: lowSort.orden, direccion: lowSort.direccion }),
     queryFn: () =>
       inventoryApi.getLowStock({ q: lf.q.trim() || undefined, orden: lowSort.orden, direccion: lowSort.direccion, pagina: lowPage, tamanoPagina: 15 }),
     placeholderData: keepPreviousData,
@@ -131,14 +132,12 @@ export const AdminInventoryPage: React.FC = () => {
   };
 
   const mutation = useMutation({
+    mutationKey: mutationKeys.inventory.createMovement,
     mutationFn: inventoryApi.createMovement,
     onSuccess: res => {
       toast.success('Movimiento registrado en el kardex', `Nueva existencia: ${plural(res.saldoPosterior, 'unidad', 'unidades')}.`);
       setModalOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['kardex'] });
-      queryClient.invalidateQueries({ queryKey: ['low-stock'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-product'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-catalog-products'] });
+      void invalidateStock(queryClient);
     },
     onError: (err: unknown) => {
       const msg =

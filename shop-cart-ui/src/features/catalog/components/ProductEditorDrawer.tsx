@@ -10,6 +10,7 @@ import { discountPercent } from '@/shared/lib/pricing';
 import type { Category, Variant } from '@/shared/types/domain';
 import { readDraft, saveDraft, clearDraft } from '@/shared/lib/draft';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
+import { invalidateStock, queryKeys } from '@/shared/lib/queryKeys';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { CoverUploadField, ExternalUrlOption, GalleryAddTile } from './ImageUploadField';
 import { useStorageAvailable } from '../hooks/useImageUpload';
@@ -47,7 +48,7 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
   const [tab, setTab] = useState<Tab>('datos');
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['admin-product', productId],
+    queryKey: queryKeys.adminProduct.detail(productId),
     queryFn: () => catalogApi.getProductAdmin(productId!),
     enabled: productId !== null,
   });
@@ -89,12 +90,8 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
   }, [productId]);
 
   const refreshAll = () => {
-    queryClient.invalidateQueries({ queryKey: ['admin-product', productId] });
-    queryClient.invalidateQueries({ queryKey: ['admin-catalog-products'] });
-    queryClient.invalidateQueries({ queryKey: ['products'] });
-    queryClient.invalidateQueries({ queryKey: ['product'] });
-    queryClient.invalidateQueries({ queryKey: ['home'] });
-    queryClient.invalidateQueries({ queryKey: ['categories'] });
+    void invalidateStock(queryClient);
+    queryClient.invalidateQueries({ queryKey: queryKeys.categories.all });
   };
 
   const run = async (action: () => Promise<unknown>, ok: string, fail: string): Promise<boolean> => {
@@ -130,7 +127,7 @@ export const ProductEditorDrawer: React.FC<ProductEditorDrawerProps> = ({ produc
 
   const toggleFlag = async (flag: 'activo' | 'destacado', next: boolean) => {
     if (!producto || toggling) return;
-    const key = ['admin-product', productId];
+    const key = queryKeys.adminProduct.detail(productId);
     const field = flag === 'activo' ? 'Activo' : 'Destacado';
     const previous = queryClient.getQueryData<ProductDetailResponse>(key);
     queryClient.setQueryData<ProductDetailResponse>(key, old => (old ? { ...old, producto: { ...old.producto, [field]: next } } : old));

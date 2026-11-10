@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
+import { queryKeys } from '@/shared/lib/queryKeys';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { auditLogApi, AuditLogEntry, type AuditSortColumn } from '../api/auditLogApi';
 import { useSort } from '@/shared/hooks/useSort';
@@ -49,7 +50,7 @@ export const AdminAuditLogPage: React.FC = () => {
   const { sort, toggle } = useSort<AuditSortColumn>({ orden: 'fecha', direccion: 'desc' }, resetPage);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['admin-audit-log', page, f, sort.orden, sort.direccion],
+    queryKey: queryKeys.audit.list({ page, f, orden: sort.orden, direccion: sort.direccion }),
     placeholderData: keepPreviousData,
     queryFn: () =>
       auditLogApi.getLogs({

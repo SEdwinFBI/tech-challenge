@@ -6,12 +6,14 @@ import { AddressFormModal, hasAddressDraft } from '../components/AddressFormModa
 import { ConfirmDialog, ErrorState } from '@/shared/ui';
 import { toast } from '@/shared/ui/toastStore';
 import { formatMoney } from '@/shared/lib/formatters';
+import { queryKeys } from '@/shared/lib/queryKeys';
+import { addressesQueryOptions } from '../queries';
 import { formatPhone } from '@/shared/lib/phone';
 import type { Address } from '@/shared/types/domain';
 
 export const MyAddressesPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { data: addresses = [], isLoading, isError, refetch } = useQuery({ queryKey: ['addresses'], queryFn: checkoutApi.getAddresses });
+  const { data: addresses = [], isLoading, isError, refetch } = useQuery(addressesQueryOptions());
   const [modal, setModal] = useState(hasAddressDraft);
   const [toDelete, setToDelete] = useState<Address | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -20,7 +22,7 @@ export const MyAddressesPage: React.FC = () => {
   const markDefault = async (a: Address) => {
     setMarking(a.IDDireccion);
     try {
-      queryClient.setQueryData(['addresses'], await checkoutApi.setDefaultAddress(a.IDDireccion));
+      queryClient.setQueryData(queryKeys.addresses.all, await checkoutApi.setDefaultAddress(a.IDDireccion));
       toast.success('Dirección predeterminada actualizada');
     } catch {
       toast.error('No se pudo marcar como predeterminada');
@@ -33,7 +35,7 @@ export const MyAddressesPage: React.FC = () => {
     if (!toDelete) return;
     setDeleting(true);
     try {
-      queryClient.setQueryData(['addresses'], await checkoutApi.deleteAddress(toDelete.IDDireccion));
+      queryClient.setQueryData(queryKeys.addresses.all, await checkoutApi.deleteAddress(toDelete.IDDireccion));
       toast.success('Dirección eliminada');
       setToDelete(null);
     } catch {
@@ -113,7 +115,7 @@ export const MyAddressesPage: React.FC = () => {
         </ul>
       )}
 
-      <AddressFormModal isOpen={modal} onClose={() => setModal(false)} onSaved={list => queryClient.setQueryData(['addresses'], list)} />
+      <AddressFormModal isOpen={modal} onClose={() => setModal(false)} onSaved={list => queryClient.setQueryData(queryKeys.addresses.all, list)} />
       <ConfirmDialog
         isOpen={toDelete !== null}
         onClose={() => setToDelete(null)}

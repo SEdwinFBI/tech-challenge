@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { catalogApi } from '../api/catalogApi';
+import { queryKeys } from '@/shared/lib/queryKeys';
 import { useCategories } from './useCatalog';
 
 export const SUGGESTION_DEBOUNCE_MS = 250;
@@ -16,7 +17,7 @@ export function useSearchSuggestions(value: string, open: boolean) {
   const enabled = open && settled && term.length >= MIN_QUERY;
 
   const products = useQuery({
-    queryKey: ['search-suggestions', term],
+    queryKey: queryKeys.search.suggestions(term),
     queryFn: ({ signal }) => catalogApi.getProducts({ q: term, tamanoPagina: 5 }, signal),
     enabled,
     staleTime: 30_000,

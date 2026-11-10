@@ -8,6 +8,7 @@ import { toast } from '@/shared/ui/toastStore';
 import { formatMoney } from '@/shared/lib/formatters';
 import type { Address } from '@/shared/types/domain';
 import { checkoutApi } from '../api/checkoutApi';
+import { queryKeys } from '@/shared/lib/queryKeys';
 
 export interface AddressFormModalProps {
   isOpen: boolean;
@@ -35,7 +36,7 @@ const field =
 
 export const AddressFormModal: React.FC<AddressFormModalProps> = ({ isOpen, onClose, onSaved }) => {
   const { data: municipalities = [], isLoading } = useQuery({
-    queryKey: ['municipalities'],
+    queryKey: queryKeys.municipalities.all,
     queryFn: checkoutApi.getMunicipalities,
     staleTime: 30 * 60_000,
     gcTime: 30 * 60_000,

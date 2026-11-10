@@ -6,6 +6,7 @@ import { useSort } from '@/shared/hooks/useSort';
 import { useColumnFilters } from '@/shared/hooks/useColumnFilters';
 import type { FilterDef } from '@/shared/lib/columnFilters';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
+import { queryKeys } from '@/shared/lib/queryKeys';
 import { formatDateTime, formatMoney } from '@/shared/lib/formatters';
 import {
   Badge,
@@ -51,7 +52,7 @@ export const AdminPaymentsPage: React.FC = () => {
   const { sort, toggle } = useSort<'fecha'>({ orden: 'fecha', direccion: 'desc' }, resetPage);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['admin-payments', page, f, sort.direccion],
+    queryKey: queryKeys.payments.list({ page, f, direccion: sort.direccion }),
     placeholderData: keepPreviousData,
     queryFn: () =>
       paymentsApi.getPayments({

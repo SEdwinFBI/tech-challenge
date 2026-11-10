@@ -5,6 +5,7 @@ import { ArrowRight, Package } from 'lucide-react';
 import { ordersApi } from '../api/ordersApi';
 import { ErrorState, Illustration, NumberedPagination, getOrderStatusBadge } from '@/shared/ui';
 import { formatDate, formatMoney } from '@/shared/lib/formatters';
+import { queryKeys } from '@/shared/lib/queryKeys';
 import { HAPPY_PATH, happyPathIndex } from '@/shared/lib/orderStatus';
 
 const PAGE_SIZE = 10;
@@ -34,7 +35,7 @@ export const MyOrdersPage: React.FC = () => {
   const [estado, setEstado] = useState('');
 
   const { data, isLoading, isError, refetch, isPlaceholderData } = useQuery({
-    queryKey: ['my-orders', page, estado],
+    queryKey: queryKeys.orders.mine(page, estado),
     queryFn: () => ordersApi.getOrders({ pagina: page, tamanoPagina: PAGE_SIZE, estado: estado || undefined }),
     placeholderData: keepPreviousData,
   });

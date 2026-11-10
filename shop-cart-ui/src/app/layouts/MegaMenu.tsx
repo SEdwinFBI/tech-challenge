@@ -7,6 +7,7 @@ import { ChevronRight, LayoutGrid, X } from 'lucide-react';
 import { useCategories } from '@/features/catalog/hooks/useCatalog';
 import { catalogApi } from '@/features/catalog/api/catalogApi';
 import { PriceTag } from '@/shared/ui/PriceTag';
+import { queryKeys } from '@/shared/lib/queryKeys';
 
 export interface MegaMenuProps {
   open: boolean;
@@ -22,7 +23,7 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({ open, onClose }) => {
   const current = active.find(c => c.IDCategoria === currentId);
 
   const { data: preview, isFetching } = useQuery({
-    queryKey: ['mega-preview', currentId],
+    queryKey: queryKeys.megaMenu.preview(currentId),
     queryFn: () => catalogApi.getProducts({ idCategoria: currentId!, tamanoPagina: 4, orden: 'DESTACADOS' }),
     enabled: open && currentId != null,
     staleTime: 60_000,

@@ -7,6 +7,7 @@ import { useCart } from '@/features/cart/hooks/useCart';
 import { cartApi } from '@/features/cart/api/cartApi';
 import { CouponDialog } from '@/features/cart/components/CouponDialog';
 import { checkoutApi, type ConfirmOrderPayload } from '../api/checkoutApi';
+import { addressesQueryOptions } from '../queries';
 import { AddressFormModal, hasAddressDraft } from '../components/AddressFormModal';
 import { OrderSummary } from '../components/OrderSummary';
 import { ConfirmDialog, ErrorState, Illustration, ReservationCountdown, Stepper } from '@/shared/ui';
@@ -19,6 +20,7 @@ import { ShippingPartners } from '@/shared/ui/ShippingPartners';
 import type { Address } from '@/shared/types/domain';
 import { apiErrorMessage, errorCode } from '@/shared/lib/apiErrors';
 import { newUuid } from '@/shared/lib/uuid';
+import { invalidateStock, queryKeys } from '@/shared/lib/queryKeys';
 
 type Step = 0 | 1;
 
@@ -51,7 +53,7 @@ export const CheckoutPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const addressesQuery = useQuery({ queryKey: ['addresses'], queryFn: checkoutApi.getAddresses });
+  const addressesQuery = useQuery(addressesQueryOptions());
   const addresses = addressesQuery.data ?? [];
 
   const [saved] = useState(loadCheckoutDraft);
@@ -92,7 +94,7 @@ export const CheckoutPage: React.FC = () => {
   const total = netSubtotal + (shipping?.cost ?? 0);
   const overLimit = items.some(i => i.Cantidad > i.ExistenciaDisponible);
 
-  const setAddresses = (list: Address[]) => queryClient.setQueryData(['addresses'], list);
+  const setAddresses = (list: Address[]) => queryClient.setQueryData(queryKeys.addresses.all, list);
 
   const reserve = async () => {
     let cartId = cart?.idCarrito;
@@ -144,8 +146,9 @@ export const CheckoutPage: React.FC = () => {
         ...(import.meta.env.DEV && simulacion !== 'APROBADO' ? { simulacionPago: simulacion } : {}),
       });
       clearDraft(CHECKOUT_DRAFT);
-      await queryClient.invalidateQueries({ queryKey: ['cart'] });
-      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.cart.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
+      void invalidateStock(queryClient);
       navigate(`/pedido/${result.idPedido}/confirmado`, { replace: true });
     } catch (err: unknown) {
       const msg =

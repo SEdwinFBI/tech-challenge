@@ -2,12 +2,13 @@ import React from 'react';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { favoritesApi } from '../api/favoritesApi';
+import { queryKeys } from '@/shared/lib/queryKeys';
 import { ProductCard, ProductCardSkeletonV2 } from '@/shared/ui/ProductCard';
 import { ErrorState, Illustration } from '@/shared/ui';
 import { RecommendationRail } from '@/features/recommendations/components/RecommendationRail';
 
 export const FavoritesPage: React.FC = () => {
-  const { data = [], isLoading, isError, refetch } = useQuery({ queryKey: ['favorites', 'list'], queryFn: favoritesApi.list });
+  const { data = [], isLoading, isError, refetch } = useQuery({ queryKey: queryKeys.favorites.list(), queryFn: favoritesApi.list });
 
   return (
     <div className="animate-fade-up">

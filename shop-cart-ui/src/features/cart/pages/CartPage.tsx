@@ -6,7 +6,7 @@ import { AlertTriangle, ArrowRight, Heart, ImageOff, LogIn, TicketPercent, X } f
 import { useCart } from '../hooks/useCart';
 import { CouponDialog } from '../components/CouponDialog';
 import { useRecommendations } from '@/features/recommendations/hooks/useRecommendations';
-import { checkoutApi } from '@/features/checkout/api/checkoutApi';
+import { addressesQueryOptions } from '@/features/checkout/queries';
 import { ProductRail } from '@/shared/ui/ProductRail';
 import { useAuth } from '@/features/auth';
 import { useFavorites } from '@/features/wishlist/hooks/useFavorites';
@@ -36,7 +36,7 @@ export const CartPage: React.FC = () => {
   const [couponOpen, setCouponOpen] = useState(false);
   const isClient = user?.rol === 'CLIENTE';
 
-  const addresses = useQuery({ queryKey: ['addresses'], queryFn: checkoutApi.getAddresses, enabled: isClient, staleTime: 60_000 });
+  const addresses = useQuery({ ...addressesQueryOptions(), enabled: isClient });
   const suggestions = useRecommendations('carrito');
 
   const items = cart?.items ?? [];

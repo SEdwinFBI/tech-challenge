@@ -10,6 +10,7 @@ import { CoverUploadField, PendingCoverField } from '../components/ImageUploadFi
 import { uploadCompressed } from '../hooks/useImageUpload';
 import type { CompressedImage } from '@/shared/lib/compress-image';
 import { formatMoney } from '@/shared/lib/formatters';
+import { invalidateStock, queryKeys } from '@/shared/lib/queryKeys';
 import { useSort } from '@/shared/hooks/useSort';
 import { useColumnFilters } from '@/shared/hooks/useColumnFilters';
 import type { FilterDef } from '@/shared/lib/columnFilters';
@@ -84,7 +85,7 @@ export const AdminCatalogPage: React.FC = () => {
   );
 
   const productsQuery = useQuery({
-    queryKey: ['admin-catalog-products', page, f, sort.orden, sort.direccion],
+    queryKey: queryKeys.adminCatalog.list({ page, f, orden: sort.orden, direccion: sort.direccion }),
     queryFn: () =>
       catalogApi.getProducts({
         pagina: page,
@@ -170,8 +171,8 @@ export const AdminCatalogPage: React.FC = () => {
         toast.success('Producto creado');
       }
       closeNewProduct();
-      queryClient.invalidateQueries({ queryKey: ['admin-catalog-products'] });
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      void invalidateStock(queryClient);
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories.all });
     } catch (err) {
       toast.error('No se pudo crear el producto', apiMessage(err, 'El SKU podría estar repetido.'));
     } finally {
@@ -197,10 +198,10 @@ export const AdminCatalogPage: React.FC = () => {
   };
 
   const refreshCategories = () => {
-    queryClient.invalidateQueries({ queryKey: ['categories'] });
-    queryClient.invalidateQueries({ queryKey: ['home'] });
-    queryClient.invalidateQueries({ queryKey: ['products'] });
-    queryClient.invalidateQueries({ queryKey: ['admin-catalog-products'] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.categories.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.home.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.catalog.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.adminCatalog.all });
   };
 
   const setCategoryActive = async (c: Category, activa: boolean) => {

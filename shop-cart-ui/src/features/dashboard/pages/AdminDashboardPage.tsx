@@ -5,6 +5,7 @@ import { BarChart3, Download, PackageCheck, Receipt, RefreshCw, ShoppingCart, Ta
 import { dashboardApi } from '../api/dashboardApi';
 import { useDashboardStream } from '../hooks/useDashboardStream';
 import { formatMoney, plural } from '@/shared/lib/formatters';
+import { queryKeys } from '@/shared/lib/queryKeys';
 import { Button, ErrorState, PageHeader, Skeleton } from '@/shared/ui';
 import { toast } from '@/shared/ui/toastStore';
 
@@ -68,7 +69,7 @@ export const AdminDashboardPage: React.FC = () => {
   const [exporting, setExporting] = useState(false);
 
   const { data, isLoading, isError, refetch, isFetching, dataUpdatedAt } = useQuery({
-    queryKey: ['admin-dashboard', periodo],
+    queryKey: queryKeys.dashboard.summary(periodo),
     queryFn: () => dashboardApi.getSummary({ periodo }),
     staleTime: 30_000,
   });

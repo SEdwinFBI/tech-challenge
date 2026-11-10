@@ -3,12 +3,14 @@ import { Link, useParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, MapPin, XCircle } from 'lucide-react';
 import { ordersApi } from '../api/ordersApi';
+import { orderDetailQueryOptions } from '../queries';
 import { OrderLineAmount } from '../components/OrderLineAmount';
 import { ConfirmDialog, ErrorState, IvaBreakdown, OrderTimeline, PriceTag, getOrderStatusBadge } from '@/shared/ui';
 import { toast } from '@/shared/ui/toastStore';
 import { formatDateTime, formatMoney } from '@/shared/lib/formatters';
 import { HAPPY_PATH, canClientCancel, happyPathIndex, orderStatusMeta } from '@/shared/lib/orderStatus';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
+import { invalidateStock, mutationKeys, queryKeys } from '@/shared/lib/queryKeys';
 
 export const OrderDetailPage: React.FC = () => {
   const { id } = useParams();
@@ -17,28 +19,26 @@ export const OrderDetailPage: React.FC = () => {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['order-detail', orderId],
-    queryFn: () => ordersApi.getOrderById(orderId),
-    enabled: Number.isFinite(orderId) && orderId > 0,
-  });
+  const { data, isLoading, isError, refetch } = useQuery(orderDetailQueryOptions(orderId));
 
   const cancel = useMutation({
+    mutationKey: mutationKeys.orders.cancel,
     mutationFn: () =>
       ordersApi.updateOrderStatus(orderId, 'CANCELADO', cancelReason.trim() || 'Cancelado por solicitud del cliente'),
     onSuccess: () => {
       toast.success('Pedido cancelado');
       setCancelOpen(false);
       setCancelReason('');
-      queryClient.invalidateQueries({ queryKey: ['order-detail', orderId] });
-      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders.detail(orderId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
+      void invalidateStock(queryClient);
     },
     onError: (err: unknown) => {
       const msg =
         apiErrorMessage(err, 'No se pudo cancelar.');
       toast.error('Error al cancelar', msg);
       setCancelOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['order-detail', orderId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders.detail(orderId) });
     },
   });
 

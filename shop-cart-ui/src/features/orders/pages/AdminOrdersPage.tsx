@@ -6,6 +6,7 @@ import { useSort } from '@/shared/hooks/useSort';
 import { useColumnFilters } from '@/shared/hooks/useColumnFilters';
 import { dateRangeToIso, numberOrUndefined, type FilterDef } from '@/shared/lib/columnFilters';
 import { formatMoney, formatDateTime } from '@/shared/lib/formatters';
+import { queryKeys } from '@/shared/lib/queryKeys';
 import {
   Table,
   TableHeader,
@@ -68,7 +69,7 @@ export const AdminOrdersPage: React.FC = () => {
   const rangeInvalid = totalMinN !== undefined && totalMaxN !== undefined && totalMinN > totalMaxN;
 
   const { data, isLoading, isError, isPaused, failureCount, refetch } = useQuery({
-    queryKey: ['admin-orders', page, search, f, rangeInvalid, sort.orden, sort.direccion],
+    queryKey: queryKeys.adminOrders.list({ page, search, f, rangeInvalid, orden: sort.orden, direccion: sort.direccion }),
     queryFn: () =>
       ordersApi.getOrders({
         pagina: page,

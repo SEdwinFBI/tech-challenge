@@ -10,6 +10,7 @@ import { FilterPanel } from '../components/FilterPanel';
 import { ProductCard, ProductCardSkeletonV2 } from '@/shared/ui/ProductCard';
 import { Button, ErrorState, Skeleton, NumberedPagination } from '@/shared/ui';
 import { formatMoney, plural } from '@/shared/lib/formatters';
+import { queryKeys } from '@/shared/lib/queryKeys';
 import { RecommendationRail } from '@/features/recommendations/components/RecommendationRail';
 import { SearchRecommendation } from '@/features/recommendations/components/SearchRecommendation';
 
@@ -45,7 +46,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({ mode = 'all' }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const query = useQuery({
-    queryKey: ['products', params],
+    queryKey: queryKeys.catalog.list(params),
     queryFn: ({ signal }) => catalogApi.getProducts(params, signal),
     placeholderData: keepPreviousData,
   });

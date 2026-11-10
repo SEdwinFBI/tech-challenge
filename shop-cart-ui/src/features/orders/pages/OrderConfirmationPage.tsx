@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, MapPin } from 'lucide-react';
-import { ordersApi } from '../api/ordersApi';
+import { orderDetailQueryOptions } from '../queries';
 import { OrderLineAmount } from '../components/OrderLineAmount';
 import { ErrorState, Illustration, IvaBreakdown, PriceTag, getOrderStatusBadge } from '@/shared/ui';
 import { formatDateTime, formatMoney } from '@/shared/lib/formatters';
@@ -11,11 +11,7 @@ import { orderNumber } from '@/shared/lib/pricing';
 export const OrderConfirmationPage: React.FC = () => {
   const { id } = useParams();
   const orderId = Number(id);
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['order-detail', orderId],
-    queryFn: () => ordersApi.getOrderById(orderId),
-    enabled: Number.isFinite(orderId) && orderId > 0,
-  });
+  const { data, isLoading, isError, refetch } = useQuery(orderDetailQueryOptions(orderId));
 
   if (isLoading) {
     return <div className="mx-auto h-96 max-w-2xl animate-pulse rounded-3xl bg-slate-200/70" aria-busy="true" />;

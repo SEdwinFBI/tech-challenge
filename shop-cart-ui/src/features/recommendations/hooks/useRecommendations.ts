@@ -3,7 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { getGuestToken } from '@/shared/lib/guestToken';
-import { RECOMMENDATIONS_KEY } from '@/shared/lib/queryKeys';
+import { mutationKeys, queryKeys } from '@/shared/lib/queryKeys';
 import {
   recommendationsApi,
   type RecommendationFilters,
@@ -21,7 +21,7 @@ function useIdentity() {
 export function useRecommendations(contexto: RecommendationPlacement, idProducto?: number, filters: RecommendationFilters = {}) {
   const identity = useIdentity();
   return useQuery({
-    queryKey: [...RECOMMENDATIONS_KEY, identity, contexto, idProducto, filters],
+    queryKey: queryKeys.recommendations.list(identity, contexto, idProducto, filters),
     queryFn: () => recommendationsApi.list(contexto, idProducto, filters),
     enabled: contexto !== 'producto' || Boolean(idProducto),
     staleTime: 30_000,
@@ -31,7 +31,7 @@ export function useRecommendations(contexto: RecommendationPlacement, idProducto
 
 export function useRecordProductView(idProducto?: number) {
   const identity = useIdentity();
-  const { mutate } = useMutation({ mutationFn: recommendationsApi.recordView });
+  const { mutate } = useMutation({ mutationKey: mutationKeys.recommendations.recordView, mutationFn: recommendationsApi.recordView });
 
   useEffect(() => {
     if (!idProducto) return;
@@ -47,7 +47,7 @@ export function useSearchRecommendation(filters: SearchRecommendationFilters, { 
   const settled = useDebounce(serialized, debounceMs) === serialized;
   const active = enabled && settled;
   const query = useQuery({
-    queryKey: ['search-recommendation', filters],
+    queryKey: queryKeys.search.recommendation(filters),
     queryFn: ({ signal }) => recommendationsApi.search(filters, signal),
     enabled: active && filters.q.trim().length >= 2,
     staleTime: 60_000,

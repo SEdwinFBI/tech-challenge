@@ -5,8 +5,8 @@ import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronRight, Heart, Loader2, MapPin, ShoppingCart, Truck } from 'lucide-react';
-import { catalogApi } from '../api/catalogApi';
-import { checkoutApi } from '@/features/checkout/api/checkoutApi';
+import { productQueryOptions } from '../queries';
+import { addressesQueryOptions } from '@/features/checkout/queries';
 import { useCart } from '@/features/cart/hooks/useCart';
 import { useAuth } from '@/features/auth';
 import { useFavorites } from '@/features/wishlist/hooks/useFavorites';
@@ -51,11 +51,7 @@ export const ProductDetailPage: React.FC = () => {
   const { isFavorite, toggle } = useFavorites();
   const recientes = useRecentlyViewed(productId);
 
-  const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['product', productId],
-    queryFn: () => catalogApi.getProductById(productId),
-    enabled: parsedId !== null,
-  });
+  const { data, isLoading, isError, error, refetch } = useQuery(productQueryOptions(productId, parsedId !== null));
 
   const producto = data?.producto;
 
@@ -102,12 +98,7 @@ export const ProductDetailPage: React.FC = () => {
   const related = useRecommendations('producto', producto?.IDProducto);
   const relatedItems = related.data ?? [];
 
-  const addresses = useQuery({
-    queryKey: ['addresses'],
-    queryFn: checkoutApi.getAddresses,
-    enabled: user?.rol === 'CLIENTE',
-    staleTime: 60_000,
-  });
+  const addresses = useQuery({ ...addressesQueryOptions(), enabled: user?.rol === 'CLIENTE' });
 
   const ctaRef = useRef<HTMLDivElement>(null);
   const [ctaVisible, setCtaVisible] = useState(true);

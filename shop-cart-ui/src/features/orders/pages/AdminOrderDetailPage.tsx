@@ -18,6 +18,7 @@ import {
 import { ArrowLeft, MapPin, RotateCcw } from 'lucide-react';
 import { toast } from '@/shared/ui/toastStore';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
+import { invalidateStock, mutationKeys, queryKeys } from '@/shared/lib/queryKeys';
 
 // Igual que TransicionesEstadoPedido y order-state.machine (backend)
 const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
@@ -46,7 +47,7 @@ export const AdminOrderDetailPage: React.FC = () => {
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['admin-order-detail', orderId],
+    queryKey: queryKeys.adminOrders.detail(orderId),
     queryFn: () => ordersApi.getOrderById(orderId),
   });
 
@@ -57,14 +58,15 @@ export const AdminOrderDetailPage: React.FC = () => {
   const nextAllowedStates = pedido ? ALLOWED_TRANSITIONS[pedido.Estado] || [] : [];
 
   const changeStatusMutation = useMutation({
+    mutationKey: mutationKeys.adminOrders.changeStatus,
     mutationFn: () => ordersApi.updateOrderStatus(orderId, targetStatus as OrderStatus, statusReason.trim() || undefined),
     onSuccess: () => {
       toast.success('Estado actualizado');
       setIsStatusDialogOpen(false);
       setStatusReason('');
       setTargetStatus('');
-      queryClient.invalidateQueries({ queryKey: ['admin-order-detail', orderId] });
-      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminOrders.all });
+      void invalidateStock(queryClient);
     },
     onError: (err: unknown) => {
       const msg =
@@ -74,6 +76,7 @@ export const AdminOrderDetailPage: React.FC = () => {
   });
 
   const returnLineMutation = useMutation({
+    mutationKey: mutationKeys.adminOrders.returnLine,
     mutationFn: () => {
       if (!selectedLineForReturn) throw new Error('No line selected');
       return ordersApi.returnOrderLine(orderId, {
@@ -86,8 +89,8 @@ export const AdminOrderDetailPage: React.FC = () => {
       toast.success('Devolución procesada');
       setIsReturnModalOpen(false);
       setSelectedLineForReturn(null);
-      queryClient.invalidateQueries({ queryKey: ['admin-order-detail', orderId] });
-      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminOrders.all });
+      void invalidateStock(queryClient);
     },
     onError: (err: unknown) => {
       const msg =

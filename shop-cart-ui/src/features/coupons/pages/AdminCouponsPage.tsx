@@ -5,6 +5,7 @@ import { couponsApi, CouponPayload, type CouponSortColumn, type CouponValidity }
 import { useCategories } from '@/features/catalog/hooks/useCatalog';
 import { formatMoney, formatDateTime } from '@/shared/lib/formatters';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
+import { mutationKeys, queryKeys } from '@/shared/lib/queryKeys';
 import { clearDraft, readDraft, saveDraft } from '@/shared/lib/draft';
 import { useSort } from '@/shared/hooks/useSort';
 import { useColumnFilters } from '@/shared/hooks/useColumnFilters';
@@ -144,7 +145,7 @@ export const AdminCouponsPage: React.FC = () => {
   }, [isModalOpen, editingCouponId, form]);
 
   const { data: coupons = [], isLoading, isError, refetch } = useQuery({
-    queryKey: ['admin-coupons', sort.orden, sort.direccion, f],
+    queryKey: queryKeys.coupons.list({ orden: sort.orden, direccion: sort.direccion, f }),
     queryFn: () =>
       couponsApi.getCoupons(sort, {
         q: f.q.trim() || undefined,
@@ -178,23 +179,25 @@ export const AdminCouponsPage: React.FC = () => {
     toast.error(apiErrorMessage(err, 'Revisa fechas y porcentaje.', { DUPLICATE_KEY: 'Ya existe un cupón con ese código.' }));
 
   const saveMutation = useMutation({
+    mutationKey: mutationKeys.coupons.save,
     mutationFn: (payload: CouponPayload) =>
       editingCouponId ? couponsApi.updateCoupon(editingCouponId, payload) : couponsApi.createCoupon(payload),
     onSuccess: () => {
       toast.success(editingCouponId ? 'Cupón actualizado' : 'Cupón creado');
       closeModal();
-      queryClient.invalidateQueries({ queryKey: ['admin-coupons'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.coupons.all });
     },
     onError,
   });
 
   const statusMutation = useMutation({
+    mutationKey: mutationKeys.coupons.status,
     mutationFn: ({ coupon, activo }: { coupon: Coupon; activo: boolean }) =>
       couponsApi.updateCoupon(coupon.IDCupon, { ...toPayload(formFromCoupon(coupon)), activo }),
     onSuccess: (_d, { activo }) => {
       toast.success(activo ? 'Cupón activado' : 'Cupón desactivado');
       setToDeactivate(null);
-      queryClient.invalidateQueries({ queryKey: ['admin-coupons'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.coupons.all });
     },
     onError,
   });

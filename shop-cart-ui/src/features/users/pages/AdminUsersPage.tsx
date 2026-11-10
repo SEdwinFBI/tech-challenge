@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
+import { mutationKeys, queryKeys } from '@/shared/lib/queryKeys';
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authApi, type UserSortColumn } from '@/features/auth/api/authApi';
 import { useSort } from '@/shared/hooks/useSort';
@@ -66,7 +67,7 @@ export const AdminUsersPage: React.FC = () => {
   const { sort, toggle } = useSort<UserSortColumn>({ orden: 'fecha', direccion: 'desc' }, resetPage);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['admin-users', page, f, sort.orden, sort.direccion],
+    queryKey: queryKeys.users.list({ page, f, orden: sort.orden, direccion: sort.direccion }),
     placeholderData: keepPreviousData,
     queryFn: () =>
       authApi.getUsers({
@@ -83,11 +84,12 @@ export const AdminUsersPage: React.FC = () => {
   const users = data?.datos || [];
 
   const updateStatusMutation = useMutation({
+    mutationKey: mutationKeys.users.status,
     mutationFn: ({ id, activo }: { id: number; activo: boolean }) => authApi.updateUserStatus(id, activo),
     onSuccess: () => {
       toast.success('Estado del usuario actualizado');
       setUserToToggle(null);
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
     },
     onError: () => {
       toast.error('No se pudo actualizar el estado del usuario');
@@ -95,11 +97,12 @@ export const AdminUsersPage: React.FC = () => {
   });
 
   const updateRoleMutation = useMutation({
+    mutationKey: mutationKeys.users.role,
     mutationFn: ({ id, rol }: { id: number; rol: UserRole }) => authApi.updateUserRole(id, rol),
     onSuccess: () => {
       toast.success('Rol de usuario actualizado');
       setUserToChangeRole(null);
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
     },
     onError: () => {
       toast.error('No se pudo cambiar el rol del usuario');

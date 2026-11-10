@@ -3,9 +3,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { toast } from '@/shared/ui/toastStore';
 import { favoritesApi } from '../api/favoritesApi';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
-import { RECOMMENDATIONS_KEY } from '@/shared/lib/queryKeys';
-
-const IDS_KEY = ['favorites', 'ids'] as const;
+import { mutationKeys, queryKeys } from '@/shared/lib/queryKeys';
 
 /** Favoritos del cliente. Otros roles reciben aviso en el botón. */
 export function useFavorites() {
@@ -14,35 +12,36 @@ export function useFavorites() {
   const enabled = user?.rol === 'CLIENTE';
 
   const idsQuery = useQuery({
-    queryKey: IDS_KEY,
+    queryKey: queryKeys.favorites.ids(),
     queryFn: favoritesApi.ids,
     enabled,
     staleTime: 60_000,
   });
 
   const mutation = useMutation({
+    mutationKey: mutationKeys.favorites.toggle,
     mutationFn: ({ idProducto, add }: { idProducto: number; add: boolean }) =>
       add ? favoritesApi.add(idProducto) : favoritesApi.remove(idProducto),
     onMutate: async ({ idProducto, add }) => {
-      await queryClient.cancelQueries({ queryKey: IDS_KEY });
-      const previous = queryClient.getQueryData<number[]>(IDS_KEY) ?? [];
+      await queryClient.cancelQueries({ queryKey: queryKeys.favorites.ids() });
+      const previous = queryClient.getQueryData<number[]>(queryKeys.favorites.ids()) ?? [];
       queryClient.setQueryData<number[]>(
-        IDS_KEY,
+        queryKeys.favorites.ids(),
         add ? [idProducto, ...previous.filter(id => id !== idProducto)] : previous.filter(id => id !== idProducto),
       );
       return { previous };
     },
     onError: (err: unknown, _vars, ctx) => {
-      if (ctx) queryClient.setQueryData(IDS_KEY, ctx.previous);
+      if (ctx) queryClient.setQueryData(queryKeys.favorites.ids(), ctx.previous);
       const msg = apiErrorMessage(err, '');
       toast.error('No se pudo actualizar tus favoritos', msg);
     },
     onSuccess: (_d, { add }) => {
-      void queryClient.invalidateQueries({ queryKey: RECOMMENDATIONS_KEY });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.recommendations.all });
       toast.success(add ? 'Guardado en favoritos' : 'Quitado de favoritos');
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['favorites'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all });
     },
   });
 

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastContainer } from '@/shared/ui/Toast';
 import { useAuth } from '@/features/auth';
 import { errorCode } from '@/shared/lib/apiErrors';
+import { clearUserSession } from '@/shared/lib/queryKeys';
 import { BrandLoader } from '@/shared/ui/BrandLoader';
 import { ConnectionLayer } from './ConnectionLayer';
 
@@ -34,8 +35,7 @@ export const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children
     }
     if (previousUserId.current !== userId) {
       previousUserId.current = userId;
-      queryClient.invalidateQueries({ queryKey: ['cart'] });
-      ['favorites', 'addresses', 'my-orders', 'order-detail'].forEach((k) => queryClient.removeQueries({ queryKey: [k] }));
+      clearUserSession(queryClient);
     }
   }, [userId]);
 

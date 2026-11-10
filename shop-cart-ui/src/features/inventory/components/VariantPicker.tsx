@@ -4,6 +4,7 @@ import { Search, X } from 'lucide-react';
 import { catalogApi } from '@/features/catalog/api/catalogApi';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { SafeImage } from '@/shared/ui/SafeImage';
+import { queryKeys } from '@/shared/lib/queryKeys';
 
 export interface VariantInfo {
   idVariante: number;
@@ -27,7 +28,7 @@ export const VariantPicker: React.FC<VariantPickerProps> = ({ value, onChange, l
   const [productId, setProductId] = useState<number | null>(null);
 
   const products = useQuery({
-    queryKey: ['picker-products', debounced],
+    queryKey: queryKeys.inventory.picker(debounced),
     queryFn: () => catalogApi.getProducts({ q: debounced || undefined, tamanoPagina: 8, orden: 'NOMBRE_ASC' }),
     enabled: !value,
     staleTime: 0,
@@ -36,7 +37,7 @@ export const VariantPicker: React.FC<VariantPickerProps> = ({ value, onChange, l
   });
 
   const detail = useQuery({
-    queryKey: ['inventory-product', productId],
+    queryKey: queryKeys.inventory.product(productId),
     queryFn: () => catalogApi.getProductInventory(productId!),
     enabled: productId !== null && !value,
     staleTime: 0,

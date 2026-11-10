@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowRight } from 'lucide-react';
 import { catalogApi, type GetProductsParams } from '@/features/catalog/api/catalogApi';
 import { useCategories } from '@/features/catalog/hooks/useCatalog';
+import { queryKeys } from '@/shared/lib/queryKeys';
 import { ProductRail } from '@/shared/ui/ProductRail';
 import { useRecentlyViewed } from '@/shared/lib/recentlyViewed';
 import { SectionHeader, Rail } from '@/shared/ui/Rail';
@@ -18,7 +19,7 @@ const SECTION_SIZE = 10;
 
 function useSection(key: string, params: GetProductsParams) {
   return useQuery({
-    queryKey: ['home', key, params],
+    queryKey: queryKeys.home.section(key, params),
     queryFn: () => catalogApi.getProducts({ ...params, pagina: 1, tamanoPagina: SECTION_SIZE }),
     staleTime: 60_000,
   });
