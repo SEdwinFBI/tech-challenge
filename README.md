@@ -37,6 +37,8 @@ Arquitectura Vertical Slice, con DDD y CQRS ligeros.
 - DDD ligero: las reglas base viven en `domain/` transiciones de estado, políticas de cupones e inventario. 
 
 
+![Página de inicio de ShopCart](docs/imagenes/img.png)
+
 ## Desarrollo local
 
 El backend está en `shop-cart-backend/`. 
