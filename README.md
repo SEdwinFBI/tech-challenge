@@ -200,7 +200,7 @@ Para que Grafana funcione en `/grafana/`, el `.env` del servidor necesita `GRAFA
 
 Con `docker compose --profile app up -d --build` también arrancan Prometheus y Grafana.
 
-- Grafana: `http://localhost:3002`, dashboard "ShopCart" con acceso anónimo de solo lectura. El usuario `admin` usa `GRAFANA_ADMIN_PASSWORD`. En el servidor se entra por `https://shop-cart.code-qx.click/grafana/`.
+- Grafana: `http://localhost:3002`, dashboard "ShopCart" con acceso anónimo de solo lectura. El usuario `admin` usa `GRAFANA_ADMIN_PASSWORD`. En el servidor se entra por `https://shop-cart.code-qx.click/grafana/` con el usuario `admin` y la contraseña `Admin123!`. El dashboard está en `https://shop-cart.code-qx.click/grafana/d/shopcart/shopcart`.
 - Prometheus: `http://localhost:9090`. Lee `/metrics` de `api-1` y `api-2` cada 15 segundos.
 - `/metrics` no se publica por Nginx; solo se llega desde la red de Docker.
 
