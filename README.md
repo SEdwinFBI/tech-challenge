@@ -1,12 +1,12 @@
 # ShopCart
 
-ShopCart es una tienda en línea para gestionar catálogo, inventario, carritos, pedidos y usuarios. El backend es una API desarrollada con TypeScript, Express y SQL Server, y el frontend una aplicación React. El pago se simula; no hay integración con una pasarela de cobros.
+ShopCart es una tienda en línea para gestionar catálogo, inventario, carritos, pedidos y usuarios. El backend es una API desarrollada con TypeScript, Express y SQL Server, y el frontend con React. El pago se simula; no hay integración con una pasarela de cobros.
 
 ## Tecnologías
 
 | Parte | Tecnologías |
 | --- | --- |
-| Base de datos | SQL Server 2022 o posterior (Docker usa 2025), procedimientos almacenados, funciones, vistas y triggers |
+| Base de datos | SQL Server 2022 o posterior el proyecto usa Docker 2025, procedimientos almacenados, funciones, vistas y triggers |
 | Backend | Node.js 24, TypeScript, Express 5, Zod, `mssql`, JWT, bcrypt, Helmet, express-rate-limit, ExcelJS, node-cron |
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, TanStack Query, React Hook Form, Zustand, Recharts, PWA con `vite-plugin-pwa` |
 | Imágenes | AWS S3 con URL firmada y CloudFront; la imagen se comprime en el navegador antes de subirla |
@@ -32,7 +32,7 @@ Arquitectura Vertical Slice, con DDD y CQRS ligeros.
 
 - Slices verticales: Se seleccionó esta arquitectura porque permite organizar el código en función de lo que la aplicación hace. Este modelo agrupa todos los componentes necesarios para resolver una función específica. Esto reduce el tiempo de desarrollo y facilita la búsqueda de archivos.
 - CQRS ligero: Se complementó el diseño con un enfoque de CQRS ligero para separar las operaciones de lectura y escritura dentro de cada función.
-- DDD ligero: las reglas base viven en `domain/` (transiciones de estado, políticas de cupones e inventario). 
+- DDD ligero: las reglas base viven en `domain/` transiciones de estado, políticas de cupones e inventario. 
 
 
 ## Desarrollo local
@@ -80,7 +80,7 @@ Para SQL Server con Docker, crear el `.env` de la raíz a partir de [`.env.examp
 | `JEV_URL` | URL del servicio de IA; opcional; sin clave se usa el orden local. |
 | `INSTANCE_ID` | Nombre de la instancia que se devuelve en el encabezado `X-Instancia`; por defecto, el hostname. |
 | `GRAFANA_ADMIN_PASSWORD` | Contraseña del administrador de Grafana; va en el `.env` de la raíz, junto a `MSSQL_SA_PASSWORD`. |
-| `TRUST_PROXY` | Número de proxies delante de la API (`1` con Nginx del compose, `2` si además hay un Nginx con certificado en el servidor), para que el límite de intentos use la IP del cliente; opcional. |
+| `TRUST_PROXY` | Número de proxies delante de la API `1` con Nginx del compose, `2` si  hay un Nginx con certificado en el servidor, para que el límite de intentos use la IP del cliente; opcional. |
 
 ### Base de datos
 
@@ -140,7 +140,7 @@ El perfil `prod` no levanta SQL Server: usa una base en Azure SQL y las imágene
 3. En el `.env` de la raíz definir `CORS_ALLOW_ORIGIN=https://tu-dominio` y `GRAFANA_ADMIN_PASSWORD`.
 4. `docker compose --profile prod up -d`.
 
-Mientras pruebas, la aplicación queda en `http://IP-DEL-SERVIDOR:8080`. Con certificado, poner `WEB_BIND=127.0.0.1` y `TRUST_PROXY=2` en el `.env` para que `web` solo escuche en local. El certificado va en el Nginx del servidor, que hace `proxy_pass http://127.0.0.1:8080` con `proxy_buffering off` y `proxy_read_timeout 1h` para el SSE del dashboard.
+la aplicación queda en `http://IP:8080`. Con certificado, poner `WEB_BIND=127.0.0.1` y `TRUST_PROXY=2` en el `.env` para que `web` solo escuche en local. El certificado va en el Nginx del servidor, que hace `proxy_pass http://127.0.0.1:8080` con `proxy_buffering off` y `proxy_read_timeout 1h` para el SSE del dashboard.
 
 ### Observabilidad
 
@@ -205,7 +205,7 @@ Los contratos de las peticiones y respuestas estan en OpenAPI.
 
 ## Frontend
 
-Está en `shop-cart-ui/`: tienda y backoffice de ShopCart · Don Arturo, con TypeScript estricto.
+Está en `shop-cart-ui/`: tienda y backoffice de ShopCart · Don Arturo, con TypeScript.
 
 ### Cómo ejecutarlo
 
@@ -242,16 +242,16 @@ Las rutas antiguas `/mis-pedidos`, `/mis-pedidos/:id` y `/mis-direcciones` redir
 
 ### Sistema de diseño
 
-- Marca: jade (`--color-brand`), maíz para la acción principal (`--color-cta`) y achiote para ofertas (`--color-sale`). Neutros cálidos en lugar de grises azulados.
+- Color: jade (`--color-brand`),  para la acción principal (`--color-cta`) y achiote para ofertas (`--color-sale`). Neutros cálidos en lugar de grises azulados.
 - Los tokens viven en `src/index.css` dentro de `@theme`. La escala jade reemplaza a `indigo-*` y los neutros cálidos a `slate-*`, por lo que cualquier pantalla se re-tiñe sin editarla.
 - Tipografía Plus Jakarta Sans; los precios usan cifras tabulares y los centavos en superíndice (`PriceTag`).
-- Accesibilidad: foco visible, áreas táctiles de 44 px, enlace "Saltar al contenido", `prefers-reduced-motion` y roles y etiquetas en carruseles, pestañas, contadores y diálogos.
+- Accesibilidad: foco visible, áreas táctiles de 44 px,`prefers-reduced-motion` y roles y etiquetas en carruseles, pestañas, contadores y diálogos.
 - Componentes compartidos en `src/shared/ui`: `PriceTag`, `StockIndicator`, `QuantityStepper`, `Rail`, `Stepper`, `ReservationCountdown`, `FreeShippingProgress`, `OrderTimeline`, `IvaBreakdown`, `NumberedPagination`, `Drawer`, `SafeImage`, ilustraciones propias, además de los básicos (botón, tabla, modal, etc.).
 - Todas las vistas con datos tienen estado de carga, vacío y error con "Reintentar".
 
 ### Decisiones del frontend
 
-1. Los filtros van en la URL (`useCatalogFilters`): búsqueda, categoría, precio, disponibilidad, ofertas, novedades, orden y página. Se pueden compartir y el botón "atrás" funciona. El servidor busca, filtra, ordena y pagina (RF-02, RF-08).
+1. Los filtros van en la URL (`useCatalogFilters`): búsqueda, categoría, precio, disponibilidad, ofertas, novedades, orden y página. El servidor busca, filtra, ordena y pagina .
 2. Reserva y pago: al continuar al pago se reserva la existencia 15 minutos con cuenta regresiva. La clave de idempotencia se crea una vez por visita y se reutiliza en los reintentos; el botón se deshabilita al primer clic. Un doble clic produce una sola solicitud de confirmación. El modo de prueba de pago (aprobado o rechazado) solo existe en desarrollo.
 3. Envío: `quoteShipping` replica la regla del servidor (gratis si el subtotal con descuento llega al mínimo del departamento). Sirve solo para mostrar el total antes de pagar. El que cobra es el servidor.
 4. Existencia vista por el propio carrito: el backend descuenta únicamente lo apartado por otros carritos, así que quien reservó sus unidades no las ve como ajenas. La tienda usa esa cifra en carrito, detalle y agregado rápido.
@@ -291,9 +291,6 @@ shop-cart-ui/src/
 
 Cada feature agrupa `api/`, `hooks/`, `components/` y `pages/`. Las páginas no contienen lógica de negocio: los cálculos viven en `shared/lib` y en hooks.
 
-### Mejoras posibles
-
-Reseñas con compra verificada, listas de regalos, subcategorías y recojo en tienda.
 
 
 ## Modelo de datos
@@ -391,7 +388,7 @@ npm run test:concurrency:http
 
 ### Rendimiento
 
-`npm run test:rendimiento` mide cada listado 20 veces, después de 3 de calentamiento, contra la API de pruebas. Resultado con los datos de ejemplo, en un i7-1165G7 con 16 GB:
+`npm run test:rendimiento` mide cada listado 20 veces, después de 3 de calentamiento, contra la API de pruebas. Resultado con los datos de ejemplo, en mi laptop con procesador i7-1165G7 con 16 GB:
 
 | Endpoint | p50 (ms) | p95 (ms) |
 | --- | --- | --- |
@@ -410,7 +407,7 @@ npm run test:concurrency:http
 | Resumen del dashboard, con caché | 15.7 | 18.2 |
 | Exportación a Excel | 32.2 | 51.6 |
 
-Todo queda por debajo de 1 segundo. Se midió con los datos de ejemplo (82 productos, 22 pedidos, 171 movimientos de kardex), así que sirve para ver que no hay consultas pesadas, no como prueba de carga.
+Se midió con los datos de ejemplo (82 productos, 22 pedidos, 171 movimientos de kardex)
 
 `npm run test:concurrency` ejecuta una demostración adicional de concurrencia. Su implementación está en [`tests/concurrency-demo.ts`](shop-cart-backend/tests/concurrency-demo.ts).
 
