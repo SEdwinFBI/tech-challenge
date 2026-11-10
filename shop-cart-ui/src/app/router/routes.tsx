@@ -29,177 +29,109 @@ import { AdminPaymentsPage } from '@/features/payments';
 import { ForbiddenPage } from '../pages/ForbiddenPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 
+type Role = 'CLIENTE' | 'OPERADOR' | 'ADMINISTRADOR';
+
+type Guard = { kind: 'auth'; roles?: readonly Role[] } | { kind: 'guest' };
+
+interface RouteNode {
+  path?: string;
+  index?: boolean;
+  element: React.ReactElement;
+  guard?: Guard;
+  children?: RouteNode[];
+}
+
 const LegacyOrderRedirect: React.FC = () => {
   const { id } = useParams();
   return <Navigate to={`/cuenta/pedidos/${id}`} replace />;
 };
 
-const CLIENT = ['CLIENTE'] as const;
+const guards = {
+  auth: { kind: 'auth' },
+  cliente: { kind: 'auth', roles: ['CLIENTE'] },
+  backoffice: { kind: 'auth', roles: ['OPERADOR', 'ADMINISTRADOR'] },
+  admin: { kind: 'auth', roles: ['ADMINISTRADOR'] },
+  guest: { kind: 'guest' },
+} as const satisfies Record<string, Guard>;
 
-export const AppRouter: React.FC = () => {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<StoreLayout />}>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/catalogo" element={<CatalogPage mode="all" />} />
-          <Route path="/categoria/:id" element={<CatalogPage mode="categoria" />} />
-          <Route path="/ofertas" element={<CatalogPage mode="ofertas" />} />
-          <Route path="/novedades" element={<CatalogPage mode="novedades" />} />
-          <Route path="/producto/:id" element={<ProductDetailPage />} />
-          <Route path="/carrito" element={<CartPage />} />
-          <Route
-            path="/pedido/:id/confirmado"
-            element={
-              <ProtectedRoute allowedRoles={[...CLIENT]}>
-                <OrderConfirmationPage />
-              </ProtectedRoute>
-            }
-          />
+const routeConfig: RouteNode[] = [
+  {
+    element: <StoreLayout />,
+    children: [
+      { path: '/', element: <HomePage /> },
+      { path: '/catalogo', element: <CatalogPage mode="all" /> },
+      { path: '/categoria/:id', element: <CatalogPage mode="categoria" /> },
+      { path: '/ofertas', element: <CatalogPage mode="ofertas" /> },
+      { path: '/novedades', element: <CatalogPage mode="novedades" /> },
+      { path: '/producto/:id', element: <ProductDetailPage /> },
+      { path: '/carrito', element: <CartPage /> },
+      { path: '/pedido/:id/confirmado', element: <OrderConfirmationPage />, guard: guards.cliente },
+      {
+        path: '/cuenta',
+        element: <AccountLayout />,
+        guard: guards.auth,
+        children: [
+          { index: true, element: <Navigate to="/cuenta/pedidos" replace /> },
+          { path: 'pedidos', element: <MyOrdersPage />, guard: guards.cliente },
+          { path: 'pedidos/:id', element: <OrderDetailPage />, guard: guards.cliente },
+          { path: 'favoritos', element: <FavoritesPage />, guard: guards.cliente },
+          { path: 'perfil', element: <ProfilePage /> },
+          { path: 'direcciones', element: <MyAddressesPage />, guard: guards.cliente },
+        ],
+      },
+      { path: '/mis-pedidos', element: <Navigate to="/cuenta/pedidos" replace /> },
+      { path: '/mis-pedidos/:id', element: <LegacyOrderRedirect /> },
+      { path: '/mis-direcciones', element: <Navigate to="/cuenta/direcciones" replace /> },
+    ],
+  },
+  {
+    element: <CheckoutLayout />,
+    guard: guards.cliente,
+    children: [{ path: '/checkout', element: <CheckoutPage /> }],
+  },
+  { path: '/login', element: <LoginPage />, guard: guards.guest },
+  { path: '/registro', element: <RegisterPage />, guard: guards.guest },
+  {
+    path: '/admin',
+    element: <BackofficeLayout />,
+    guard: guards.backoffice,
+    children: [
+      { index: true, element: <Navigate to="/admin/pedidos" replace /> },
+      { path: 'pedidos', element: <AdminOrdersPage /> },
+      { path: 'pedidos/:id', element: <AdminOrderDetailPage /> },
+      { path: 'inventario', element: <AdminInventoryPage /> },
+      { path: 'dashboard', element: <AdminDashboardPage />, guard: guards.admin },
+      { path: 'catalogo', element: <AdminCatalogPage />, guard: guards.admin },
+      { path: 'cupones', element: <AdminCouponsPage />, guard: guards.admin },
+      { path: 'usuarios', element: <AdminUsersPage />, guard: guards.admin },
+      { path: 'pagos', element: <AdminPaymentsPage />, guard: guards.admin },
+      { path: 'bitacora', element: <AdminAuditLogPage />, guard: guards.admin },
+    ],
+  },
+  { path: '/403', element: <ForbiddenPage /> },
+  { path: '*', element: <NotFoundPage /> },
+];
 
-          <Route
-            path="/cuenta"
-            element={
-              <ProtectedRoute>
-                <AccountLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="/cuenta/pedidos" replace />} />
-            <Route
-              path="pedidos"
-              element={
-                <ProtectedRoute allowedRoles={[...CLIENT]}>
-                  <MyOrdersPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="pedidos/:id"
-              element={
-                <ProtectedRoute allowedRoles={[...CLIENT]}>
-                  <OrderDetailPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="favoritos"
-              element={
-                <ProtectedRoute allowedRoles={[...CLIENT]}>
-                  <FavoritesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="perfil" element={<ProfilePage />} />
-            <Route
-              path="direcciones"
-              element={
-                <ProtectedRoute allowedRoles={[...CLIENT]}>
-                  <MyAddressesPage />
-                </ProtectedRoute>
-              }
-            />
-          </Route>
-
-          {/* rutas viejas, se dejan para no romper enlaces */}
-          <Route path="/mis-pedidos" element={<Navigate to="/cuenta/pedidos" replace />} />
-          <Route path="/mis-pedidos/:id" element={<LegacyOrderRedirect />} />
-          <Route path="/mis-direcciones" element={<Navigate to="/cuenta/direcciones" replace />} />
-        </Route>
-
-        <Route
-          element={
-            <ProtectedRoute allowedRoles={[...CLIENT]}>
-              <CheckoutLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/checkout" element={<CheckoutPage />} />
-        </Route>
-
-        <Route
-          path="/login"
-          element={
-            <GuestOnlyRoute>
-              <LoginPage />
-            </GuestOnlyRoute>
-          }
-        />
-        <Route
-          path="/registro"
-          element={
-            <GuestOnlyRoute>
-              <RegisterPage />
-            </GuestOnlyRoute>
-          }
-        />
-
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute allowedRoles={['OPERADOR', 'ADMINISTRADOR']}>
-              <BackofficeLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/admin/pedidos" replace />} />
-          <Route path="pedidos" element={<AdminOrdersPage />} />
-          <Route path="pedidos/:id" element={<AdminOrderDetailPage />} />
-          <Route path="inventario" element={<AdminInventoryPage />} />
-
-          <Route
-            path="dashboard"
-            element={
-              <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
-                <AdminDashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="catalogo"
-            element={
-              <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
-                <AdminCatalogPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="cupones"
-            element={
-              <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
-                <AdminCouponsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="usuarios"
-            element={
-              <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
-                <AdminUsersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="pagos"
-            element={
-              <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
-                <AdminPaymentsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="bitacora"
-            element={
-              <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
-                <AdminAuditLogPage />
-              </ProtectedRoute>
-            }
-          />
-        </Route>
-
-        <Route path="/403" element={<ForbiddenPage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </BrowserRouter>
-  );
+const withGuard = (guard: Guard | undefined, element: React.ReactElement): React.ReactElement => {
+  if (!guard) return element;
+  if (guard.kind === 'guest') return <GuestOnlyRoute>{element}</GuestOnlyRoute>;
+  return <ProtectedRoute allowedRoles={guard.roles ? [...guard.roles] : undefined}>{element}</ProtectedRoute>;
 };
+
+const renderRoutes = (nodes: RouteNode[]): React.ReactElement[] =>
+  nodes.map((node, i) => {
+    const element = withGuard(node.guard, node.element);
+    const key = node.path ?? (node.index ? 'index' : `layout-${i}`);
+    if (node.index) return <Route key={key} index element={element} />;
+    return (
+      <Route key={key} path={node.path} element={element}>
+        {node.children && renderRoutes(node.children)}
+      </Route>
+    );
+  });
+
+export const AppRouter: React.FC = () => (
+  <BrowserRouter>
+    <Routes>{renderRoutes(routeConfig)}</Routes>
+  </BrowserRouter>
+);
