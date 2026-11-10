@@ -1,5 +1,11 @@
 import { apiClient } from '@/shared/lib/apiClient';
 import { KardexItem, LowStockItem } from '@/shared/types/domain';
+import type {
+  KardexQueryParams,
+  RawCreateMovementResponse,
+  RawKardexItem,
+  RawKardexResponse,
+} from './inventoryApi.types';
 
 export type KardexSortColumn = 'fecha' | 'cantidad' | 'tipo';
 export type LowStockSortColumn = 'existencia' | 'producto' | 'sku';
@@ -33,7 +39,7 @@ export interface CreateMovementPayload {
 
 export const inventoryApi = {
   getKardex: async (params?: GetKardexParams): Promise<KardexResponse> => {
-    const cleanParams: Record<string, any> = {
+    const cleanParams: KardexQueryParams = {
       pagina: params?.pagina || 1,
       tamanoPagina: params?.tamanoPagina || 20,
     };
@@ -44,9 +50,9 @@ export const inventoryApi = {
     if (params?.fechaDesde) cleanParams.fechaDesde = params.fechaDesde;
     if (params?.fechaHasta) cleanParams.fechaHasta = params.fechaHasta;
 
-    const res = await apiClient.get<any>('/inventario/kardex', { params: cleanParams });
+    const res = await apiClient.get<RawKardexResponse>('/inventario/kardex', { params: cleanParams });
     const raw = res.data;
-    const rawItems: any[] = raw.items || raw.movimientos || [];
+    const rawItems: RawKardexItem[] = raw.items || raw.movimientos || [];
     const movimientos: KardexItem[] = rawItems.map((k) => ({
       IDKardex: k.IDMovimiento ?? k.IDKardex ?? 0,
       IDVariante: k.IDVariante,
@@ -72,7 +78,7 @@ export const inventoryApi = {
   },
 
   createMovement: async (data: CreateMovementPayload): Promise<{ ok: boolean; idKardex: number; saldoPosterior: number }> => {
-    const res = await apiClient.post<any>('/inventario/movimientos', data);
+    const res = await apiClient.post<RawCreateMovementResponse>('/inventario/movimientos', data);
     const raw = res.data;
     return {
       ok: raw.ok ?? true,

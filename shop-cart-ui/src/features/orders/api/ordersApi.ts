@@ -1,5 +1,11 @@
 import { apiClient } from '@/shared/lib/apiClient';
 import { Order, OrderItem, OrderHistoryEntry, OrderStatus } from '@/shared/types/domain';
+import type {
+  OrderWithNetTotal,
+  RawOrderDetailHeader,
+  RawOrderDetailResponse,
+  RawOrdersListResponse,
+} from './ordersApi.types';
 
 export type OrderSortColumn = 'fecha' | 'total' | 'estado' | 'cliente';
 
@@ -35,9 +41,9 @@ export interface OrderDetailResponse {
 
 export const ordersApi = {
   getOrders: async (params?: GetOrdersParams): Promise<OrdersListResponse> => {
-    const res = await apiClient.get<any>('/pedidos', { params });
+    const res = await apiClient.get<RawOrdersListResponse>('/pedidos', { params });
     const raw = res.data;
-    const items: Order[] = (raw.datos || []).map((o: any) => ({
+    const items: OrderWithNetTotal[] = (raw.datos || []).map((o) => ({
       ...o,
       NumeroSeguimiento: o.NumeroSeguimiento || o.NumeroPedido || `ORD-${String(o.IDPedido).padStart(6, '0')}`,
       Subtotal: Number(o.Subtotal || 0),
@@ -59,10 +65,10 @@ export const ordersApi = {
   },
 
   getOrderById: async (id: number): Promise<OrderDetailResponse> => {
-    const res = await apiClient.get<any>(`/pedidos/${id}`);
+    const res = await apiClient.get<RawOrderDetailResponse>(`/pedidos/${id}`);
     const raw = res.data;
-    const p = raw.pedido || {};
-    const pedido: Order = {
+    const p = raw.pedido || ({} as RawOrderDetailHeader);
+    const pedido: OrderWithNetTotal = {
       ...p,
       NumeroSeguimiento: p.NumeroSeguimiento || p.NumeroPedido || `ORD-${String(p.IDPedido).padStart(6, '0')}`,
       DireccionEntrega:
@@ -76,7 +82,7 @@ export const ordersApi = {
       MontoIVA12: Number(p.MontoIVA12 || 0),
       TotalNetoPagado: Number(p.TotalNetoPagado || p.Total || 0),
     };
-    const detalles: OrderItem[] = (raw.detalles || []).map((d: any) => ({
+    const detalles: OrderItem[] = (raw.detalles || []).map((d) => ({
       IDDetalle: d.IDPedidoDetalle ?? d.IDDetallePedido ?? d.IDDetalle ?? 0,
       IDVariante: d.IDVariante,
       SKU: d.SKU || '',
@@ -88,8 +94,8 @@ export const ordersApi = {
       Subtotal: d.SubtotalLinea ?? d.Subtotal ?? 0,
       CantidadDevuelta: d.CantidadDevuelta ?? 0,
     }));
-    const toCode = (v: string) => (v ? v.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toUpperCase().replace(/s+/g, '_') : '');
-    const historial: OrderHistoryEntry[] = (raw.historial || []).map((h: any) => ({
+    const toCode = (v: string) => (v ? v.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toUpperCase().replace(/\s+/g, '_') : '');
+    const historial: OrderHistoryEntry[] = (raw.historial || []).map((h) => ({
       IDHistorial: h.IDPedidoHistorial ?? h.IDHistorial ?? 0,
       EstadoAnterior: toCode(h.EstadoAnterior || ''),
       EstadoNuevo: toCode(h.EstadoNuevo || ''),

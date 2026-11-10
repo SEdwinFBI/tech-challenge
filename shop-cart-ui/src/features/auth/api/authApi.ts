@@ -1,6 +1,7 @@
 import { apiClient, setAccessToken } from '@/shared/lib/apiClient';
 import { User, UserRole } from '@/shared/types/domain';
 import { ApiListResponse } from '@/shared/types/api';
+import type { RawUsersListResponse } from './authApi.types';
 
 export interface AuthResponse {
   ok: boolean;
@@ -43,7 +44,7 @@ export const authApi = {
   },
 
   getUsers: async (params: { orden?: UserSortColumn; direccion?: 'asc' | 'desc'; pagina?: number; tamanoPagina?: number; busqueda?: string; rol?: string; activo?: boolean }): Promise<ApiListResponse<User>> => {
-    const res = await apiClient.get<any>('/auth/usuarios', {
+    const res = await apiClient.get<RawUsersListResponse>('/auth/usuarios', {
       params: {
         orden: params.orden,
         direccion: params.direccion,
@@ -55,11 +56,11 @@ export const authApi = {
       },
     });
     const raw = res.data;
-    const datos: User[] = (raw.datos || []).map((u: any) => ({
-      idUsuario: u.IDUsuario ?? u.idUsuario,
-      correo: u.Correo ?? u.correo,
-      nombreCompleto: u.NombreCompleto ?? u.nombreCompleto,
-      rol: u.Rol ?? u.rol,
+    const datos: User[] = (raw.datos || []).map((u) => ({
+      idUsuario: (u.IDUsuario ?? u.idUsuario) as number,
+      correo: (u.Correo ?? u.correo) as string,
+      nombreCompleto: (u.NombreCompleto ?? u.nombreCompleto) as string,
+      rol: (u.Rol ?? u.rol) as UserRole,
       activo: u.Activo ?? u.activo ?? true,
       fechaCreacion: u.FechaCreacion ?? u.fechaCreacion,
     }));

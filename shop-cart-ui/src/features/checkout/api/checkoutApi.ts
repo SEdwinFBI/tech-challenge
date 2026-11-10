@@ -1,5 +1,6 @@
 import { apiClient } from '@/shared/lib/apiClient';
 import { Address, Municipality } from '@/shared/types/domain';
+import type { RawConfirmOrderResponse, RawReserveStockResponse } from './checkoutApi.types';
 
 export interface CreateAddressPayload {
   etiqueta: string;
@@ -59,7 +60,7 @@ export const checkoutApi = {
   },
 
   reserveStock: async (idCarrito: number): Promise<ReserveStockResponse> => {
-    const res = await apiClient.post<any>('/checkout/reservar', { idCarrito });
+    const res = await apiClient.post<RawReserveStockResponse>('/checkout/reservar', { idCarrito });
     const raw = res.data;
     const expiration = raw.FechaExpiracionReserva ?? raw.ReservaExpiracion ?? '';
     const serverNow = Date.parse(raw.FechaServidor ?? '');
@@ -74,11 +75,11 @@ export const checkoutApi = {
   },
 
   confirmOrder: async (data: ConfirmOrderPayload): Promise<ConfirmOrderResponse> => {
-    const res = await apiClient.post<any>('/checkout/confirmar', data);
+    const res = await apiClient.post<RawConfirmOrderResponse>('/checkout/confirmar', data);
     const raw = res.data;
     return {
       ok: raw.ok ?? true,
-      idPedido: raw.IDPedido ?? raw.idPedido,
+      idPedido: (raw.IDPedido ?? raw.idPedido) as number,
       numeroSeguimiento: raw.NumeroPedido ?? raw.numeroSeguimiento ?? '',
       total: raw.Total ?? raw.total,
       FueIdempotente: raw.FueIdempotente,
