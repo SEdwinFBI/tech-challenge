@@ -51,7 +51,8 @@ export const AuthShell: React.FC<AuthShellProps> = ({ title, subtitle, children,
       <p className="relative text-center text-xs text-white/70">© 2026 ShopCart por Santos Edwin Baquiax</p>
     </aside>
 
-    <div className="flex flex-col lg:hidden">
+    <div className="flex min-h-screen flex-col lg:min-h-0">
+      <div className="lg:hidden">
       <div className="relative overflow-hidden bg-gradient-to-br from-brand via-brand-hover to-brand-deep px-6 pb-6 pt-10 text-white">
         <span className="pointer-events-none absolute -right-14 -top-14 h-44 w-44 rounded-full bg-white/[0.08]" aria-hidden="true" />
         <span className="pointer-events-none absolute -bottom-10 -left-10 h-36 w-36 rounded-full bg-cta/15" aria-hidden="true" />
@@ -79,25 +80,17 @@ export const AuthShell: React.FC<AuthShellProps> = ({ title, subtitle, children,
           />
         </svg>
       </div>
+      </div>
 
-      <main className="flex-1 bg-white px-5 pb-12 pt-2 sm:px-10">
+      <main className="flex-1 bg-white px-5 pb-12 pt-2 sm:px-10 lg:flex lg:items-center lg:justify-center lg:py-10">
         <div className="mx-auto w-full max-w-[400px] animate-fade-up">
           <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">{title}</h1>
-          {subtitle && <p className="mt-1.5 text-sm text-slate-600">{subtitle}</p>}
-          <div className="mt-6">{children}</div>
-          <div className="mt-6 text-center text-sm text-slate-600">{footer}</div>
+          {subtitle && <p className="mt-1.5 text-sm text-slate-600 lg:mt-2">{subtitle}</p>}
+          <div className="mt-6 lg:mt-8">{children}</div>
+          <div className="mt-6 text-center text-sm text-slate-600 lg:mt-8">{footer}</div>
         </div>
       </main>
     </div>
-
-    <main className="hidden items-center justify-center px-5 py-10 sm:px-10 lg:flex">
-      <div className="w-full max-w-[400px] animate-fade-up">
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{title}</h1>
-        {subtitle && <p className="mt-2 text-sm text-slate-600">{subtitle}</p>}
-        <div className="mt-8">{children}</div>
-        <div className="mt-8 text-center text-sm text-slate-600">{footer}</div>
-      </div>
-    </main>
   </div>
 );
 

@@ -80,7 +80,7 @@ export const BackofficeLayout: React.FC = () => {
           </div>
         </div>
 
-        <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
+        <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {groups.map(g => (
             <div key={g.title}>
               <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-widest text-white/65">{g.title}</p>
