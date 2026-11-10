@@ -49,7 +49,7 @@ export const StoreLayout: React.FC = () => {
 
   return (
     <div
-      className="flex min-h-screen flex-col bg-white pb-16 text-slate-800 lg:pb-0"
+      className="flex min-h-screen flex-col bg-white pb-16 text-slate-800 lg:pb-0 overflow-x-clip"
       style={{ ['--header-h' as string]: `${headerH}px` }}
     >
       <a

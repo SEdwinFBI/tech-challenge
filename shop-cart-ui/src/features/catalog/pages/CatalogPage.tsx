@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useParams } from 'react-router';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ChevronDown, SearchX, SlidersHorizontal, X } from 'lucide-react';
@@ -108,7 +109,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({ mode = 'all' }) => {
   };
 
   return (
-    <div className="animate-fade-up">
+    <div className="animate-fade-up overflow-x-hidden">
       {mode === 'categoria' && category && (
         <div className="relative mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-brand to-brand-deep p-6 text-white sm:p-10">
           {category.ImagenUrl && (
@@ -257,26 +258,32 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({ mode = 'all' }) => {
         </div>
       </div>
 
-      {drawerOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Filtros">
-          <div className="absolute inset-0 bg-slate-900/50" onClick={() => setDrawerOpen(false)} aria-hidden="true" />
-          <div className="absolute inset-y-0 left-0 flex w-[88%] max-w-sm flex-col bg-white shadow-lift">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
-              <span className="text-base font-extrabold text-slate-900">Filtrar y ordenar</span>
-              <button type="button" onClick={() => setDrawerOpen(false)} aria-label="Cerrar filtros"
-                className="rounded-full p-2 text-slate-500 hover:bg-slate-100">
-                <X className="h-5 w-5" aria-hidden="true" />
-              </button>
+      {drawerOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] lg:hidden" role="dialog" aria-modal="true" aria-label="Filtros">
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs" onClick={() => setDrawerOpen(false)} aria-hidden="true" />
+            <div className="fixed inset-y-0 left-0 z-10 flex w-[88%] max-w-sm flex-col bg-white shadow-lift">
+              <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
+                <span className="text-base font-extrabold text-slate-900">Filtrar y ordenar</span>
+                <button
+                  type="button"
+                  onClick={() => setDrawerOpen(false)}
+                  aria-label="Cerrar filtros"
+                  className="rounded-full p-2 text-slate-500 hover:bg-slate-100"
+                >
+                  <X className="h-5 w-5" aria-hidden="true" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-5">{panel}</div>
+              <div className="shrink-0 border-t border-slate-200 p-4">
+                <Button variant="cta" size="lg" pill block onClick={() => setDrawerOpen(false)}>
+                  Ver {total} {total === 1 ? 'producto' : 'productos'}
+                </Button>
+              </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-5">{panel}</div>
-            <div className="border-t border-slate-200 p-4">
-              <Button variant="cta" size="lg" pill block onClick={() => setDrawerOpen(false)}>
-                Ver {total} {total === 1 ? 'producto' : 'productos'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };
