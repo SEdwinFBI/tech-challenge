@@ -47,7 +47,7 @@ export interface RefreshResult {
   usuario: User;
 }
 
-// Un solo refresh en vuelo: con rotación, reusar el mismo refresh token cierra la sesión
+// Un solo refresh con rotación
 export function refreshSession(): Promise<RefreshResult> {
   refreshPromise ??= apiClient
     .post<RefreshResult>('/auth/refresh', undefined, { timeout: 10_000 })
@@ -61,7 +61,7 @@ export function refreshSession(): Promise<RefreshResult> {
   return refreshPromise;
 }
 
-// Renovar antes de que venza: vencido, hasta las rutas públicas dan 401
+// se renueva antes de que venza
 apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   if (
     inMemoryAccessToken &&
