@@ -31,7 +31,7 @@ const LineSkeleton: React.FC = () => (
 export const CartPage: React.FC = () => {
   const navigate = useNavigate();
   const user = useAuth(s => s.user);
-  const { cart, isLoading, isError, refetch, upsertItem, removeItem, removeCoupon, isUpserting, isRemoving, isRemovingCoupon } = useCart();
+  const { cart, isLoading, isError, refetch, upsertItem, removeItem, removeCoupon, isUpserting, isRemoving, isRemovingCoupon, flushPendingUpdates } = useCart();
   const { toggle, isFavorite } = useFavorites();
   const [couponOpen, setCouponOpen] = useState(false);
   const isClient = user?.rol === 'CLIENTE';
@@ -45,7 +45,7 @@ export const CartPage: React.FC = () => {
   const quote = address ? quoteShipping(netSubtotal, address) : null;
   const estimatedTotal = (cart?.total ?? 0) + (quote?.cost ?? 0);
   const overLimit = items.some(i => i.Cantidad > i.ExistenciaDisponible);
-  const busy = isUpserting || isRemoving;
+  const busy = isRemoving;
 
   const changeQty = (item: CartItem, next: number) => {
     if (next > item.ExistenciaDisponible) {
@@ -258,7 +258,10 @@ export const CartPage: React.FC = () => {
           <button
             type="button"
             disabled={overLimit || busy}
-            onClick={() => navigate('/checkout')}
+            onClick={() => {
+              flushPendingUpdates();
+              navigate('/checkout');
+            }}
             className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-cta text-base font-extrabold text-cta-fg shadow-lift transition hover:bg-cta-hover active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {user ? 'Continuar al pago' : 'Ingresar y pagar'} <ArrowRight className="h-5 w-5" />
