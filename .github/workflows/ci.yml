@@ -10,6 +10,19 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      DB_HOST: localhost
+      DB_PORT: '1433'
+      DB_USER: sa
+      DB_PASSWORD: ci-pruebas-unitarias
+      DB_NAME: ShopCartCi
+      JWT_ACCESS_SECRET: ci-acceso-solo-para-pruebas-unitarias
+      JWT_REFRESH_SECRET: ci-refresco-solo-para-pruebas-unitarias
+      CORS_ALLOW_ORIGIN: http://localhost:5173
+      CDN_BASE_URL: https://cdn.ci.test
+      S3_BUCKET: ci-pruebas
+      S3_REGION: us-east-1
     defaults:
       run:
         working-directory: shop-cart-backend
