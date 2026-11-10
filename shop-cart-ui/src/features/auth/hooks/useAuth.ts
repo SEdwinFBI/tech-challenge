@@ -34,6 +34,7 @@ interface AuthState {
   hasSessionHint: () => boolean;
   login: (correo: string, pass: string) => Promise<User>;
   register: (correo: string, pass: string, name: string) => Promise<User>;
+  endLocalSession: () => void;
   logout: () => Promise<void>;
 }
 
@@ -143,18 +144,22 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     const data = await authApi.register(correo, pass, name);
     recordarSesion(true);
     claimDrafts(data.usuario.idUsuario);
-    set({ user: data.usuario, status: 'authenticated' });
+    set({ user: data.usuario, status: 'authenticated', reconnecting: false });
     return data.usuario;
   },
 
-  logout: async () => {
+  endLocalSession: () => {
     stopRetries();
     recordarSesion(false);
     clearAllDrafts();
+    set({ user: null, status: 'unauthenticated', reconnecting: false });
+  },
+
+  logout: async () => {
     try {
       await authApi.logout();
     } finally {
-      set({ user: null, status: 'unauthenticated', reconnecting: false });
+      get().endLocalSession();
     }
   },
 }));

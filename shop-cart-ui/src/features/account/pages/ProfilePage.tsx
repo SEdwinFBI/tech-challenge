@@ -74,7 +74,7 @@ export const ProfilePage: React.FC = () => {
     try {
       await authApi.changePassword(data.passwordActual, data.passwordNueva);
       setAccessToken(null);
-      useAuth.setState({ user: null, status: 'unauthenticated' });
+      useAuth.getState().endLocalSession();
       toast.success('Contraseña actualizada', 'Ingresa de nuevo.');
       navigate('/login', { replace: true });
     } catch (err: unknown) {

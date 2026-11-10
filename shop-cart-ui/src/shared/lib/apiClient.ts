@@ -47,7 +47,7 @@ export interface RefreshResult {
   usuario: User;
 }
 
-// Un solo refresh con rotación
+// Un solo refresh en vuelo: con rotación, reusar el mismo refresh token cierra la sesión
 export function refreshSession(): Promise<RefreshResult> {
   refreshPromise ??= apiClient
     .post<RefreshResult>('/auth/refresh', undefined, { timeout: 10_000 })
@@ -61,7 +61,16 @@ export function refreshSession(): Promise<RefreshResult> {
   return refreshPromise;
 }
 
-// se renueva antes de que venza
+function handleRefreshFailure(err: unknown): void {
+  if (isAuthUncertain(err)) {
+    onUncertainCallback?.();
+    return;
+  }
+  setAccessToken(null);
+  onUnauthorizedCallback?.();
+}
+
+// Renovar antes de que venza y solo después poner Authorization: vencido, hasta las rutas públicas dan 401
 apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   if (
     inMemoryAccessToken &&
@@ -74,19 +83,6 @@ apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) =>
       handleRefreshFailure(err);
     }
   }
-  return config;
-});
-
-function handleRefreshFailure(err: unknown): void {
-  if (isAuthUncertain(err)) {
-    onUncertainCallback?.();
-    return;
-  }
-  setAccessToken(null);
-  onUnauthorizedCallback?.();
-}
-
-apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (inMemoryAccessToken) {
     config.headers.set('Authorization', `Bearer ${inMemoryAccessToken}`);
   }
