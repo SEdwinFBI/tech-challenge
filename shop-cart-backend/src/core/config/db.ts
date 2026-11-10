@@ -9,7 +9,7 @@ const dbConfig: sql.config = {
   database: env.DB_NAME,
   port: env.DB_PORT,
   pool: { max: 20, min: 2, idleTimeoutMillis: 30000 },
-  options: { encrypt: false, trustServerCertificate: true },
+  options: { encrypt: env.DB_ENCRYPT, trustServerCertificate: !env.DB_ENCRYPT },
 };
 
 let poolPromise: Promise<sql.ConnectionPool> | null = null;

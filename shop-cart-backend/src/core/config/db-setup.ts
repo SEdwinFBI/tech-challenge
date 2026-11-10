@@ -40,7 +40,7 @@ async function runDbSetup() {
     server: env.DB_HOST,
     database: 'master',
     port: env.DB_PORT,
-    options: { encrypt: false, trustServerCertificate: true },
+    options: { encrypt: env.DB_ENCRYPT, trustServerCertificate: !env.DB_ENCRYPT },
   };
 
   console.log('Conectando...');
@@ -69,7 +69,8 @@ async function runDbSetup() {
     server: env.DB_HOST,
     database: env.DB_NAME,
     port: env.DB_PORT,
-    options: { encrypt: false, trustServerCertificate: true },
+    requestTimeout: 600_000,
+    options: { encrypt: env.DB_ENCRYPT, trustServerCertificate: !env.DB_ENCRYPT },
   };
 
   const appPool = await new sql.ConnectionPool(appDbConfig).connect();
