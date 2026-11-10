@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { couponsApi, CouponPayload, type CouponSortColumn, type CouponValidity } from '../api/couponsApi';
-import { useCategories } from '@/features/catalog/hooks/useCatalog';
+import { useCategories } from '@/features/catalog';
 import { formatMoney, formatDateTime } from '@/shared/lib/formatters';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
 import { mutationKeys, queryKeys } from '@/shared/lib/queryKeys';

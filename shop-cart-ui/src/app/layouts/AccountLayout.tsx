@@ -11,7 +11,8 @@ const LINKS = [
 ];
 
 export const AccountLayout: React.FC = () => {
-  const { user, logout } = useAuth();
+  const user = useAuth(s => s.user);
+  const logout = useAuth(s => s.logout);
   const navigate = useNavigate();
   const links = LINKS.filter(l => !l.clientOnly || user?.rol === 'CLIENTE');
 

@@ -3,6 +3,7 @@ import { cartApi } from '../api/cartApi';
 import { toast } from '@/shared/ui/toastStore';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
 import { mutationKeys, queryKeys } from '@/shared/lib/queryKeys';
+import { netSubtotal } from '@/shared/lib/pricing';
 import type { Cart } from '@/shared/types/domain';
 
 const pendingTimers = new Map<number, ReturnType<typeof setTimeout>>();
@@ -135,7 +136,7 @@ export function useCart() {
 
     const subtotal = Number(nextItems.reduce((acc, i) => acc + i.SubtotalLinea, 0).toFixed(2));
     const descuento = previousCart.descuento ?? 0;
-    const total = Math.max(0, Number((subtotal - descuento).toFixed(2)));
+    const total = netSubtotal(subtotal, descuento);
 
     queryClient.setQueryData<Cart>(queryKeys.cart.all, {
       ...previousCart,

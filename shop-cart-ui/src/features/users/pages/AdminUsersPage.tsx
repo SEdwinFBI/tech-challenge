@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
 import { mutationKeys, queryKeys } from '@/shared/lib/queryKeys';
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { authApi, type UserSortColumn } from '@/features/auth/api/authApi';
+import { authApi, type UserSortColumn } from '@/features/auth';
 import { useSort } from '@/shared/hooks/useSort';
 import { useColumnFilters } from '@/shared/hooks/useColumnFilters';
 import type { FilterDef } from '@/shared/lib/columnFilters';

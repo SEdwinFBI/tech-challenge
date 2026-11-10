@@ -3,9 +3,10 @@ import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { favoritesApi } from '../api/favoritesApi';
 import { queryKeys } from '@/shared/lib/queryKeys';
-import { ProductCard, ProductCardSkeletonV2 } from '@/shared/ui/ProductCard';
+import { ConnectedProductCard } from '@/features/catalog';
+import { ProductCardSkeletonV2 } from '@/shared/ui/ProductCard';
 import { ErrorState, Illustration } from '@/shared/ui';
-import { RecommendationRail } from '@/features/recommendations/components/RecommendationRail';
+import { RecommendationRail } from '@/features/recommendations';
 
 export const FavoritesPage: React.FC = () => {
   const { data = [], isLoading, isError, refetch } = useQuery({ queryKey: queryKeys.favorites.list(), queryFn: favoritesApi.list });
@@ -34,7 +35,7 @@ export const FavoritesPage: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3">
-          {data.map(p => <ProductCard key={p.IDProducto} product={p} />)}
+          {data.map(p => <ConnectedProductCard key={p.IDProducto} product={p} />)}
         </div>
       )}
       {!isLoading && !isError && data.length > 0 && (

@@ -7,12 +7,12 @@ import { catalogApi } from '../api/catalogApi';
 import { useCategories } from '../hooks/useCatalog';
 import { ORDER_OPTIONS, PAGE_SIZE, useCatalogFilters, type CatalogMode, type CatalogOrder } from '../hooks/useCatalogFilters';
 import { FilterPanel } from '../components/FilterPanel';
-import { ProductCard, ProductCardSkeletonV2 } from '@/shared/ui/ProductCard';
+import { ProductCardSkeletonV2 } from '@/shared/ui/ProductCard';
+import { ConnectedProductCard } from '../components/ConnectedProductCard';
 import { Button, ErrorState, Skeleton, NumberedPagination } from '@/shared/ui';
 import { formatMoney, plural } from '@/shared/lib/formatters';
 import { queryKeys } from '@/shared/lib/queryKeys';
-import { RecommendationRail } from '@/features/recommendations/components/RecommendationRail';
-import { SearchRecommendation } from '@/features/recommendations/components/SearchRecommendation';
+import { RecommendationRail, SearchRecommendation } from '@/features/recommendations';
 
 export interface CatalogPageProps {
   mode?: CatalogMode;
@@ -241,7 +241,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({ mode = 'all' }) => {
             </div>
           ) : (
             <div className={`${GRID} transition-opacity ${query.isPlaceholderData ? 'opacity-60' : ''}`}>
-              {items.map(p => <ProductCard key={p.IDProducto} product={p} />)}
+              {items.map(p => <ConnectedProductCard key={p.IDProducto} product={p} />)}
             </div>
           )}
 

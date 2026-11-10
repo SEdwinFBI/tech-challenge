@@ -23,7 +23,7 @@ export function passwordStrength(pw: string): { score: 0 | 1 | 2 | 3 | 4; label:
 const BAR = ['bg-slate-200', 'bg-rose-500', 'bg-amber-500', 'bg-lime-500', 'bg-emerald-500'];
 
 export const RegisterPage: React.FC = () => {
-  const { register: registerUser } = useAuth();
+  const registerUser = useAuth(s => s.register);
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);

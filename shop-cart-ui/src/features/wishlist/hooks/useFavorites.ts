@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useAuth } from '@/features/auth';
 import { toast } from '@/shared/ui/toastStore';
 import { favoritesApi } from '../api/favoritesApi';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';

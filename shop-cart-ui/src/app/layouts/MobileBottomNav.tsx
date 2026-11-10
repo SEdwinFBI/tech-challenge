@@ -9,7 +9,7 @@ export interface MobileBottomNavProps {
 }
 
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onOpenCategories, cartCount }) => {
-  const { user } = useAuth();
+  const user = useAuth(s => s.user);
   const { pathname } = useLocation();
   const accountTo = user ? '/cuenta/pedidos' : '/login';
 

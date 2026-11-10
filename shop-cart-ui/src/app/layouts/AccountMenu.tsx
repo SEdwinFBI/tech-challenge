@@ -11,7 +11,9 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 export const AccountMenu: React.FC = () => {
-  const { user, logout, status } = useAuth();
+  const user = useAuth(s => s.user);
+  const logout = useAuth(s => s.logout);
+  const status = useAuth(s => s.status);
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);

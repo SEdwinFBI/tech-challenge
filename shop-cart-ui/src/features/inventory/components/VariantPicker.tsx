@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, X } from 'lucide-react';
-import { catalogApi } from '@/features/catalog/api/catalogApi';
+import { catalogApi } from '@/features/catalog';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { SafeImage } from '@/shared/ui/SafeImage';
 import { queryKeys } from '@/shared/lib/queryKeys';

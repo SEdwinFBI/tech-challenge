@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { productPath } from '@/shared/lib/slug';
 import { useNavigate } from 'react-router';
-import { useCart } from './useCart';
+import { useCart } from '@/features/cart';
 import { toast } from '@/shared/ui/toastStore';
-import { catalogApi } from '@/features/catalog/api/catalogApi';
+import { catalogApi } from '../api/catalogApi';
 
 // El carrito espera la cantidad total, no el delta
 export function useQuickAdd() {

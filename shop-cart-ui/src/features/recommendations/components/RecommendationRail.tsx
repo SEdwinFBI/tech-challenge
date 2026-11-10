@@ -1,4 +1,4 @@
-import { ProductRail } from '@/shared/ui/ProductRail';
+import { ProductRail } from '@/features/catalog';
 import { useRecommendations } from '../hooks/useRecommendations';
 import type { RecommendationFilters, RecommendationPlacement } from '../api/recommendationsApi';
 

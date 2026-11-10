@@ -3,8 +3,8 @@ import { plural } from '@/shared/lib/formatters';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { Heart, LayoutGrid, ShoppingCart, PackageOpen, Tag, Flame, Star, Truck } from 'lucide-react';
 import { useAuth } from '@/features/auth';
-import { useCart } from '@/features/cart/hooks/useCart';
-import { useFavorites } from '@/features/wishlist/hooks/useFavorites';
+import { useCart } from '@/features/cart';
+import { useFavorites } from '@/features/wishlist';
 import { MobileSearch, SearchBox } from './SearchBox';
 import { MegaMenu } from './MegaMenu';
 import { AccountMenu } from './AccountMenu';
@@ -21,7 +21,7 @@ const SUBNAV = [
 ];
 
 export const StoreLayout: React.FC = () => {
-  const { user } = useAuth();
+  const user = useAuth(s => s.user);
   const { totalItemsCount } = useCart();
   const { ids } = useFavorites();
   const location = useLocation();

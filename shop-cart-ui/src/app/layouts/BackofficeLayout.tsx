@@ -13,7 +13,8 @@ interface NavItem {
 const ROLE_LABEL: Record<string, string> = { ADMINISTRADOR: 'Administrador', OPERADOR: 'Operador' };
 
 export const BackofficeLayout: React.FC = () => {
-  const { user, logout } = useAuth();
+  const user = useAuth(s => s.user);
+  const logout = useAuth(s => s.logout);
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const isAdmin = user?.rol === 'ADMINISTRADOR';

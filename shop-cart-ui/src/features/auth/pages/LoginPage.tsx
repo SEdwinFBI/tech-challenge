@@ -16,7 +16,9 @@ const DEMO = [
 ];
 
 export const LoginPage: React.FC = () => {
-  const { login, trySilentRefresh, hasSessionHint } = useAuth();
+  const login = useAuth(s => s.login);
+  const trySilentRefresh = useAuth(s => s.trySilentRefresh);
+  const hasSessionHint = useAuth(s => s.hasSessionHint);
   const navigate = useNavigate();
   const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);

@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { ArrowRight } from 'lucide-react';
 import type { ProductListItem } from '@/shared/types/domain';
 import { Rail, SectionHeader } from '@/shared/ui/Rail';
-import { ProductCard } from './ProductCard';
+import { ConnectedProductCard } from './ConnectedProductCard';
 
 export interface ProductRailProps {
   title: string;
@@ -41,7 +41,7 @@ export const ProductRail: React.FC<ProductRailProps> = ({ title, subtitle, produ
                 <div className="mt-2 h-5 w-1/2 rounded bg-slate-200/70" />
               </div>
             ))
-          : products.map(p => <ProductCard key={p.IDProducto} product={p} variant="compact" />)}
+          : products.map(p => <ConnectedProductCard key={p.IDProducto} product={p} variant="compact" />)}
       </Rail>
     </section>
   );

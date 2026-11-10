@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ordersApi } from '../api/ordersApi';
 import { OrderStatus, OrderItem } from '@/shared/types/domain';
 import { formatMoney, formatDateTime, plural } from '@/shared/lib/formatters';
-import { orderStatusMeta } from '@/shared/lib/orderStatus';
+import { ALLOWED_TRANSITIONS, orderStatusMeta } from '@/shared/lib/orderStatus';
 import {
   getOrderStatusBadge,
   OrderTimeline,
@@ -19,17 +19,6 @@ import { ArrowLeft, MapPin, RotateCcw } from 'lucide-react';
 import { toast } from '@/shared/ui/toastStore';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
 import { invalidateStock, mutationKeys, queryKeys } from '@/shared/lib/queryKeys';
-
-// Igual que TransicionesEstadoPedido y order-state.machine (backend)
-const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  PAGADO: ['EN_PREPARACION', 'CANCELADO'],
-  EN_PREPARACION: ['DESPACHADO', 'CANCELADO'],
-  DESPACHADO: ['ENTREGADO'],
-  ENTREGADO: ['DEVUELTO_PARCIAL', 'DEVUELTO_TOTAL'],
-  CANCELADO: [],
-  DEVUELTO_PARCIAL: ['DEVUELTO_TOTAL'],
-  DEVUELTO_TOTAL: [],
-};
 
 export const AdminOrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();

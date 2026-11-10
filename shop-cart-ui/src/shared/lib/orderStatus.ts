@@ -20,6 +20,17 @@ export function orderStatusMeta(status: string): OrderStatusMeta {
   return ORDER_STATUS_META[status] ?? { label: status, hint: '', tone: 'neutral' };
 }
 
+// Igual que TransicionesEstadoPedido y order-state.machine (backend)
+export const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  PAGADO: ['EN_PREPARACION', 'CANCELADO'],
+  EN_PREPARACION: ['DESPACHADO', 'CANCELADO'],
+  DESPACHADO: ['ENTREGADO'],
+  ENTREGADO: ['DEVUELTO_PARCIAL', 'DEVUELTO_TOTAL'],
+  CANCELADO: [],
+  DEVUELTO_PARCIAL: ['DEVUELTO_TOTAL'],
+  DEVUELTO_TOTAL: [],
+};
+
 export function canClientCancel(status: OrderStatus | string): boolean {
   return status === 'PAGADO' || status === 'EN_PREPARACION';
 }

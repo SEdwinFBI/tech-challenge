@@ -2,7 +2,15 @@
 
 export const IVA_RATE = 0.12;
 
-const round2 = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 100;
+export const round2 = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 100;
+
+export function netSubtotal(subtotal: number, descuento: number): number {
+  return Math.max(0, round2(subtotal - descuento));
+}
+
+export function orderTotal(subtotalNeto: number, shipping: number): number {
+  return round2(subtotalNeto + shipping);
+}
 
 export function splitIva(totalConIva: number): { base: number; iva: number } {
   const total = Number.isFinite(totalConIva) ? totalConIva : 0;

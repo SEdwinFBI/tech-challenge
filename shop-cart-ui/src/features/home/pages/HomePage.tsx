@@ -4,16 +4,14 @@ import { SafeImage } from '@/shared/ui/SafeImage';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight } from 'lucide-react';
-import { catalogApi, type GetProductsParams } from '@/features/catalog/api/catalogApi';
-import { useCategories } from '@/features/catalog/hooks/useCatalog';
+import { catalogApi, ProductRail, type GetProductsParams, useCategories } from '@/features/catalog';
 import { queryKeys } from '@/shared/lib/queryKeys';
-import { ProductRail } from '@/shared/ui/ProductRail';
 import { useRecentlyViewed } from '@/shared/lib/recentlyViewed';
 import { SectionHeader, Rail } from '@/shared/ui/Rail';
 import { ErrorState } from '@/shared/ui';
 import { CategoryRail } from '../components/CategoryRail';
 import { HeroCarousel, type HeroSlide } from '../components/HeroCarousel';
-import { RecommendationRail } from '@/features/recommendations/components/RecommendationRail';
+import { RecommendationRail } from '@/features/recommendations';
 
 const SECTION_SIZE = 10;
 

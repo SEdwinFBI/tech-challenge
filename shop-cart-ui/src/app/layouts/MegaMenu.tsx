@@ -4,8 +4,7 @@ import { SafeImage } from '@/shared/ui/SafeImage';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronRight, LayoutGrid, X } from 'lucide-react';
-import { useCategories } from '@/features/catalog/hooks/useCatalog';
-import { catalogApi } from '@/features/catalog/api/catalogApi';
+import { useCategories, catalogApi } from '@/features/catalog';
 import { PriceTag } from '@/shared/ui/PriceTag';
 import { queryKeys } from '@/shared/lib/queryKeys';
 

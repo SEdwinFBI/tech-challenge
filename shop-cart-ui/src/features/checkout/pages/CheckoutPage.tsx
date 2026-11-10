@@ -3,9 +3,7 @@ import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { Link, useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, CreditCard, Loader2, Lock, MapPin, Plus, Trash2, TicketPercent, Truck } from 'lucide-react';
-import { useCart } from '@/features/cart/hooks/useCart';
-import { cartApi } from '@/features/cart/api/cartApi';
-import { CouponDialog } from '@/features/cart/components/CouponDialog';
+import { useCart, cartApi, CouponDialog } from '@/features/cart';
 import { checkoutApi, type ConfirmOrderPayload } from '../api/checkoutApi';
 import { addressesQueryOptions } from '../queries';
 import { AddressFormModal, hasAddressDraft } from '../components/AddressFormModal';
@@ -14,7 +12,7 @@ import { ConfirmDialog, ErrorState, Illustration, ReservationCountdown, Stepper 
 import { toast } from '@/shared/ui/toastStore';
 import { clearDraft, readDraft, saveDraft } from '@/shared/lib/draft';
 import { formatMoney } from '@/shared/lib/formatters';
-import { quoteShipping } from '@/shared/lib/pricing';
+import { netSubtotal, orderTotal, quoteShipping } from '@/shared/lib/pricing';
 import { formatPhone } from '@/shared/lib/phone';
 import { ShippingPartners } from '@/shared/ui/ShippingPartners';
 import type { Address } from '@/shared/types/domain';
@@ -89,9 +87,9 @@ export const CheckoutPage: React.FC = () => {
   const selected = addresses.find(a => a.IDDireccion === selectedId) ?? null;
   const items = cart?.items ?? [];
 
-  const netSubtotal = Math.max(0, (cart?.subtotal ?? 0) - (cart?.descuento ?? 0));
-  const shipping = useMemo(() => (selected ? quoteShipping(netSubtotal, selected) : null), [selected, netSubtotal]);
-  const total = netSubtotal + (shipping?.cost ?? 0);
+  const net = netSubtotal(cart?.subtotal ?? 0, cart?.descuento ?? 0);
+  const shipping = useMemo(() => (selected ? quoteShipping(net, selected) : null), [selected, net]);
+  const total = orderTotal(net, shipping?.cost ?? 0);
   const overLimit = items.some(i => i.Cantidad > i.ExistenciaDisponible);
 
   const setAddresses = (list: Address[]) => queryClient.setQueryData(queryKeys.addresses.all, list);
@@ -303,7 +301,7 @@ export const CheckoutPage: React.FC = () => {
                       {shipping.free
                         ? ''
                         : shipping.freeFrom != null
-                          ? `Te faltan ${formatMoney(Math.max(0, shipping.freeFrom - netSubtotal))} para envío gratis.`
+                          ? `Te faltan ${formatMoney(Math.max(0, shipping.freeFrom - net))} para envío gratis.`
                           : 'Tarifa fija para tu departamento.'}
                     </p>
                     <ShippingPartners className="mt-2" />

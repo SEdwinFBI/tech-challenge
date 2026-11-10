@@ -1,3 +1,5 @@
+import { discountPercent, round2 } from '@/shared/lib/pricing';
+
 export type OfferMode = 'off' | 'ahora' | 'antes';
 
 export interface OfferDraft {
@@ -9,8 +11,6 @@ export interface OfferDraft {
 
 export const EMPTY_OFFER: OfferDraft = { mode: 'off', antes: '', ahora: '', pct: '' };
 
-export const round2 = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 100;
-
 export const cleanDecimal = (raw: string): string => raw.replace(/[^0-9.]/g, '');
 
 export const formatPct = (n: number): string => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0+$/, ''));
@@ -21,8 +21,7 @@ export function pctOf(before: number, now: number): number {
 }
 
 export function pctFromBefore(antes: number, price: number): number {
-  if (!(price > 0) || !(antes > price)) return 0;
-  return Math.round(((antes - price) * 100) / antes);
+  return price > 0 ? discountPercent(antes, price) : 0;
 }
 
 export function beforeFromPct(pct: number, price: number): number {

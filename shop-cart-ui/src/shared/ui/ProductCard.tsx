@@ -7,12 +7,14 @@ import { Heart, ImageOff, Loader2, ShoppingCart } from 'lucide-react';
 import type { ProductListItem } from '@/shared/types/domain';
 import { PriceTag, DiscountBadge } from '@/shared/ui/PriceTag';
 import { StockIndicator } from '@/shared/ui/StockIndicator';
-import { useFavorites } from '@/features/wishlist/hooks/useFavorites';
-import { useQuickAdd } from '@/features/cart/hooks/useQuickAdd';
 
 export interface ProductCardProps {
   product: ProductListItem;
   variant?: 'grid' | 'compact';
+  isFavorite: boolean;
+  onToggleFavorite: () => void;
+  onAdd: () => void;
+  adding?: boolean;
 }
 
 const NEW_DAYS = 7;
@@ -23,14 +25,17 @@ function isNew(fecha?: string): boolean {
   return Number.isFinite(t) && Date.now() - t < NEW_DAYS * 86_400_000;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product, variant = 'grid' }) => {
+export const ProductCard: React.FC<ProductCardProps> = ({
+  product,
+  variant = 'grid',
+  isFavorite: fav,
+  onToggleFavorite,
+  onAdd,
+  adding = false,
+}) => {
   const online = useOnlineStatus();
-  const { isFavorite, toggle } = useFavorites();
-  const { add, pendingId } = useQuickAdd();
-  const fav = isFavorite(product.IDProducto);
   const soldOut = product.StockTotalDisponible <= 0;
   const onSale = Boolean(product.PorcentajeDescuento && product.PrecioReferencia && product.PrecioOferta);
-  const adding = pendingId === product.IDProducto;
   const to = productPath(product.IDProducto, product.Nombre);
 
   return (
@@ -66,7 +71,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, variant = 'gr
 
         <button
           type="button"
-          onClick={() => toggle(product.IDProducto)}
+          onClick={onToggleFavorite}
           aria-pressed={fav}
           aria-label={fav ? 'Quitar de favoritos' : 'Guardar en favoritos'}
           className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-sm backdrop-blur transition hover:scale-110 hover:bg-white"
@@ -95,7 +100,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, variant = 'gr
           type="button"
           disabled={soldOut || adding || !online}
           title={online ? undefined : 'Sin conexión'}
-          onClick={() => add(product.IDProducto)}
+          onClick={onAdd}
           className="mt-auto inline-flex h-10 w-full items-center justify-center gap-2 rounded-full border border-slate-300 bg-white text-sm font-bold text-slate-800 shadow-xs transition hover:border-brand hover:bg-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-300 disabled:hover:bg-white disabled:hover:text-slate-800"
         >
           {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}

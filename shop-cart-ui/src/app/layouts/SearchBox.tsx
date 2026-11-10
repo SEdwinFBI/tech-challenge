@@ -2,10 +2,8 @@ import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 
 import { productPath } from '@/shared/lib/slug';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, Search, X } from 'lucide-react';
-import { SearchSuggestionsPanel, type SearchOption } from '@/features/catalog/components/SearchSuggestionsPanel';
-import { useRecentSearches } from '@/features/catalog/hooks/useRecentSearches';
-import { optionDomId, useSearchSuggestions } from '@/features/catalog/hooks/useSearchSuggestions';
-import { useSearchRecommendation } from '@/features/recommendations/hooks/useRecommendations';
+import { SearchSuggestionsPanel, type SearchOption, useRecentSearches, optionDomId, useSearchSuggestions } from '@/features/catalog';
+import { useSearchRecommendation } from '@/features/recommendations';
 
 const fold = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 

@@ -5,15 +5,15 @@ import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, ArrowRight, Heart, ImageOff, LogIn, TicketPercent, X } from 'lucide-react';
 import { useCart } from '../hooks/useCart';
 import { CouponDialog } from '../components/CouponDialog';
-import { useRecommendations } from '@/features/recommendations/hooks/useRecommendations';
-import { addressesQueryOptions } from '@/features/checkout/queries';
-import { ProductRail } from '@/shared/ui/ProductRail';
+import { useRecommendations } from '@/features/recommendations';
+import { addressesQueryOptions } from '@/features/checkout';
+import { ProductRail } from '@/features/catalog';
 import { useAuth } from '@/features/auth';
-import { useFavorites } from '@/features/wishlist/hooks/useFavorites';
+import { useFavorites } from '@/features/wishlist';
 import { ErrorState, FreeShippingProgress, Illustration, IvaBreakdown, PriceTag, QuantityStepper, StockIndicator } from '@/shared/ui';
 import { toast } from '@/shared/ui/toastStore';
 import { formatMoney, plural } from '@/shared/lib/formatters';
-import { quoteShipping } from '@/shared/lib/pricing';
+import { netSubtotal, orderTotal, quoteShipping } from '@/shared/lib/pricing';
 import { ShippingPartners } from '@/shared/ui/ShippingPartners';
 import type { CartItem } from '@/shared/types/domain';
 
@@ -41,9 +41,9 @@ export const CartPage: React.FC = () => {
 
   const items = cart?.items ?? [];
   const address = addresses.data?.[0];
-  const netSubtotal = Math.max(0, (cart?.subtotal ?? 0) - (cart?.descuento ?? 0));
-  const quote = address ? quoteShipping(netSubtotal, address) : null;
-  const estimatedTotal = (cart?.total ?? 0) + (quote?.cost ?? 0);
+  const net = netSubtotal(cart?.subtotal ?? 0, cart?.descuento ?? 0);
+  const quote = address ? quoteShipping(net, address) : null;
+  const estimatedTotal = orderTotal(net, quote?.cost ?? 0);
   const overLimit = items.some(i => i.Cantidad > i.ExistenciaDisponible);
   const busy = isRemoving;
 
@@ -192,7 +192,7 @@ export const CartPage: React.FC = () => {
         <aside className="space-y-4 rounded-3xl bg-canvas p-5 sm:p-6 lg:sticky lg:top-[calc(var(--header-h,7rem)+1rem)]" aria-label="Resumen del pedido">
           <h2 className="text-lg font-extrabold text-slate-900">Resumen</h2>
 
-          {isClient && quote && <FreeShippingProgress subtotalNeto={netSubtotal} freeFrom={quote.freeFrom} />}
+          {isClient && quote && <FreeShippingProgress subtotalNeto={net} freeFrom={quote.freeFrom} />}
 
           {cart?.cupon ? (
             <div className="flex items-center justify-between gap-3 rounded-2xl bg-emerald-50 px-4 py-3">

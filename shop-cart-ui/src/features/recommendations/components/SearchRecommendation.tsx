@@ -1,5 +1,5 @@
 import { Sparkles } from 'lucide-react';
-import { ProductCard } from '@/shared/ui/ProductCard';
+import { ConnectedProductCard } from '@/features/catalog';
 import type { SearchRecommendationFilters } from '../api/recommendationsApi';
 import { useSearchRecommendation } from '../hooks/useRecommendations';
 
@@ -25,7 +25,7 @@ export function SearchRecommendation({ filters, normalIds = [], closest = false,
       </div>
     </div>
     <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 xl:grid-cols-4">
-      <ProductCard product={product} />
+      <ConnectedProductCard product={product} />
     </div>
   </section>;
 }
