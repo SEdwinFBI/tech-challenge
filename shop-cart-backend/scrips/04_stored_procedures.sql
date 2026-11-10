@@ -2774,15 +2774,23 @@ BEGIN
     DECLARE @HorasAbandono INT = 24;
     SELECT @HorasAbandono = TRY_CAST(Valor AS INT) FROM ConfiguracionSistema WHERE Clave = 'CARRITO_ABANDONADO_HORAS';
 
-    SELECT 
-        COUNT(p.IDPedido) AS TotalPedidosCompletados,
-        ISNULL(SUM(p.Total - p.MontoReembolsado), 0.00) AS VentasNetasQuetzales,
-        CASE WHEN COUNT(p.IDPedido) > 0 THEN CAST(ROUND(SUM(p.Total - p.MontoReembolsado) / COUNT(p.IDPedido), 2) AS DECIMAL(12,2)) ELSE 0.00 END AS TicketPromedioQuetzales,
-        (SELECT COUNT(1) FROM Carritos c WHERE EXISTS (SELECT 1 FROM CarritoItems ci WHERE ci.IDCarrito = c.IDCarrito) AND c.UltimaActividad <= DATEADD(HOUR, -ISNULL(@HorasAbandono, 24), SYSDATETIME())) AS CarritosAbandonadosActuales
+    SELECT
+        COUNT(CASE WHEN ep.Codigo <> 'CANCELADO' THEN p.IDPedido END) AS TotalPedidosCompletados,
+        CAST(ISNULL(SUM(CASE WHEN ep.Codigo <> 'CANCELADO' THEN p.Total - p.MontoReembolsado END), 0.00) AS DECIMAL(12,2)) AS VentasNetasQuetzales,
+        CASE WHEN COUNT(CASE WHEN ep.Codigo <> 'CANCELADO' THEN p.IDPedido END) > 0
+             THEN CAST(ROUND(SUM(CASE WHEN ep.Codigo <> 'CANCELADO' THEN p.Total - p.MontoReembolsado END) / COUNT(CASE WHEN ep.Codigo <> 'CANCELADO' THEN p.IDPedido END), 2) AS DECIMAL(12,2))
+             ELSE CAST(0.00 AS DECIMAL(12,2)) END AS TicketPromedioQuetzales,
+        (SELECT COUNT(1) FROM Carritos c WHERE EXISTS (SELECT 1 FROM CarritoItems ci WHERE ci.IDCarrito = c.IDCarrito) AND c.UltimaActividad <= DATEADD(HOUR, -ISNULL(@HorasAbandono, 24), SYSDATETIME())) AS CarritosAbandonadosActuales,
+        COUNT(CASE WHEN ep.Codigo IN ('PAGADO', 'EN_PREPARACION', 'DESPACHADO') THEN p.IDPedido END) AS PedidosPorEntregar,
+        (SELECT COUNT(1) FROM Usuarios u INNER JOIN Roles r ON r.IDRol = u.IDRol WHERE r.Codigo = 'CLIENTE' AND u.FechaCreacion BETWEEN @FechaInicio AND @FechaFin) AS ClientesNuevos,
+        (SELECT COUNT(1) FROM VW_Inventario_ExistenciasBajas) AS VariantesExistenciasBajas,
+        COUNT(CASE WHEN ep.Codigo <> 'CANCELADO' AND p.IDCupon IS NOT NULL THEN p.IDPedido END) AS PedidosConCupon,
+        CAST(ISNULL(SUM(CASE WHEN ep.Codigo <> 'CANCELADO' AND p.IDCupon IS NOT NULL THEN p.Descuento END), 0.00) AS DECIMAL(12,2)) AS DescuentoCuponesQuetzales,
+        (SELECT COUNT(DISTINCT d.IDPedido) FROM Devoluciones d WHERE d.FechaDevolucion BETWEEN @FechaInicio AND @FechaFin) AS DevolucionesCantidad,
+        (SELECT CAST(ISNULL(SUM(d.MontoReembolsadoLinea), 0.00) AS DECIMAL(12,2)) FROM Devoluciones d WHERE d.FechaDevolucion BETWEEN @FechaInicio AND @FechaFin) AS DevolucionesMontoQuetzales
     FROM Pedidos p
     INNER JOIN EstadosPedido ep ON p.IDEstadoPedido = ep.IDEstadoPedido
-    WHERE ep.Codigo IN ('ENTREGADO', 'DEVUELTO_PARCIAL', 'DEVUELTO_TOTAL')
-      AND p.FechaCreacion BETWEEN @FechaInicio AND @FechaFin;
+    WHERE p.FechaCreacion BETWEEN @FechaInicio AND @FechaFin;
 
     SELECT TOP 10
         pr.IDProducto, pr.Nombre AS Producto,
@@ -2793,7 +2801,7 @@ BEGIN
     INNER JOIN EstadosPedido ep ON p.IDEstadoPedido = ep.IDEstadoPedido
     INNER JOIN Variantes v ON pd.IDVariante = v.IDVariante
     INNER JOIN Productos pr ON v.IDProducto = pr.IDProducto
-    WHERE ep.Codigo IN ('ENTREGADO', 'DEVUELTO_PARCIAL', 'DEVUELTO_TOTAL')
+    WHERE ep.Codigo <> 'CANCELADO'
       AND p.FechaCreacion BETWEEN @FechaInicio AND @FechaFin
     GROUP BY pr.IDProducto, pr.Nombre
     HAVING SUM(pd.CantidadComprada - pd.CantidadDevuelta) > 0
@@ -2813,9 +2821,28 @@ BEGIN
     INNER JOIN PedidoDetalles pd ON v.IDVariante = pd.IDVariante
     INNER JOIN Pedidos p ON pd.IDPedido = p.IDPedido
     INNER JOIN EstadosPedido ep ON p.IDEstadoPedido = ep.IDEstadoPedido
-    WHERE ep.Codigo IN ('ENTREGADO', 'DEVUELTO_PARCIAL', 'DEVUELTO_TOTAL')
+    WHERE ep.Codigo <> 'CANCELADO'
       AND p.FechaCreacion BETWEEN @FechaInicio AND @FechaFin
     GROUP BY c.IDCategoria, c.Nombre;
+
+    SELECT
+        ep.Codigo AS Estado,
+        COUNT(p.IDPedido) AS TotalPedidos,
+        CAST(ISNULL(SUM(p.Total - p.MontoReembolsado), 0.00) AS DECIMAL(12,2)) AS MontoQuetzales
+    FROM Pedidos p
+    INNER JOIN EstadosPedido ep ON p.IDEstadoPedido = ep.IDEstadoPedido
+    WHERE p.FechaCreacion BETWEEN @FechaInicio AND @FechaFin
+    GROUP BY ep.Codigo
+    ORDER BY ep.Codigo;
+
+    SELECT
+        ip.Estado,
+        COUNT(1) AS TotalIntentos,
+        CAST(ISNULL(SUM(ip.Monto), 0.00) AS DECIMAL(12,2)) AS MontoQuetzales
+    FROM IntentosPago ip
+    WHERE ip.FechaCreacion BETWEEN @FechaInicio AND @FechaFin
+    GROUP BY ip.Estado
+    ORDER BY ip.Estado;
 END;
 GO
 
@@ -2836,10 +2863,10 @@ BEGIN
         SUM(p.Total - p.MontoReembolsado) AS VentasQuetzales
     FROM Pedidos p
     INNER JOIN EstadosPedido ep ON p.IDEstadoPedido = ep.IDEstadoPedido
-    WHERE ep.Codigo IN ('ENTREGADO', 'DEVUELTO_PARCIAL', 'DEVUELTO_TOTAL')
+    WHERE ep.Codigo <> 'CANCELADO'
       AND p.FechaCreacion BETWEEN @FechaInicio AND @FechaFin
-    GROUP BY 
-        CASE 
+    GROUP BY
+        CASE
             WHEN @Agrupacion = 'DIA' THEN CONVERT(VARCHAR(10), p.FechaCreacion, 23)
             WHEN @Agrupacion = 'SEMANA' THEN CONCAT(YEAR(p.FechaCreacion), '-W', RIGHT('0' + CAST(DATEPART(ISO_WEEK, p.FechaCreacion) AS VARCHAR(2)), 2))
             ELSE FORMAT(p.FechaCreacion, 'yyyy-MM')

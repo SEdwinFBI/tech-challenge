@@ -17,7 +17,7 @@ INNER JOIN Variantes v ON pr.IDProducto = v.IDProducto
 INNER JOIN PedidoDetalles pd ON v.IDVariante = pd.IDVariante
 INNER JOIN Pedidos p ON pd.IDPedido = p.IDPedido
 INNER JOIN EstadosPedido ep ON p.IDEstadoPedido = ep.IDEstadoPedido
-WHERE ep.Codigo IN ('ENTREGADO', 'DEVUELTO_PARCIAL', 'DEVUELTO_TOTAL')
+WHERE ep.Codigo <> 'CANCELADO'
 GROUP BY c.IDCategoria, c.Nombre;
 GO
 
