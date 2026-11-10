@@ -32,7 +32,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,webp,ico,woff2}'],
         globIgnores: ['shopCart.png', 'shopCart-icon.png', 'shopcart-svg.svg', 'shopCart-loading.gif'],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/grafana(\/|$)/],
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
