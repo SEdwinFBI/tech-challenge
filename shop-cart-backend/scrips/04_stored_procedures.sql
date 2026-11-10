@@ -2805,7 +2805,7 @@ BEGIN
       AND p.FechaCreacion BETWEEN @FechaInicio AND @FechaFin
     GROUP BY pr.IDProducto, pr.Nombre
     HAVING SUM(pd.CantidadComprada - pd.CantidadDevuelta) > 0
-    ORDER BY UnidadesNetasVendidas DESC;
+    ORDER BY UnidadesNetasVendidas DESC, IngresosNetosQuetzales DESC;
 
     SELECT 
         c.IDCategoria,
@@ -2855,21 +2855,22 @@ BEGIN
     SET NOCOUNT ON;
     SELECT 
         CASE 
-            WHEN @Agrupacion = 'DIA' THEN CONVERT(VARCHAR(10), p.FechaCreacion, 23)
-            WHEN @Agrupacion = 'SEMANA' THEN CONCAT(YEAR(DATEADD(DAY, 26 - DATEPART(ISO_WEEK, p.FechaCreacion), p.FechaCreacion)), '-W', RIGHT('0' + CAST(DATEPART(ISO_WEEK, p.FechaCreacion) AS VARCHAR(2)), 2))
-            ELSE FORMAT(p.FechaCreacion, 'yyyy-MM')
+            WHEN @Agrupacion = 'DIA' THEN CONVERT(VARCHAR(10), f.FechaLocal, 23)
+            WHEN @Agrupacion = 'SEMANA' THEN CONCAT(YEAR(DATEADD(DAY, 26 - DATEPART(ISO_WEEK, f.FechaLocal), f.FechaLocal)), '-W', RIGHT('0' + CAST(DATEPART(ISO_WEEK, f.FechaLocal) AS VARCHAR(2)), 2))
+            ELSE FORMAT(f.FechaLocal, 'yyyy-MM')
         END AS Periodo,
         COUNT(p.IDPedido) AS NumeroPedidos,
         SUM(p.Total - p.MontoReembolsado) AS VentasQuetzales
     FROM Pedidos p
     INNER JOIN EstadosPedido ep ON p.IDEstadoPedido = ep.IDEstadoPedido
+    CROSS APPLY (SELECT DATEADD(HOUR, -6, p.FechaCreacion) AS FechaLocal) f
     WHERE ep.Codigo <> 'CANCELADO'
       AND p.FechaCreacion BETWEEN @FechaInicio AND @FechaFin
     GROUP BY
         CASE
-            WHEN @Agrupacion = 'DIA' THEN CONVERT(VARCHAR(10), p.FechaCreacion, 23)
-            WHEN @Agrupacion = 'SEMANA' THEN CONCAT(YEAR(DATEADD(DAY, 26 - DATEPART(ISO_WEEK, p.FechaCreacion), p.FechaCreacion)), '-W', RIGHT('0' + CAST(DATEPART(ISO_WEEK, p.FechaCreacion) AS VARCHAR(2)), 2))
-            ELSE FORMAT(p.FechaCreacion, 'yyyy-MM')
+            WHEN @Agrupacion = 'DIA' THEN CONVERT(VARCHAR(10), f.FechaLocal, 23)
+            WHEN @Agrupacion = 'SEMANA' THEN CONCAT(YEAR(DATEADD(DAY, 26 - DATEPART(ISO_WEEK, f.FechaLocal), f.FechaLocal)), '-W', RIGHT('0' + CAST(DATEPART(ISO_WEEK, f.FechaLocal) AS VARCHAR(2)), 2))
+            ELSE FORMAT(f.FechaLocal, 'yyyy-MM')
         END
     ORDER BY Periodo ASC;
 END;

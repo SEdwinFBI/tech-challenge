@@ -25,7 +25,7 @@ export const ORDER_STATES: StateMeta[] = [
 
 export const PAYMENT_STATES: StateMeta[] = [
   { code: 'AUTORIZADO', label: 'Autorizado', color: '#2563eb' },
-  { code: 'CAPTURADO', label: 'Capturado', color: '#0e7c66' },
+  { code: 'CAPTURADO', label: 'Cobrado', color: '#0e7c66' },
   { code: 'RECHAZADO', label: 'Rechazado', color: '#d7263d' },
   { code: 'ANULADO', label: 'Anulado', color: '#57534e' },
   { code: 'PENDIENTE_CONCILIACION', label: 'Pendiente de conciliación', color: '#d97706' },
