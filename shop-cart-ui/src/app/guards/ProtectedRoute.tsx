@@ -1,6 +1,5 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router';
-import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/features/auth';
 import { UserRole } from '@/shared/types/domain';
 import { BrandLoader } from '@/shared/ui/BrandLoader';

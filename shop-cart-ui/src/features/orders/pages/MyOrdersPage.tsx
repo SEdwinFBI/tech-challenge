@@ -22,7 +22,7 @@ const Progress: React.FC<{ status: string }> = ({ status }) => {
   const idx = happyPathIndex(status);
   if (idx < 0) return null;
   return (
-    <div className="mt-3 flex items-center gap-1.5" aria-hidden="true">
+    <div className="mt-3 flex items-center gap-1.5" role="img" aria-label={`Progreso del pedido: ${HAPPY_PATH[idx].label}, paso ${idx + 1} de ${HAPPY_PATH.length}`}>
       {HAPPY_PATH.map((s, i) => (
         <span key={s.code} className={`h-1.5 flex-1 rounded-full ${i <= idx ? 'bg-brand' : 'bg-slate-200'}`} title={s.label} />
       ))}

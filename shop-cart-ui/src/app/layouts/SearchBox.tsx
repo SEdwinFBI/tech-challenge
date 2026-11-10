@@ -219,11 +219,12 @@ const SearchCombobox: React.FC<ComboboxProps> = ({ variant, onDone, onClose }) =
       </div>
 
       {sheet ? (
-        <div className="-mx-4 mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-slate-100" onMouseDown={e => e.preventDefault()}>
+        <div role="presentation" className="-mx-4 mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-slate-100" onMouseDown={e => e.preventDefault()}>
           {panel}
         </div>
       ) : showPanel && (
         <div
+          role="presentation"
           onMouseDown={e => e.preventDefault()}
           className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl bg-white text-slate-900 shadow-lift ring-1 ring-slate-200 animate-fade-up"
         >

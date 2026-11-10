@@ -163,7 +163,6 @@ await save(
 );
 
 const logo = await trimmed(await cutOutside('shopCart.png', 1));
-const logoMeta = await sharp(logo).metadata();
 await save(sharp(logo).resize({ width: 512, kernel: 'lanczos3' }).webp({ quality: 84, effort: 6, alphaQuality: 90 }), 'logo-full.webp');
 await save(sharp(logo).resize({ width: 512, kernel: 'lanczos3' }).png({ compressionLevel: 9, palette: true, quality: 85, effort: 10 }), 'logo-full.png');
 

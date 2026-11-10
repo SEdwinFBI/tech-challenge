@@ -89,7 +89,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, alt, bad
                 i === index ? 'ring-brand' : 'ring-transparent hover:ring-slate-300'
               }`}
             >
-              <SafeImage src={src} alt="" loading="lazy" className="h-full w-full object-cover" />
+              <SafeImage src={src} alt={`${alt}, imagen ${i + 1}`} loading="lazy" className="h-full w-full object-cover" />
             </button>
           ))}
         </div>

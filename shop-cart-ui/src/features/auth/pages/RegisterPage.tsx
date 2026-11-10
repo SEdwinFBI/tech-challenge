@@ -46,7 +46,7 @@ export const RegisterPage: React.FC = () => {
   const onSubmit = async (data: RegisterFormData) => {
     setServerError(null);
     try {
-      const user = await registerUser(data.correo, data.password, data.nombreCompleto);
+      await registerUser(data.correo, data.password, data.nombreCompleto);
       toast.success('Cuenta creada');
       navigate('/', { replace: true });
     } catch (err: unknown) {

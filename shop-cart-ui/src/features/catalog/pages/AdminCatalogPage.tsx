@@ -326,7 +326,7 @@ export const AdminCatalogPage: React.FC = () => {
                     <TableRow key={p.IDProducto} className={p.Activo ? '' : 'opacity-60'}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <SafeImage src={p.ImagenUrl} alt="" className="h-11 w-11 shrink-0 rounded-lg bg-canvas object-cover" loading="lazy" />
+                          <SafeImage src={p.ImagenUrl} alt={p.Nombre} className="h-11 w-11 shrink-0 rounded-lg bg-canvas object-cover" loading="lazy" />
                           <div className="min-w-0">
                             <p className="flex items-center gap-1.5 truncate font-bold text-slate-900">
                               {p.Nombre}

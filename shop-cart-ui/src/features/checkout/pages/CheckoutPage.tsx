@@ -244,6 +244,7 @@ export const CheckoutPage: React.FC = () => {
                         key={a.IDDireccion}
                         className={`flex gap-3 rounded-2xl border-2 p-4 transition ${active ? 'border-brand bg-brand-soft/60' : 'border-slate-200 hover:border-slate-300'}`}
                       >
+                        {/* oxlint-disable-next-line jsx-a11y/label-has-associated-control -- el input va envuelto por el label */}
                         <label className="flex min-w-0 flex-1 cursor-pointer gap-3">
                           <input
                             type="radio"

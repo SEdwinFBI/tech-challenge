@@ -1,5 +1,5 @@
 import React from 'react';
-import { useToastStore, ToastItem } from './toastStore';
+import { useToastStore } from './toastStore';
 import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 const icons = {

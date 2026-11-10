@@ -19,7 +19,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ cart, shipping, tota
       {cart.items.map(item => (
         <li key={item.IDCarritoItem} className="flex gap-3">
           <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white">
-            <SafeImage src={item.ImagenUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+            <SafeImage src={item.ImagenUrl} alt={item.Producto} className="h-full w-full object-cover" loading="lazy" />
             <span className="absolute -right-0 -top-0 flex h-5 min-w-5 items-center justify-center rounded-bl-lg bg-slate-800 px-1 text-[11px] font-bold text-white">
               {item.Cantidad}
             </span>

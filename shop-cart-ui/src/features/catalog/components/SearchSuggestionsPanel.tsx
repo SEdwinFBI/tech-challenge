@@ -63,8 +63,10 @@ export const SearchSuggestionsPanel: React.FC<Props> = ({
   const row = (o: SearchOption, children: React.ReactNode) => {
     const active = o.key === activeKey;
     return (
+      // oxlint-disable-next-line jsx-a11y/click-events-have-key-events -- el teclado lo maneja el combobox
       <div
         role="option"
+        tabIndex={-1}
         id={optionDomId(listId, o.key)}
         aria-selected={active}
         onMouseMove={() => !active && onActivate(o.key)}

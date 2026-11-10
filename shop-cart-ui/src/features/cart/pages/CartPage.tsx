@@ -31,7 +31,7 @@ const LineSkeleton: React.FC = () => (
 export const CartPage: React.FC = () => {
   const navigate = useNavigate();
   const user = useAuth(s => s.user);
-  const { cart, isLoading, isError, refetch, upsertItem, removeItem, removeCoupon, isUpserting, isRemoving, isRemovingCoupon, flushPendingUpdates } = useCart();
+  const { cart, isLoading, isError, refetch, upsertItem, removeItem, removeCoupon, isRemoving, isRemovingCoupon, flushPendingUpdates } = useCart();
   const { toggle, isFavorite } = useFavorites();
   const [couponOpen, setCouponOpen] = useState(false);
   const isClient = user?.rol === 'CLIENTE';
