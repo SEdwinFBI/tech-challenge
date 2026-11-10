@@ -403,7 +403,7 @@ describe('Validación de Esquemas Zod', () => {
   describe('Auth Schemas (auth.schema.ts)', () => {
     it('RegisterSchema: valida usuario correcto y rechaza correo inválido o password menor a 8 chars', () => {
       const valido = RegisterSchema.safeParse({
-        correo: 'juan.perez@shopcart.gt',
+        correo: 'juan.perez@gmail.com',
         password: 'PasswordSegura2026!',
         nombreCompleto: 'Juan Pérez',
       });
@@ -417,14 +417,14 @@ describe('Validación de Esquemas Zod', () => {
       assert.equal(correoInvalido.success, false);
 
       const passwordCorta = RegisterSchema.safeParse({
-        correo: 'juan.perez@shopcart.gt',
+        correo: 'juan.perez@gmail.com',
         password: '12345',
         nombreCompleto: 'Juan Pérez',
       });
       assert.equal(passwordCorta.success, false);
 
       const nombreCorto = RegisterSchema.safeParse({
-        correo: 'juan.perez@shopcart.gt',
+        correo: 'juan.perez@gmail.com',
         password: 'PasswordSegura2026!',
         nombreCompleto: 'Jo',
       });
@@ -433,13 +433,13 @@ describe('Validación de Esquemas Zod', () => {
 
     it('LoginSchema y UpdateUserStatusSchema: validaciones esperadas', () => {
       const loginValido = LoginSchema.safeParse({
-        correo: 'admin@shopcart.gt',
+        correo: 'admin@gmail.com',
         password: 'Password123!',
       });
       assert.equal(loginValido.success, true);
 
       const loginInvalido = LoginSchema.safeParse({
-        correo: 'admin@shopcart.gt',
+        correo: 'admin@gmail.com',
         password: '',
       });
       assert.equal(loginInvalido.success, false);
@@ -704,7 +704,7 @@ describe('Handlers CQRS con repositorios mock', () => {
       };
 
       const handler = new UpdateOrderStatusCommandHandler(repoMock, new FakePublisher());
-      const clienteEjecutor: AuthUser = { idUsuario: 123, correo: 'cliente@shopcart.gt', rol: 'CLIENTE' };
+      const clienteEjecutor: AuthUser = { idUsuario: 123, correo: 'cliente@gmail.com', rol: 'CLIENTE' };
 
       await assert.rejects(
         async () => {
@@ -735,7 +735,7 @@ describe('Handlers CQRS con repositorios mock', () => {
       };
 
       const handler = new UpdateOrderStatusCommandHandler(repoMock, new FakePublisher());
-      const operador: AuthUser = { idUsuario: 5, correo: 'operador@shopcart.gt', rol: 'OPERADOR' };
+      const operador: AuthUser = { idUsuario: 5, correo: 'operador@gmail.com', rol: 'OPERADOR' };
 
       const res = await handler.handle({
         idPedido: 100,
@@ -763,7 +763,7 @@ describe('Handlers CQRS con repositorios mock', () => {
       };
 
       const handler = new GetOrderByIdQueryHandler(repoMock);
-      const cliente: AuthUser = { idUsuario: 1, correo: 'cliente@shopcart.gt', rol: 'CLIENTE' };
+      const cliente: AuthUser = { idUsuario: 1, correo: 'cliente@gmail.com', rol: 'CLIENTE' };
 
       await assert.rejects(
         async () => {
@@ -786,7 +786,7 @@ describe('Handlers CQRS con repositorios mock', () => {
       };
 
       const handler = new GetOrderByIdQueryHandler(repoMock);
-      const clienteEspia: AuthUser = { idUsuario: 789, correo: 'espia@shopcart.gt', rol: 'CLIENTE' };
+      const clienteEspia: AuthUser = { idUsuario: 789, correo: 'espia@gmail.com', rol: 'CLIENTE' };
 
       await assert.rejects(
         async () => {
@@ -812,11 +812,11 @@ describe('Handlers CQRS con repositorios mock', () => {
 
       const handler = new GetOrderByIdQueryHandler(repoMock);
 
-      const clienteDuenio: AuthUser = { idUsuario: 456, correo: 'duenio@shopcart.gt', rol: 'CLIENTE' };
+      const clienteDuenio: AuthUser = { idUsuario: 456, correo: 'duenio@gmail.com', rol: 'CLIENTE' };
       const resCliente = await handler.getSecureDetail(10, clienteDuenio);
       assert.deepEqual(resCliente, mockData);
 
-      const admin: AuthUser = { idUsuario: 99, correo: 'admin@shopcart.gt', rol: 'ADMINISTRADOR' };
+      const admin: AuthUser = { idUsuario: 99, correo: 'admin@gmail.com', rol: 'ADMINISTRADOR' };
       const resAdmin = await handler.getSecureDetail(10, admin);
       assert.deepEqual(resAdmin, mockData);
     });

@@ -208,7 +208,7 @@ async function ejecutarEnVivo(baseUrl: string): Promise<void> {
   banner('Modo en vivo contra ' + baseUrl);
 
   const secret = env.JWT_ACCESS_SECRET || 'access_token_super_secret_key_change_in_production';
-  const tokenCliente1 = jwt.sign({ idUsuario: 3, correo: 'cliente1@shopcart.gt', rol: 'CLIENTE' }, secret, { credentials: false } as any);
+  const tokenCliente1 = jwt.sign({ idUsuario: 3, correo: 'cliente1@gmail.com', rol: 'CLIENTE' }, secret, { credentials: false } as any);
 
   console.log(`${c.dim}Verificando /health...${c.reset}`);
   const healthRes = await fetch(`${baseUrl}/health`).then(r => r.json() as Promise<any>).catch(() => null);

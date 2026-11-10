@@ -10,9 +10,9 @@ import { toast } from '@/shared/ui/toastStore';
 import { apiErrorMessage } from '@/shared/lib/apiErrors';
 
 const DEMO = [
-  { label: 'Administrador', correo: 'admin@shopcart.gt' },
-  { label: 'Operador', correo: 'operador@shopcart.gt' },
-  { label: 'Cliente', correo: 'cliente@shopcart.gt' },
+  { label: 'Administrador', correo: 'admin@gmail.com' },
+  { label: 'Operador', correo: 'operador@gmail.com' },
+  { label: 'Cliente', correo: 'cliente@gmail.com' },
 ];
 
 export const LoginPage: React.FC = () => {

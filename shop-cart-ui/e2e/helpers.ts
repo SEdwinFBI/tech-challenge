@@ -3,9 +3,9 @@ import { expect, type APIRequestContext, type Page } from '@playwright/test';
 export const PASSWORD = process.env.AUDIT_PASSWORD ?? 'Admin123!';
 
 export const USERS = {
-  cliente: 'cliente@shopcart.gt',
-  operador: 'operador@shopcart.gt',
-  admin: 'admin@shopcart.gt',
+  cliente: 'cliente@gmail.com',
+  operador: 'operador@gmail.com',
+  admin: 'admin@gmail.com',
 } as const;
 
 export async function login(page: Page, correo: string) {

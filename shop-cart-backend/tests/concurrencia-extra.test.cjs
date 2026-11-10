@@ -12,7 +12,7 @@ async function verify() {
     if (status !== null) assert.equal(r.status, status, JSON.stringify({ method, path, status: r.status, codigo: data.codigo, mensaje: data.mensaje }));
     return { status: r.status, data };
   }
-  const admin = (await call("POST", "/auth/login", { correo: "admin@shopcart.gt", password })).data.accessToken;
+  const admin = (await call("POST", "/auth/login", { correo: "admin@gmail.com", password })).data.accessToken;
   const category = (await call("GET", "/catalogo/categorias")).data.datos[0].IDCategoria;
   const municipality = (await call("GET", "/checkout/municipios")).data.datos[0].IDMunicipio;
   async function newClient(i) {

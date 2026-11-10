@@ -16,9 +16,9 @@ async function llamar(metodo: string, ruta: string, token: string | null, cuerpo
 describe('Pagos: el monto autorizado coincide con el total del pedido', { skip: !habilitado }, () => {
   it('con cupón aplicado, IntentosPago.Monto es igual a Pedidos.Total', async () => {
     const password = process.env.AUDIT_PASSWORD!;
-    const correo = process.env.AUDIT_CLIENT_EMAIL ?? 'cliente@shopcart.gt';
+    const correo = process.env.AUDIT_CLIENT_EMAIL ?? 'cliente@gmail.com';
     const cliente = (await llamar('POST', '/auth/login', null, { correo, password })).body.accessToken as string;
-    const admin = (await llamar('POST', '/auth/login', null, { correo: 'admin@shopcart.gt', password })).body.accessToken as string;
+    const admin = (await llamar('POST', '/auth/login', null, { correo: 'admin@gmail.com', password })).body.accessToken as string;
 
     const codigo = `PAGO${Date.now().toString(36).toUpperCase()}`;
     const crear = await llamar('POST', '/cupones', admin, {

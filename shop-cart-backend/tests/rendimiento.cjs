@@ -43,7 +43,7 @@ async function measure(label, pathFor, token, binary = false) {
 }
 
 async function main() {
-  const [admin, operador, cliente] = await Promise.all([login("admin@shopcart.gt"), login("operador@shopcart.gt"), login("cliente@shopcart.gt")]);
+  const [admin, operador, cliente] = await Promise.all([login("admin@gmail.com"), login("operador@gmail.com"), login("cliente@gmail.com")]);
   const first = (await (await get("/catalogo/productos?tamanoPagina=1")).json()).items[0];
   const productId = first.IDProducto;
   const sample = Date.now();

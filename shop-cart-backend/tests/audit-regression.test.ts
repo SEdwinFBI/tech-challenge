@@ -57,7 +57,7 @@ test('Regresiones ', { skip: !enabled }, async t => {
   const correo = `fix-${suffix}@audit.example`;
 
   await t.test('las tres credenciales demo documentadas autentican', async () => {
-    for (const email of ['admin@shopcart.gt', 'operador@shopcart.gt', 'cliente@shopcart.gt']) {
+    for (const email of ['admin@gmail.com', 'operador@gmail.com', 'cliente@gmail.com']) {
       const { data } = await call('POST', '/auth/login', { correo: email, password: 'Admin123!' });
       assert.ok(data.accessToken);
       if (email.startsWith('admin')) admin = data.accessToken;

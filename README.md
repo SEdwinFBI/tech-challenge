@@ -317,9 +317,9 @@ El seed crea estas cuentas en una instalación nueva:
 
 | Rol | Correo | Contraseña inicial |
 | --- | --- | --- |
-| Administrador | `admin@shopcart.gt` | `Admin123!` |
-| Operador | `operador@shopcart.gt` | `Admin123!` |
-| Cliente | `cliente@shopcart.gt` | `Admin123!` |
+| Administrador | `admin@gmail.com` | `Admin123!` |
+| Operador | `operador@gmail.com` | `Admin123!` |
+| Cliente | `cliente@gmail.com` | `Admin123!` |
 
 
 El administrador gestiona catálogo, usuarios, cupones y reportes. El operador trabaja con inventario, preparación de pedidos y devoluciones. El cliente accede a sus propios carritos, direcciones, favoritos y pedidos.

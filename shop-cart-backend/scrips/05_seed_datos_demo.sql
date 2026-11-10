@@ -209,23 +209,23 @@ BEGIN
     DECLARE @DefaultHash NVARCHAR(255) = '$2b$10$8J/txcqvfHYm/vSdWm4/Xuxaxtjlpdcifj518DFbwbo6Fv9qJMVpa';
 
     -- cuentas 
-    IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Correo = 'admin@shopcart.gt')
+    IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Correo = 'admin@gmail.com')
         INSERT INTO Usuarios (IDRol, Correo, Password, Nombre, Activo) 
-        VALUES (@IDRolAdmin, 'admin@shopcart.gt', @DefaultHash, 'Edwin Baquiax', 1);
+        VALUES (@IDRolAdmin, 'admin@gmail.com', @DefaultHash, 'Edwin Baquiax', 1);
     ELSE
-        UPDATE Usuarios SET IDRol = @IDRolAdmin, Password = @DefaultHash, Nombre = 'Edwin Baquiax', Activo = 1 WHERE Correo = 'admin@shopcart.gt';
+        UPDATE Usuarios SET IDRol = @IDRolAdmin, Password = @DefaultHash, Nombre = 'Edwin Baquiax', Activo = 1 WHERE Correo = 'admin@gmail.com';
 
-    IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Correo = 'operador@shopcart.gt')
+    IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Correo = 'operador@gmail.com')
         INSERT INTO Usuarios (IDRol, Correo, Password, Nombre, Activo) 
-        VALUES (@IDRolOperador, 'operador@shopcart.gt', @DefaultHash, 'David Garcia', 1);
+        VALUES (@IDRolOperador, 'operador@gmail.com', @DefaultHash, 'David Garcia', 1);
     ELSE
-        UPDATE Usuarios SET IDRol = @IDRolOperador, Password = @DefaultHash, Nombre = 'David Garcia', Activo = 1 WHERE Correo = 'operador@shopcart.gt';
+        UPDATE Usuarios SET IDRol = @IDRolOperador, Password = @DefaultHash, Nombre = 'David Garcia', Activo = 1 WHERE Correo = 'operador@gmail.com';
 
-    IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Correo = 'cliente@shopcart.gt')
+    IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Correo = 'cliente@gmail.com')
         INSERT INTO Usuarios (IDRol, Correo, Password, Nombre, Activo) 
-        VALUES (@IDRolCliente, 'cliente@shopcart.gt', @DefaultHash, 'Daniel Vasquez', 1);
+        VALUES (@IDRolCliente, 'cliente@gmail.com', @DefaultHash, 'Daniel Vasquez', 1);
     ELSE
-        UPDATE Usuarios SET IDRol = @IDRolCliente, Password = @DefaultHash, Nombre = 'Daniel Vasquez', Activo = 1 WHERE Correo = 'cliente@shopcart.gt';
+        UPDATE Usuarios SET IDRol = @IDRolCliente, Password = @DefaultHash, Nombre = 'Daniel Vasquez', Activo = 1 WHERE Correo = 'cliente@gmail.com';
 
     -- Operadores 
     IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Correo = 'brayan.bodega@outlook.com')
@@ -290,9 +290,9 @@ BEGIN
         VALUES (@IDRolCliente, 'karin.deleon@outlook.com', @DefaultHash, 'Karin Iveth De León de la Roca', 1);
 
     -- Direcciones
-    DECLARE @IDUserAdmin INT = (SELECT IDUsuario FROM Usuarios WHERE Correo = 'admin@shopcart.gt');
-    DECLARE @IDUserOperador INT = (SELECT IDUsuario FROM Usuarios WHERE Correo = 'operador@shopcart.gt');
-    DECLARE @IDUserAlex INT = (SELECT IDUsuario FROM Usuarios WHERE Correo = 'cliente@shopcart.gt');
+    DECLARE @IDUserAdmin INT = (SELECT IDUsuario FROM Usuarios WHERE Correo = 'admin@gmail.com');
+    DECLARE @IDUserOperador INT = (SELECT IDUsuario FROM Usuarios WHERE Correo = 'operador@gmail.com');
+    DECLARE @IDUserAlex INT = (SELECT IDUsuario FROM Usuarios WHERE Correo = 'cliente@gmail.com');
     DECLARE @IDUserChristian INT = (SELECT IDUsuario FROM Usuarios WHERE Correo = 'cmorales94@gmail.com');
     DECLARE @IDUserMafer INT = (SELECT IDUsuario FROM Usuarios WHERE Correo = 'mafer.arq@gmail.com');
     DECLARE @IDUserMazariegos INT = (SELECT IDUsuario FROM Usuarios WHERE Correo = 'lic.mazariegos@yahoo.com');
@@ -1083,7 +1083,7 @@ BEGIN
         ('ORDER-SEED-2026-108', N'LON-COM-UNI', 2, N'ing_xicara@gmail.com', 5),
         ('ORDER-SEED-2026-109', N'SAR-ANT-24', 2, N'mendoza92@gmail.com', 11),
         ('ORDER-SEED-2026-110', N'BAL-VOL-5', 2, N'lic.mazariegos@yahoo.com', 7),
-        ('ORDER-SEED-2026-111', N'REA-C35-64', 1, N'cliente@shopcart.gt', 7);
+        ('ORDER-SEED-2026-111', N'REA-C35-64', 1, N'cliente@gmail.com', 7);
 
     DECLARE @ProductosNuevosIds TABLE (IDProducto INT, Nombre NVARCHAR(150));
     INSERT INTO Productos (IDCategoria, Nombre, Descripcion, ImagenUrl, Activo, Destacado, FechaCreacion)

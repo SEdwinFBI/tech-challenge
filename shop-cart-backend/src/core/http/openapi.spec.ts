@@ -139,7 +139,7 @@ export const openApiSpec = {
         type: 'object',
         properties: {
           idUsuario: { type: 'integer', example: 1 },
-          correo: { type: 'string', format: 'email', example: 'cliente@shopcart.gt' },
+          correo: { type: 'string', format: 'email', example: 'cliente@gmail.com' },
           nombreCompleto: { type: 'string', example: 'Juan Pérez' },
           rol: { type: 'string', enum: ['CLIENTE', 'OPERADOR', 'ADMINISTRADOR'], example: 'CLIENTE' },
         },
@@ -260,7 +260,7 @@ export const openApiSpec = {
           Cantidad: { type: 'integer', example: 20 },
           SaldoPosterior: { type: 'integer', example: 35 },
           Motivo: { type: 'string', example: 'Reabastecimiento de bodega central Lote 2026-B' },
-          UsuarioResponsable: { type: 'string', example: 'operador@shopcart.gt' },
+          UsuarioResponsable: { type: 'string', example: 'operador@gmail.com' },
         },
       },
       Pedido: {
@@ -269,7 +269,7 @@ export const openApiSpec = {
           IDPedido: { type: 'integer', example: 1 },
           NumeroSeguimiento: { type: 'string', example: 'ORD-000014', description: 'ORD- más el IDPedido con seis dígitos. No se guarda en la base; se arma a partir de IDPedido.' },
           Cliente: { type: 'string', example: 'Juan Pérez' },
-          Correo: { type: 'string', example: 'cliente@shopcart.gt' },
+          Correo: { type: 'string', example: 'cliente@gmail.com' },
           Estado: {
             type: 'string',
             enum: ['PAGADO', 'EN_PREPARACION', 'DESPACHADO', 'ENTREGADO', 'CANCELADO', 'DEVUELTO_PARCIAL', 'DEVUELTO_TOTAL'],
@@ -365,7 +365,7 @@ export const openApiSpec = {
                 type: 'object',
                 required: ['correo', 'password', 'nombreCompleto'],
                 properties: {
-                  correo: { type: 'string', format: 'email', example: 'nuevo.cliente@shopcart.gt' },
+                  correo: { type: 'string', format: 'email', example: 'nuevo.cliente@gmail.com' },
                   password: { type: 'string', minLength: 6, example: 'Segura123!' },
                   nombreCompleto: { type: 'string', minLength: 3, example: 'Carlos Mendoza' },
                 },
@@ -404,7 +404,7 @@ export const openApiSpec = {
                 type: 'object',
                 required: ['correo', 'password'],
                 properties: {
-                  correo: { type: 'string', format: 'email', example: 'admin@shopcart.gt' },
+                  correo: { type: 'string', format: 'email', example: 'admin@gmail.com' },
                   password: { type: 'string', example: 'Admin123!' },
                 },
               },
