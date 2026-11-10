@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { Loader2 } from 'lucide-react';
-import { useAuth } from '@/features/auth';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { UserRole } from '@/shared/types/domain';
 import { BrandLoader } from '@/shared/ui/BrandLoader';
 
@@ -11,7 +11,8 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
-  const { user, status } = useAuth();
+  const user = useAuth(s => s.user);
+  const status = useAuth(s => s.status);
   const location = useLocation();
 
   if (status === 'initializing') {

@@ -1,137 +1,148 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router';
+import { createBrowserRouter, Navigate, Outlet, useParams, type RouteObject } from 'react-router';
+import { RouterProvider } from 'react-router/dom';
 import { StoreLayout } from '../layouts/StoreLayout';
-import { CheckoutLayout } from '../layouts/CheckoutLayout';
-import { AccountLayout } from '../layouts/AccountLayout';
-import { BackofficeLayout } from '../layouts/BackofficeLayout';
 import { ProtectedRoute } from '../guards/ProtectedRoute';
 import { GuestOnlyRoute } from '../guards/GuestOnlyRoute';
-
-import { HomePage } from '@/features/home';
-import { CatalogPage, ProductDetailPage } from '@/features/catalog';
-import { CartPage } from '@/features/cart';
-import { CheckoutPage, MyAddressesPage } from '@/features/checkout';
-import { MyOrdersPage, OrderDetailPage, OrderConfirmationPage } from '@/features/orders';
-import { FavoritesPage } from '@/features/wishlist';
-import { ProfilePage } from '@/features/account';
-
-import { LoginPage, RegisterPage } from '@/features/auth';
-
-import { AdminOrdersPage, AdminOrderDetailPage } from '@/features/orders';
-import { AdminCatalogPage } from '@/features/catalog';
-import { AdminInventoryPage } from '@/features/inventory';
-import { AdminCouponsPage } from '@/features/coupons';
-import { AdminDashboardPage } from '@/features/dashboard';
-import { AdminUsersPage } from '@/features/users';
-import { AdminAuditLogPage } from '@/features/audit-log';
-import { AdminPaymentsPage } from '@/features/payments';
-
 import { ForbiddenPage } from '../pages/ForbiddenPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { RouteError } from './RouteError';
+import { RouteFallback } from './RouteFallback';
+import type { CatalogPage } from '@/features/catalog/pages/CatalogPage';
 
 type Role = 'CLIENTE' | 'OPERADOR' | 'ADMINISTRADOR';
+type CatalogMode = React.ComponentProps<typeof CatalogPage>['mode'];
 
-type Guard = { kind: 'auth'; roles?: readonly Role[] } | { kind: 'guest' };
-
-interface RouteNode {
-  path?: string;
-  index?: boolean;
-  element: React.ReactElement;
-  guard?: Guard;
-  children?: RouteNode[];
-}
+const roles = {
+  cliente: ['CLIENTE'],
+  backoffice: ['OPERADOR', 'ADMINISTRADOR'],
+  admin: ['ADMINISTRADOR'],
+} as const satisfies Record<string, readonly Role[]>;
 
 const LegacyOrderRedirect: React.FC = () => {
   const { id } = useParams();
   return <Navigate to={`/cuenta/pedidos/${id}`} replace />;
 };
 
-const guards = {
-  auth: { kind: 'auth' },
-  cliente: { kind: 'auth', roles: ['CLIENTE'] },
-  backoffice: { kind: 'auth', roles: ['OPERADOR', 'ADMINISTRADOR'] },
-  admin: { kind: 'auth', roles: ['ADMINISTRADOR'] },
-  guest: { kind: 'guest' },
-} as const satisfies Record<string, Guard>;
+const lazyComponent = (load: () => Promise<React.ComponentType>): Pick<RouteObject, 'lazy'> => ({
+  lazy: async () => ({ Component: await load() }),
+});
 
-const routeConfig: RouteNode[] = [
+const catalog = (mode: CatalogMode): Pick<RouteObject, 'lazy'> => ({
+  lazy: async () => {
+    const { CatalogPage } = await import('@/features/catalog/pages/CatalogPage');
+    return { element: <CatalogPage mode={mode} /> };
+  },
+});
+
+const redirect = (to: string): Pick<RouteObject, 'element'> => ({ element: <Navigate to={to} replace /> });
+
+const requireSession = (children: RouteObject[], allowed?: readonly Role[]): RouteObject => ({
+  element: (
+    <ProtectedRoute allowedRoles={allowed ? [...allowed] : undefined}>
+      <Outlet />
+    </ProtectedRoute>
+  ),
+  children,
+});
+
+const guestOnly = (children: RouteObject[]): RouteObject => ({
+  element: (
+    <GuestOnlyRoute>
+      <Outlet />
+    </GuestOnlyRoute>
+  ),
+  children,
+});
+
+const routeObjects: RouteObject[] = [
   {
-    element: <StoreLayout />,
+    HydrateFallback: RouteFallback,
+    errorElement: <RouteError />,
     children: [
-      { path: '/', element: <HomePage /> },
-      { path: '/catalogo', element: <CatalogPage mode="all" /> },
-      { path: '/categoria/:id', element: <CatalogPage mode="categoria" /> },
-      { path: '/ofertas', element: <CatalogPage mode="ofertas" /> },
-      { path: '/novedades', element: <CatalogPage mode="novedades" /> },
-      { path: '/producto/:id', element: <ProductDetailPage /> },
-      { path: '/carrito', element: <CartPage /> },
-      { path: '/pedido/:id/confirmado', element: <OrderConfirmationPage />, guard: guards.cliente },
       {
-        path: '/cuenta',
-        element: <AccountLayout />,
-        guard: guards.auth,
+        element: <StoreLayout />,
         children: [
-          { index: true, element: <Navigate to="/cuenta/pedidos" replace /> },
-          { path: 'pedidos', element: <MyOrdersPage />, guard: guards.cliente },
-          { path: 'pedidos/:id', element: <OrderDetailPage />, guard: guards.cliente },
-          { path: 'favoritos', element: <FavoritesPage />, guard: guards.cliente },
-          { path: 'perfil', element: <ProfilePage /> },
-          { path: 'direcciones', element: <MyAddressesPage />, guard: guards.cliente },
+          { path: '/', ...lazyComponent(() => import('@/features/home/pages/HomePage').then(m => m.HomePage)) },
+          { path: '/catalogo', ...catalog('all') },
+          { path: '/categoria/:id', ...catalog('categoria') },
+          { path: '/ofertas', ...catalog('ofertas') },
+          { path: '/novedades', ...catalog('novedades') },
+          { path: '/producto/:id', ...lazyComponent(() => import('@/features/catalog/pages/ProductDetailPage').then(m => m.ProductDetailPage)) },
+          { path: '/carrito', ...lazyComponent(() => import('@/features/cart/pages/CartPage').then(m => m.CartPage)) },
+          requireSession(
+            [{ path: '/pedido/:id/confirmado', ...lazyComponent(() => import('@/features/orders/pages/OrderConfirmationPage').then(m => m.OrderConfirmationPage)) }],
+            roles.cliente,
+          ),
+          requireSession([
+            {
+              path: '/cuenta',
+              ...lazyComponent(() => import('../layouts/AccountLayout').then(m => m.AccountLayout)),
+              children: [
+                { index: true, ...redirect('/cuenta/pedidos') },
+                requireSession(
+                  [
+                    { path: 'pedidos', ...lazyComponent(() => import('@/features/orders/pages/MyOrdersPage').then(m => m.MyOrdersPage)) },
+                    { path: 'pedidos/:id', ...lazyComponent(() => import('@/features/orders/pages/OrderDetailPage').then(m => m.OrderDetailPage)) },
+                    { path: 'favoritos', ...lazyComponent(() => import('@/features/wishlist/pages/FavoritesPage').then(m => m.FavoritesPage)) },
+                    { path: 'direcciones', ...lazyComponent(() => import('@/features/checkout/pages/MyAddressesPage').then(m => m.MyAddressesPage)) },
+                  ],
+                  roles.cliente,
+                ),
+                { path: 'perfil', ...lazyComponent(() => import('@/features/account/pages/ProfilePage').then(m => m.ProfilePage)) },
+              ],
+            },
+          ]),
+          { path: '/mis-pedidos', ...redirect('/cuenta/pedidos') },
+          { path: '/mis-pedidos/:id', element: <LegacyOrderRedirect /> },
+          { path: '/mis-direcciones', ...redirect('/cuenta/direcciones') },
         ],
       },
-      { path: '/mis-pedidos', element: <Navigate to="/cuenta/pedidos" replace /> },
-      { path: '/mis-pedidos/:id', element: <LegacyOrderRedirect /> },
-      { path: '/mis-direcciones', element: <Navigate to="/cuenta/direcciones" replace /> },
+      requireSession(
+        [
+          {
+            ...lazyComponent(() => import('../layouts/CheckoutLayout').then(m => m.CheckoutLayout)),
+            children: [{ path: '/checkout', ...lazyComponent(() => import('@/features/checkout/pages/CheckoutPage').then(m => m.CheckoutPage)) }],
+          },
+        ],
+        roles.cliente,
+      ),
+      guestOnly([
+        { path: '/login', ...lazyComponent(() => import('@/features/auth/pages/LoginPage').then(m => m.LoginPage)) },
+        { path: '/registro', ...lazyComponent(() => import('@/features/auth/pages/RegisterPage').then(m => m.RegisterPage)) },
+      ]),
+      requireSession(
+        [
+          {
+            path: '/admin',
+            ...lazyComponent(() => import('../layouts/BackofficeLayout').then(m => m.BackofficeLayout)),
+            children: [
+              { index: true, ...redirect('/admin/pedidos') },
+              { path: 'pedidos', ...lazyComponent(() => import('@/features/orders/pages/AdminOrdersPage').then(m => m.AdminOrdersPage)) },
+              { path: 'pedidos/:id', ...lazyComponent(() => import('@/features/orders/pages/AdminOrderDetailPage').then(m => m.AdminOrderDetailPage)) },
+              { path: 'inventario', ...lazyComponent(() => import('@/features/inventory/pages/AdminInventoryPage').then(m => m.AdminInventoryPage)) },
+              requireSession(
+                [
+                  { path: 'dashboard', ...lazyComponent(() => import('@/features/dashboard/pages/AdminDashboardPage').then(m => m.AdminDashboardPage)) },
+                  { path: 'catalogo', ...lazyComponent(() => import('@/features/catalog/pages/AdminCatalogPage').then(m => m.AdminCatalogPage)) },
+                  { path: 'cupones', ...lazyComponent(() => import('@/features/coupons/pages/AdminCouponsPage').then(m => m.AdminCouponsPage)) },
+                  { path: 'usuarios', ...lazyComponent(() => import('@/features/users/pages/AdminUsersPage').then(m => m.AdminUsersPage)) },
+                  { path: 'pagos', ...lazyComponent(() => import('@/features/payments/pages/AdminPaymentsPage').then(m => m.AdminPaymentsPage)) },
+                  { path: 'bitacora', ...lazyComponent(() => import('@/features/audit-log/pages/AdminAuditLogPage').then(m => m.AdminAuditLogPage)) },
+                ],
+                roles.admin,
+              ),
+            ],
+          },
+        ],
+        roles.backoffice,
+      ),
+      { path: '/403', element: <ForbiddenPage /> },
+      { path: '*', element: <NotFoundPage /> },
     ],
   },
-  {
-    element: <CheckoutLayout />,
-    guard: guards.cliente,
-    children: [{ path: '/checkout', element: <CheckoutPage /> }],
-  },
-  { path: '/login', element: <LoginPage />, guard: guards.guest },
-  { path: '/registro', element: <RegisterPage />, guard: guards.guest },
-  {
-    path: '/admin',
-    element: <BackofficeLayout />,
-    guard: guards.backoffice,
-    children: [
-      { index: true, element: <Navigate to="/admin/pedidos" replace /> },
-      { path: 'pedidos', element: <AdminOrdersPage /> },
-      { path: 'pedidos/:id', element: <AdminOrderDetailPage /> },
-      { path: 'inventario', element: <AdminInventoryPage /> },
-      { path: 'dashboard', element: <AdminDashboardPage />, guard: guards.admin },
-      { path: 'catalogo', element: <AdminCatalogPage />, guard: guards.admin },
-      { path: 'cupones', element: <AdminCouponsPage />, guard: guards.admin },
-      { path: 'usuarios', element: <AdminUsersPage />, guard: guards.admin },
-      { path: 'pagos', element: <AdminPaymentsPage />, guard: guards.admin },
-      { path: 'bitacora', element: <AdminAuditLogPage />, guard: guards.admin },
-    ],
-  },
-  { path: '/403', element: <ForbiddenPage /> },
-  { path: '*', element: <NotFoundPage /> },
 ];
 
-const withGuard = (guard: Guard | undefined, element: React.ReactElement): React.ReactElement => {
-  if (!guard) return element;
-  if (guard.kind === 'guest') return <GuestOnlyRoute>{element}</GuestOnlyRoute>;
-  return <ProtectedRoute allowedRoles={guard.roles ? [...guard.roles] : undefined}>{element}</ProtectedRoute>;
-};
+const router = createBrowserRouter(routeObjects);
 
-const renderRoutes = (nodes: RouteNode[]): React.ReactElement[] =>
-  nodes.map((node, i) => {
-    const element = withGuard(node.guard, node.element);
-    const key = node.path ?? (node.index ? 'index' : `layout-${i}`);
-    if (node.index) return <Route key={key} index element={element} />;
-    return (
-      <Route key={key} path={node.path} element={element}>
-        {node.children && renderRoutes(node.children)}
-      </Route>
-    );
-  });
-
-export const AppRouter: React.FC = () => (
-  <BrowserRouter>
-    <Routes>{renderRoutes(routeConfig)}</Routes>
-  </BrowserRouter>
-);
+export const AppRouter: React.FC = () => <RouterProvider router={router} />;

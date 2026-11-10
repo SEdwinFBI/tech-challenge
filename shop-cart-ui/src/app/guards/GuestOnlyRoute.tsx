@@ -1,10 +1,11 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router';
-import { useAuth } from '@/features/auth';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { Skeleton } from '@/shared/ui';
 
 export const GuestOnlyRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, status } = useAuth();
+  const user = useAuth(s => s.user);
+  const status = useAuth(s => s.status);
   const location = useLocation();
   const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
 
