@@ -18,6 +18,7 @@ import { formatPhone } from '@/shared/lib/phone';
 import { ShippingPartners } from '@/shared/ui/ShippingPartners';
 import type { Address } from '@/shared/types/domain';
 import { apiErrorMessage, errorCode } from '@/shared/lib/apiErrors';
+import { newUuid } from '@/shared/lib/uuid';
 
 type Step = 0 | 1;
 
@@ -66,7 +67,7 @@ export const CheckoutPage: React.FC = () => {
   const [expired, setExpired] = useState(false);
 
   // Una clave por visita: los reintentos no duplican pedido ni cobro
-  const idempotencyKey = useRef<string>(saved?.idempotencyKey ?? crypto.randomUUID());
+  const idempotencyKey = useRef<string>(saved?.idempotencyKey ?? newUuid());
   const [paying, setPaying] = useState(false);
   const [simulacion, setSimulacion] = useState<NonNullable<ConfirmOrderPayload['simulacionPago']>>('APROBADO');
   const [reconciling, setReconciling] = useState(false);
