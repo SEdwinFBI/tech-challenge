@@ -1,8 +1,6 @@
-# Fase 1
+# ShopCart
 
-# ShopCart Backend
-
-API de comercio electrónico para gestionar catálogo, inventario, carritos, pedidos y usuarios. Está desarrollada con TypeScript, Express y SQL Server. El pago se simula; no hay integración con una pasarela de cobros.
+ShopCart es una tienda en línea para gestionar catálogo, inventario, carritos, pedidos y usuarios. El backend es una API desarrollada con TypeScript, Express y SQL Server, y el frontend una aplicación React. El pago se simula; no hay integración con una pasarela de cobros.
 
 ## Tecnologías
 
@@ -62,7 +60,6 @@ Para SQL Server con Docker, crear el `.env` de la raíz a partir de [`.env.examp
 | `NODE_ENV` | Entorno: `development`, `test` o `production`. |
 | `RESERVATION_TTL_MINUTES` | Minutos durante los que se apartan los productos al pasar al pago. |
 | `DB_HOST`, `DB_PORT` | Dirección y puerto de SQL Server. |
-| `DB_ENCRYPT` | `true` para Azure SQL (conexión cifrada); `false` por defecto para SQL Server local. |
 | `DB_ENCRYPT` | `true` para Azure SQL (conexión cifrada); `false` por defecto para SQL Server local. |
 | `DB_USER`, `DB_PASSWORD` | Credenciales de conexión. |
 | `DB_NAME` | Nombre de la base de datos. |
@@ -336,7 +333,7 @@ El administrador gestiona catálogo, usuarios, cupones y reportes. El operador t
 | RF-05 Cupones | Porcentaje o monto fijo, por carrito o por categoría, un cupón por pedido. Cada rechazo tiene su código: vencido, agotado, inactivo, mínimo o límite por cliente. El total nunca baja de cero. | `real-concurrency.test.cjs` (último uso), `concurrencia-extra.test.cjs` (3 usos, 10 clientes) |
 | RF-06 Checkout | Reserva de 15 min. `SP_Pedidos_CrearPedido` bloquea con `UPDLOCK, HOLDLOCK` y guarda pedido, detalle, kardex y cupón en una transacción. La clave de idempotencia evita pedidos y cobros dobles. | `real-concurrency.test.cjs` (última unidad, 5 confirmaciones iguales, rollback), `pagos.test.ts` |
 | RF-07 Pedidos | Transiciones en `TransicionesEstadoPedido` y en `order-state.machine.ts`. Cancelar o devolver repone por kardex. No se devuelve más de lo vendido (50082). La reserva vencida se libera sola cada minuto y ya no se puede pagar (50112). | `domain.test.ts`, `concurrencia-extra.test.cjs` |
-| RF-08 Reportes | Ventas por día, semana y mes, por categoría y top 10. Solo cuentan pedidos entregados y se restan devoluciones. Listados paginados y filtrados en el servidor. | `extensiones.test.ts`, `audit-regression.test.ts` (caché) |
+| RF-08 Reportes | Ventas por día, semana y mes, por categoría y top 10. Cuentan los pedidos pagados, sin los cancelados, y se restan devoluciones. Listados paginados y filtrados en el servidor. | `extensiones.test.ts`, `audit-regression.test.ts` (caché) |
 | RF-09 Bitácora | Se escribe dentro de cada SP. El trigger `TR_Bitacora_Inmutable` (`INSTEAD OF UPDATE, DELETE`) impide cambiarla. | Revisión del script 01 |
 | Sin SQL en el backend | Solo se llaman procedimientos `SP_Modulo_Proceso`. Las únicas excepciones son el seed y el inicializador. | `sin-sql.test.ts` revisa todo `src/` y la nomenclatura de los scripts |
 
@@ -359,7 +356,7 @@ Extras del reto: dashboard en vivo con SSE, exportación a Excel, caché del res
 - Con varias réplicas, Redis comparte los tickets del dashboard, el caché del resumen, el límite de intentos, los eventos en vivo y el candado de las tareas programadas. Si Redis se cae, el catálogo y el checkout siguen funcionando porque SQL Server protege el stock y la idempotencia; los eventos solo llegan a los clientes de la misma réplica, el límite de intentos no se aplica y el ticket del dashboard no se puede emitir.
 - El ordenamiento se hace en el servidor .
 - La primera dirección activa de un cliente queda como predeterminada
-- Las Estadisticas cuentan como completados los pedidos entregados y descuentan las devoluciones. 
+- Las Estadisticas cuentan los pedidos pagados que no se cancelaron y descuentan las devoluciones. Los días se agrupan por hora de Guatemala. 
 - Las imágenes se optimizan en el navegador y se suben directo a S3 con una URL firmada. La base guarda la llave del archivo, no la URL; la URL de la CDN se arma al leer con `CDN_BASE_URL`. Al cambiar la portada o borrar un producto, el archivo viejo se borra del bucket.
 - La IA solo recibe nombres de productos, categorías, precios y el texto de búsqueda, nunca ids de usuario ni correos, y tiene un presupuesto de 30 llamadas por minuto compartido entre réplicas.
 
