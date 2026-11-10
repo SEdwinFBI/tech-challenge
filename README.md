@@ -2,6 +2,8 @@
 
 ShopCart es una tienda en línea para gestionar catálogo, inventario, carritos, pedidos y usuarios. El backend es una API desarrollada con TypeScript, Express y SQL Server, y el frontend con React. El pago se simula; no hay integración con una pasarela de cobros.
 
+![Arquitectura de despliegue de ShopCart](docs/imagenes/arquitectura-despliegue.svg)
+
 ## Tecnologías
 
 | Parte | Tecnologías |
@@ -27,8 +29,6 @@ Arquitectura Vertical Slice, con DDD y CQRS ligeros.
 **DDD ligero.** Las reglas del negocio viven en `domain/` como código: estados del pedido, las políticas de cupones e inventario, el objeto de valor  y los errores de dominio. La persistencia, las transacciones y el control de existencias se resuelven en SQL Server.
 
 ![Arquitectura vertical de ShopCart](docs/imagenes/arquitectura-vertical.svg)
-
-![Arquitectura de despliegue de ShopCart](docs/imagenes/arquitectura-despliegue.svg)
 
 ### Por qué esta arquitectura
 
